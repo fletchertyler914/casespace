@@ -79,6 +79,7 @@ jobs:
 
   verify-download-links:
     name: Verify release links for web resolver
+    if: ${{ !contains(github.ref_name, '-rc.') }}
     needs: build-and-publish
     runs-on: ubuntu-latest
     steps:
