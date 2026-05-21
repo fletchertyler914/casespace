@@ -20,7 +20,8 @@ export const metadata: Metadata = {
   },
   openGraph: {
     title: "CaseSpace",
-    description: "Investigative case intelligence built for speed and security.",
+    description:
+      "Investigative case intelligence built for speed and security.",
     images: ["/casespace-owl-icon.png"],
   },
 };
@@ -51,10 +52,18 @@ export default function RootLayout({
               <span>CaseSpace</span>
             </Link>
             <div className="flex flex-1 items-center justify-end gap-5">
-              <Link className="hover:text-white" href="/download">Download</Link>
-              <Link className="hover:text-white" href="/docs">Docs</Link>
-              <Link className="hover:text-white" href="/pricing">Pricing</Link>
-              <Link className="hover:text-white" href="/contact">Contact</Link>
+              <Link className="hover:text-white" href="/download">
+                Download
+              </Link>
+              <Link className="hover:text-white" href="/docs">
+                Docs
+              </Link>
+              <Link className="hover:text-white" href="/pricing">
+                Pricing
+              </Link>
+              <Link className="hover:text-white" href="/contact">
+                Contact
+              </Link>
             </div>
           </nav>
         </header>
@@ -68,7 +77,9 @@ export default function RootLayout({
                 width={20}
                 height={20}
               />
-              <span>© {new Date().getFullYear()} CaseSpace. All rights reserved.</span>
+              <span>
+                © {new Date().getFullYear()} CaseSpace. All rights reserved.
+              </span>
             </div>
             <div className="flex gap-4">
               <a

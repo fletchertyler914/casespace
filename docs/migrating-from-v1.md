@@ -62,52 +62,52 @@ The following matrix is the source of truth for migration actions.
 
 ### File-by-file mapping (high-level deterministic map)
 
-| v1 source | v2 target | Action | Notes |
-|---|---|---|---|
-| `src-tauri/src/lib.rs` | `apps/desktop-backend/src-tauri/src/lib.rs` | port-and-refactor | Recompose command registration by domain modules |
-| `src-tauri/src/database.rs` | `apps/desktop-backend/src-tauri/src/database.rs` | rewrite-net-new | New schema allowed; preserve business intent |
-| `src-tauri/src/time_tracking.rs` | `apps/desktop-backend/src-tauri/src/time_tracking.rs` | port-and-refactor | Keep billing outcomes, modernize contracts |
-| `src-tauri/src/scanner.rs` | `apps/desktop-backend/src-tauri/src/scanner.rs` | port-and-refactor | Preserve ingest semantics + performance targets |
-| `src-tauri/src/file_ingestion.rs` | `apps/desktop-backend/src-tauri/src/file_ingestion.rs` | port-and-refactor | Keep sync behavior; tighten validation |
-| `src-tauri/src/repositories/*` | `apps/desktop-backend/src-tauri/src/repositories/*` | port-and-refactor | Align with new schema and module ownership |
-| `src/components/workspace/*` | `apps/desktop/components/workspace/*` | rewrite-net-new | Next-first implementation with same workflow outcomes |
-| `src/components/viewer/*` | `apps/desktop/components/viewer/*` | port-and-refactor | Preserve multi-format viewing outcomes |
-| `src/components/notes/*` | `apps/desktop/components/notes/*` | port-and-refactor | Preserve rich notes workflows |
-| `src/components/findings/*` | `apps/desktop/components/findings/*` | port-and-refactor | Preserve findings management |
-| `src/components/timeline/*` | `apps/desktop/components/timeline/*` | port-and-refactor | Preserve event workflow semantics |
-| `src/components/search/*` | `apps/desktop/components/search/*` | port-and-refactor | Preserve discovery behavior and relevance intent |
-| `src/components/duplicates/*` | `apps/desktop/components/duplicates/*` | port-and-refactor | Preserve duplicate triage outcomes |
-| `src/components/time/*` | `apps/desktop/components/time/*` | port-and-refactor | Preserve billing/time outcomes |
-| `src/services/*` | `apps/desktop/lib/services/*` | port-and-refactor | Command adapter layer; avoid direct UI invoke sprawl |
-| `src/hooks/*` | `apps/desktop/lib/hooks/*` | port-and-refactor | Keep behavior, simplify where possible |
-| `src/store/*` | `apps/desktop/lib/state/*` | port-and-refactor | Normalize state boundaries |
-| `src/types/*` | `packages/types/*` | port-and-refactor | Promote shared domain contracts |
-| `src/components/ui/*` | `packages/ui/src/*` | port-and-refactor | Rebuild design system for v2 conventions |
-| `public/*` | `apps/desktop/public/*` | port-as-is | Keep only required assets |
-| `vite.config.ts` | N/A | deprecate | Next.js-first desktop |
-| `index.html` | N/A | deprecate | Next.js runtime replaces Vite shell |
-| `.github/workflows/build.yml` | `.github/workflows/*` | rewrite-net-new | Monorepo CI strategy |
-| `scripts/*` | `scripts/*` or app-local scripts | port-and-refactor | Keep only scripts needed for v2 workflows |
+| v1 source                         | v2 target                                              | Action            | Notes                                                 |
+| --------------------------------- | ------------------------------------------------------ | ----------------- | ----------------------------------------------------- |
+| `src-tauri/src/lib.rs`            | `apps/desktop-backend/src-tauri/src/lib.rs`            | port-and-refactor | Recompose command registration by domain modules      |
+| `src-tauri/src/database.rs`       | `apps/desktop-backend/src-tauri/src/database.rs`       | rewrite-net-new   | New schema allowed; preserve business intent          |
+| `src-tauri/src/time_tracking.rs`  | `apps/desktop-backend/src-tauri/src/time_tracking.rs`  | port-and-refactor | Keep billing outcomes, modernize contracts            |
+| `src-tauri/src/scanner.rs`        | `apps/desktop-backend/src-tauri/src/scanner.rs`        | port-and-refactor | Preserve ingest semantics + performance targets       |
+| `src-tauri/src/file_ingestion.rs` | `apps/desktop-backend/src-tauri/src/file_ingestion.rs` | port-and-refactor | Keep sync behavior; tighten validation                |
+| `src-tauri/src/repositories/*`    | `apps/desktop-backend/src-tauri/src/repositories/*`    | port-and-refactor | Align with new schema and module ownership            |
+| `src/components/workspace/*`      | `apps/desktop/components/workspace/*`                  | rewrite-net-new   | Next-first implementation with same workflow outcomes |
+| `src/components/viewer/*`         | `apps/desktop/components/viewer/*`                     | port-and-refactor | Preserve multi-format viewing outcomes                |
+| `src/components/notes/*`          | `apps/desktop/components/notes/*`                      | port-and-refactor | Preserve rich notes workflows                         |
+| `src/components/findings/*`       | `apps/desktop/components/findings/*`                   | port-and-refactor | Preserve findings management                          |
+| `src/components/timeline/*`       | `apps/desktop/components/timeline/*`                   | port-and-refactor | Preserve event workflow semantics                     |
+| `src/components/search/*`         | `apps/desktop/components/search/*`                     | port-and-refactor | Preserve discovery behavior and relevance intent      |
+| `src/components/duplicates/*`     | `apps/desktop/components/duplicates/*`                 | port-and-refactor | Preserve duplicate triage outcomes                    |
+| `src/components/time/*`           | `apps/desktop/components/time/*`                       | port-and-refactor | Preserve billing/time outcomes                        |
+| `src/services/*`                  | `apps/desktop/lib/services/*`                          | port-and-refactor | Command adapter layer; avoid direct UI invoke sprawl  |
+| `src/hooks/*`                     | `apps/desktop/lib/hooks/*`                             | port-and-refactor | Keep behavior, simplify where possible                |
+| `src/store/*`                     | `apps/desktop/lib/state/*`                             | port-and-refactor | Normalize state boundaries                            |
+| `src/types/*`                     | `packages/types/*`                                     | port-and-refactor | Promote shared domain contracts                       |
+| `src/components/ui/*`             | `packages/ui/src/*`                                    | port-and-refactor | Rebuild design system for v2 conventions              |
+| `public/*`                        | `apps/desktop/public/*`                                | port-as-is        | Keep only required assets                             |
+| `vite.config.ts`                  | N/A                                                    | deprecate         | Next.js-first desktop                                 |
+| `index.html`                      | N/A                                                    | deprecate         | Next.js runtime replaces Vite shell                   |
+| `.github/workflows/build.yml`     | `.github/workflows/*`                                  | rewrite-net-new   | Monorepo CI strategy                                  |
+| `scripts/*`                       | `scripts/*` or app-local scripts                       | port-and-refactor | Keep only scripts needed for v2 workflows             |
 
 ### Rename ledger
 
-| Legacy concept | v2 canonical name | Reason |
-|---|---|---|
-| v1 single app boundary | `desktop-backend` + `desktop` split | Explicit domain vs UX ownership |
-| ad hoc service naming | `DomainService` modules under `lib/services` | Consistent architecture |
-| mixed mapping config objects | typed domain contracts in `packages/types` | Shared compile-time safety |
-| implicit command names | versioned command contract naming | safer long-term evolution |
+| Legacy concept               | v2 canonical name                            | Reason                          |
+| ---------------------------- | -------------------------------------------- | ------------------------------- |
+| v1 single app boundary       | `desktop-backend` + `desktop` split          | Explicit domain vs UX ownership |
+| ad hoc service naming        | `DomainService` modules under `lib/services` | Consistent architecture         |
+| mixed mapping config objects | typed domain contracts in `packages/types`   | Shared compile-time safety      |
+| implicit command names       | versioned command contract naming            | safer long-term evolution       |
 
 ### Refactor worklist
 
-| Work item | Risk | Dependency | Rollback strategy |
-|---|---|---|---|
-| Rebuild DB schema and migrations | High | Phase A baselines | Keep migration snapshots + rollback SQL |
-| Recompose command surface by domains | High | schema + domain contracts | Keep temporary compatibility adapter |
-| Next desktop workflow reconstruction | High | command contracts | Feature flags per workflow |
-| Shared type extraction to `packages/types` | Medium | domain contract freeze | Keep app-local fallback typings |
-| UI system extraction to `packages/ui` | Medium | desktop UX stabilization | maintain in-app components until stable |
-| CI/release rewrite for monorepo | Medium | package/task scripts | run dual pipeline during cutover |
+| Work item                                  | Risk   | Dependency                | Rollback strategy                       |
+| ------------------------------------------ | ------ | ------------------------- | --------------------------------------- |
+| Rebuild DB schema and migrations           | High   | Phase A baselines         | Keep migration snapshots + rollback SQL |
+| Recompose command surface by domains       | High   | schema + domain contracts | Keep temporary compatibility adapter    |
+| Next desktop workflow reconstruction       | High   | command contracts         | Feature flags per workflow              |
+| Shared type extraction to `packages/types` | Medium | domain contract freeze    | Keep app-local fallback typings         |
+| UI system extraction to `packages/ui`      | Medium | desktop UX stabilization  | maintain in-app components until stable |
+| CI/release rewrite for monorepo            | Medium | package/task scripts      | run dual pipeline during cutover        |
 
 ### Net-new code inventory
 
@@ -137,19 +137,19 @@ Each manifest item is considered implemented and validated only when:
 
 The matrix below maps v1 capabilities to v2 owners and enforcement criteria.
 
-| Capability | v1 command(s) | v2 contract target | Calling layer | Security constraints | Performance SLO | Test strategy |
-|---|---|---|---|---|---|---|
-| Case management | `create_case`, `list_cases`, `get_case`, `update_case_metadata`, `delete_case` | `CaseCommandService` | `apps/desktop` workflow modules | explicit authz checks for destructive ops | list < 150ms target | unit + integration + destructive-op tests |
-| Inventory ingest/sync | `count_directory_files`, `scan_directory`, `sync_inventory`, `ingest_files_to_case` | `InventoryIngestionService` | desktop workflow + backend scheduler | path canonicalization and scope validation | 100 files ingest within target baseline budget | load tests + fixture-based parity tests |
-| Notes | `create_note`, `update_note`, `delete_note`, `list_notes`, `toggle_note_pinned` | `NotesService` | notes UI + command adapter | sanitize rich content inputs | CRUD under interactive latency budget | unit + UI + persistence tests |
-| Findings | `create_finding`, `update_finding`, `delete_finding`, `list_findings` | `FindingsService` | findings UI | validate links and references | list/filter under interactive budget | unit + integration |
-| Timeline | `create_timeline_event`, `update_timeline_event`, `delete_timeline_event`, `list_timeline_events` | `TimelineService` | timeline UI | immutable audit metadata where needed | timeline load under budget | unit + integration |
-| Search | `search_files`, `search_notes`, `search_all` | `SearchQueryService` | global search modules | query sanitization + bounded query complexity | query p95 target from baseline | query correctness + perf tests |
-| Duplicates | `find_duplicate_files`, `find_all_duplicate_groups`, `mark_duplicate_primary`, `merge_duplicate_metadata` | `DuplicateResolutionService` | duplicate workflow | guarded merge/primary transitions | duplicate scans within batch budget | integration + mutation safety tests |
-| File ops | `open_file`, `read_file_base64`, `read_file_text`, `write_file_text`, `rename_file`, `remove_file_from_case` | `FileOpsService` | viewer/editor flows | strict path policy + capability minimization | file open/read p95 targets | security tests + integration |
-| Config/preferences | `get_column_config_db`, `save_column_config_db`, `get_mapping_config_db`, `save_mapping_config_db`, `get_workspace_preferences_db`, `save_workspace_preferences_db` | `WorkspaceConfigService` | settings/workspace modules | validate schema payloads | settings read/write interactive | unit + schema validation tests |
-| Time/billing | `start_timer`, `pause_timer`, `resume_timer`, `stop_timer`, `get_time_entries`, `calculate_billing_amount`, `calculate_case_total` | `TimeBillingService` | time UI and reports | idempotent timer transitions | timer actions interactive; summaries bounded | unit + integration + edge-case timer tests |
-| Update/release hooks | updater/process flows | `ReleaseUpdateService` | desktop settings/admin | signature and channel validation | update check latency budget | e2e + staged rollout tests |
+| Capability            | v1 command(s)                                                                                                                                                       | v2 contract target           | Calling layer                        | Security constraints                          | Performance SLO                                | Test strategy                              |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------- | ------------------------------------ | --------------------------------------------- | ---------------------------------------------- | ------------------------------------------ |
+| Case management       | `create_case`, `list_cases`, `get_case`, `update_case_metadata`, `delete_case`                                                                                      | `CaseCommandService`         | `apps/desktop` workflow modules      | explicit authz checks for destructive ops     | list < 150ms target                            | unit + integration + destructive-op tests  |
+| Inventory ingest/sync | `count_directory_files`, `scan_directory`, `sync_inventory`, `ingest_files_to_case`                                                                                 | `InventoryIngestionService`  | desktop workflow + backend scheduler | path canonicalization and scope validation    | 100 files ingest within target baseline budget | load tests + fixture-based parity tests    |
+| Notes                 | `create_note`, `update_note`, `delete_note`, `list_notes`, `toggle_note_pinned`                                                                                     | `NotesService`               | notes UI + command adapter           | sanitize rich content inputs                  | CRUD under interactive latency budget          | unit + UI + persistence tests              |
+| Findings              | `create_finding`, `update_finding`, `delete_finding`, `list_findings`                                                                                               | `FindingsService`            | findings UI                          | validate links and references                 | list/filter under interactive budget           | unit + integration                         |
+| Timeline              | `create_timeline_event`, `update_timeline_event`, `delete_timeline_event`, `list_timeline_events`                                                                   | `TimelineService`            | timeline UI                          | immutable audit metadata where needed         | timeline load under budget                     | unit + integration                         |
+| Search                | `search_files`, `search_notes`, `search_all`                                                                                                                        | `SearchQueryService`         | global search modules                | query sanitization + bounded query complexity | query p95 target from baseline                 | query correctness + perf tests             |
+| Duplicates            | `find_duplicate_files`, `find_all_duplicate_groups`, `mark_duplicate_primary`, `merge_duplicate_metadata`                                                           | `DuplicateResolutionService` | duplicate workflow                   | guarded merge/primary transitions             | duplicate scans within batch budget            | integration + mutation safety tests        |
+| File ops              | `open_file`, `read_file_base64`, `read_file_text`, `write_file_text`, `rename_file`, `remove_file_from_case`                                                        | `FileOpsService`             | viewer/editor flows                  | strict path policy + capability minimization  | file open/read p95 targets                     | security tests + integration               |
+| Config/preferences    | `get_column_config_db`, `save_column_config_db`, `get_mapping_config_db`, `save_mapping_config_db`, `get_workspace_preferences_db`, `save_workspace_preferences_db` | `WorkspaceConfigService`     | settings/workspace modules           | validate schema payloads                      | settings read/write interactive                | unit + schema validation tests             |
+| Time/billing          | `start_timer`, `pause_timer`, `resume_timer`, `stop_timer`, `get_time_entries`, `calculate_billing_amount`, `calculate_case_total`                                  | `TimeBillingService`         | time UI and reports                  | idempotent timer transitions                  | timer actions interactive; summaries bounded   | unit + integration + edge-case timer tests |
+| Update/release hooks  | updater/process flows                                                                                                                                               | `ReleaseUpdateService`       | desktop settings/admin               | signature and channel validation              | update check latency budget                    | e2e + staged rollout tests                 |
 
 ## Command-risk appendix
 

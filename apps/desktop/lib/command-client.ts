@@ -24,12 +24,17 @@ function toErrorResponse(message: string): CommandResponse<never> {
   };
 }
 
-async function safeInvoke<T>(command: string, payload: Record<string, unknown>) {
+async function safeInvoke<T>(
+  command: string,
+  payload: Record<string, unknown>,
+) {
   try {
     const data = await invoke<T>(command, payload);
     return toResponse(data);
   } catch (error) {
-    return toErrorResponse(error instanceof Error ? error.message : String(error));
+    return toErrorResponse(
+      error instanceof Error ? error.message : String(error),
+    );
   }
 }
 

@@ -23,6 +23,7 @@ CaseSpace is licensed under the [Business Source License 1.1](LICENSE) (BUSL-1.1
 Contact: **fletchertyler914@yahoo.com**
 
 Include:
+
 - Your organization name
 - Intended use case
 - Deployment model (desktop, SaaS, OEM, etc.)

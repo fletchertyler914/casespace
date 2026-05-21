@@ -10,6 +10,7 @@ This guide defines when and how to use automated CLI release checks.
 - `pnpm ops:validate:remote`
 - `pnpm ops:validate`
 - `pnpm ops:validate:prod`
+
 ## Solo-ops canonical flow
 
 For one-person operations, use this deterministic command stack:
@@ -36,7 +37,6 @@ The unified release-system contract check ensures local cohesion between:
 - deterministic release asset naming in `release.yml`
 - web `/download` release resolver integration
 - required root automation scripts
-
 
 ## When to use each command
 

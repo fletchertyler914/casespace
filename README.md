@@ -82,7 +82,23 @@ pnpm ops:validate:prod
 
 - Web/marketing: `https://casespace.vercel.app`
 - Download page: `https://casespace.vercel.app/download`
-- Latest stable desktop release: `v0.1.1` (GitHub Releases)
+- Latest stable desktop release: `v0.1.2` (GitHub Releases)
+
+## Branding & icons
+
+Canonical owl source: `apps/web/public/casespace-owl.png` (mirrored to `apps/desktop/public/casespace-owl.png`). All app icons, favicons, and store logos are derived from this single asset by `scripts/generate-brand-icons.mjs`.
+
+Regenerate the full icon set after editing the owl source or changing the brand background color:
+
+```bash
+node scripts/generate-brand-icons.mjs                             # default warm-dark-gray
+node scripts/generate-brand-icons.mjs --color "#14110D"           # explicit hex
+node scripts/generate-brand-icons.mjs --color "oklch(0.18 0.01 85)" --preview  # write scripts/.preview-icon.png only
+```
+
+The script bakes the rounded squircle into every layer (including each `.icns` slice — macOS does not apply a system mask to app icons) and writes Tauri, web, and desktop favicons in one pass.
+
+`scripts/clean-owl-source.mjs` is a one-shot patch already applied to the committed `casespace-owl.png` to remove the small ink-blot artifact from the original v1 artwork (a cluster of transparent + dark pixels around `(610, 567)`). Re-run it only if the canonical source is ever restored from the raw v1 asset.
 
 ## Notes
 

@@ -10,13 +10,13 @@ export default function Page() {
             CaseSpace
           </p>
           <h1 className="text-5xl font-semibold leading-tight max-w-3xl">
-            Investigative case intelligence built for speed, security, and offline
-            execution.
+            Investigative case intelligence built for speed, security, and
+            offline execution.
           </h1>
           <p className="text-neutral-300 max-w-2xl">
-            CaseSpace helps investigators and analysts ingest large evidence sets,
-            manage findings, and produce defensible outputs from a single desktop
-            workflow.
+            CaseSpace helps investigators and analysts ingest large evidence
+            sets, manage findings, and produce defensible outputs from a single
+            desktop workflow.
           </p>
           <div className="flex flex-wrap gap-3">
             <Link
@@ -72,10 +72,12 @@ export default function Page() {
       </section>
 
       <section className="mt-12 rounded-xl border border-neutral-800 p-6 bg-neutral-900/30">
-        <h2 className="text-xl font-semibold">Need enterprise rollout support?</h2>
+        <h2 className="text-xl font-semibold">
+          Need enterprise rollout support?
+        </h2>
         <p className="text-sm text-neutral-300 mt-2">
-          Contact the CaseSpace team for deployment guidance, workflow tailoring,
-          and production hardening.
+          Contact the CaseSpace team for deployment guidance, workflow
+          tailoring, and production hardening.
         </p>
         <Link className="inline-block mt-4 underline" href="/contact">
           Contact sales

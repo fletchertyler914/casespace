@@ -10,15 +10,15 @@ This document tracks implemented scope, validated scope, and remaining gates req
 
 ## Readiness matrix (implemented vs remaining)
 
-| Area | Ready now | Not ready yet |
-|---|---|---|
-| Monorepo foundation | pnpm workspace + Turbo + architecture guard | full phase-gate evidence wiring still ongoing |
-| Desktop backend | Tauri command scaffolding + local tests + path controls | production-grade persistence and full domain parity remain |
-| Desktop UI | Next workflow scaffolding + typed command adapters | complete v1 workflow parity and E2E depth remain |
-| Web surface | Marketing/docs/download routes + release-aware download page | final content and release-proof UX validation remain |
-| Shared packages | `@repo/types` contracts package added | full DTO/versioning expansion remains |
-| Documentation | architecture/migration/readiness/runbooks present | continuous sync required as implementation evolves |
-| Quality system | lint/type/build local validation + CI workflows defined | remote workflow pass evidence not yet completed |
+| Area                | Ready now                                                    | Not ready yet                                              |
+| ------------------- | ------------------------------------------------------------ | ---------------------------------------------------------- |
+| Monorepo foundation | pnpm workspace + Turbo + architecture guard                  | full phase-gate evidence wiring still ongoing              |
+| Desktop backend     | Tauri command scaffolding + local tests + path controls      | production-grade persistence and full domain parity remain |
+| Desktop UI          | Next workflow scaffolding + typed command adapters           | complete v1 workflow parity and E2E depth remain           |
+| Web surface         | Marketing/docs/download routes + release-aware download page | final content and release-proof UX validation remain       |
+| Shared packages     | `@repo/types` contracts package added                        | full DTO/versioning expansion remains                      |
+| Documentation       | architecture/migration/readiness/runbooks present            | continuous sync required as implementation evolves         |
+| Quality system      | lint/type/build local validation + CI workflows defined      | remote workflow pass evidence not yet completed            |
 
 ## Current blockers
 

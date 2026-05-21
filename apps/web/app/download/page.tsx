@@ -1,20 +1,26 @@
 import Image from "next/image";
 import { DownloadChooser } from "./download-chooser";
-import {
-  classifyAsset,
-  fetchLatestStableRelease,
-} from "../../lib/releases";
+import { classifyAsset, fetchLatestStableRelease } from "../../lib/releases";
 
 const DEFAULT_REPO = "fletchertyler914/casespace";
 
 export default async function DownloadPage() {
   const repo = process.env.NEXT_PUBLIC_RELEASE_REPOSITORY ?? DEFAULT_REPO;
-  const release = await fetchLatestStableRelease(repo, process.env.GITHUB_TOKEN);
+  const release = await fetchLatestStableRelease(
+    repo,
+    process.env.GITHUB_TOKEN,
+  );
 
   const assets = release?.assets ?? [];
-  const macAssets = assets.filter((asset) => classifyAsset(asset.name) === "macos");
-  const macArmAssets = macAssets.filter((asset) => /-macos-arm64\./i.test(asset.name));
-  const macIntelAssets = macAssets.filter((asset) => /-macos-x64\./i.test(asset.name));
+  const macAssets = assets.filter(
+    (asset) => classifyAsset(asset.name) === "macos",
+  );
+  const macArmAssets = macAssets.filter((asset) =>
+    /-macos-arm64\./i.test(asset.name),
+  );
+  const macIntelAssets = macAssets.filter((asset) =>
+    /-macos-x64\./i.test(asset.name),
+  );
   const windowsAssets = assets.filter(
     (asset) => classifyAsset(asset.name) === "windows",
   );
@@ -44,7 +50,9 @@ export default async function DownloadPage() {
         <div className="rounded-lg border border-neutral-800 p-6">
           <h2 className="text-lg font-semibold mb-3">macOS</h2>
           {macAssets.length === 0 && (
-            <p className="text-sm text-neutral-400">No macOS assets published yet.</p>
+            <p className="text-sm text-neutral-400">
+              No macOS assets published yet.
+            </p>
           )}
           {macArmAssets.length > 0 && (
             <div className="mb-3">

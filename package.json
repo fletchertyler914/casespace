@@ -18,8 +18,11 @@
     "ops:validate": "pnpm ops:validate:local && pnpm ops:validate:remote"
   },
   "devDependencies": {
+    "@types/culori": "^4.0.1",
+    "culori": "^4.0.2",
     "prettier": "^3.7.4",
     "prettier-plugin-tailwindcss": "^0.7.2",
+    "sharp": "^0.34.5",
     "turbo": "^2.7.4"
   },
   "packageManager": "pnpm@10.19.0",
