@@ -94,11 +94,23 @@ export const SplitView = memo(function SplitView({
     notesVisible,
     findingsVisible,
     timelineVisible,
+    duplicatesVisible,
+    reportsVisible,
+    timeVisible,
   });
 
   return (
-    <PanelGroup direction="horizontal" className="min-h-0 flex-1 overflow-hidden">
-      <Panel defaultSize={panelSizes.fileViewerSize} minSize={35}>
+    <PanelGroup
+      direction="horizontal"
+      className="min-h-0 flex-1 overflow-hidden"
+      id="workspace-split"
+    >
+      <Panel
+        id="file-viewer"
+        order={0}
+        defaultSize={panelSizes.fileViewerSize}
+        minSize={35}
+      >
         <div className="flex h-full min-h-0 flex-col overflow-hidden">
           {viewingFile ? (
             <FileViewerPane
@@ -134,7 +146,13 @@ export const SplitView = memo(function SplitView({
       {notesVisible && (
         <>
           <ResizeHandle />
-          <Panel defaultSize={panelSizes.sidePanelSize} minSize={15} maxSize={40}>
+          <Panel
+            id="notes"
+            order={1}
+            defaultSize={panelSizes.sidePanelSize}
+            minSize={15}
+            maxSize={40}
+          >
             <NotesPanel
               caseId={caseId}
               notes={notes}
@@ -148,7 +166,13 @@ export const SplitView = memo(function SplitView({
       {findingsVisible && (
         <>
           <ResizeHandle />
-          <Panel defaultSize={panelSizes.sidePanelSize} minSize={15} maxSize={40}>
+          <Panel
+            id="findings"
+            order={2}
+            defaultSize={panelSizes.sidePanelSize}
+            minSize={15}
+            maxSize={40}
+          >
             <FindingsPanel
               caseId={caseId}
               findings={findings}
@@ -162,7 +186,13 @@ export const SplitView = memo(function SplitView({
       {timelineVisible && (
         <>
           <ResizeHandle />
-          <Panel defaultSize={panelSizes.sidePanelSize} minSize={15} maxSize={40}>
+          <Panel
+            id="timeline"
+            order={3}
+            defaultSize={panelSizes.sidePanelSize}
+            minSize={15}
+            maxSize={40}
+          >
             <TimelinePanel
               caseId={caseId}
               events={timeline}
@@ -176,7 +206,13 @@ export const SplitView = memo(function SplitView({
       {duplicatesVisible && (
         <>
           <ResizeHandle />
-          <Panel defaultSize={panelSizes.sidePanelSize} minSize={15} maxSize={40}>
+          <Panel
+            id="duplicates"
+            order={4}
+            defaultSize={panelSizes.sidePanelSize}
+            minSize={15}
+            maxSize={40}
+          >
             <DuplicatesPanel
               caseId={caseId}
               groups={duplicateGroups}
@@ -191,7 +227,13 @@ export const SplitView = memo(function SplitView({
       {reportsVisible && (
         <>
           <ResizeHandle />
-          <Panel defaultSize={panelSizes.sidePanelSize} minSize={18} maxSize={45}>
+          <Panel
+            id="reports"
+            order={5}
+            defaultSize={panelSizes.sidePanelSize}
+            minSize={18}
+            maxSize={45}
+          >
             <ReportsPanel caseId={caseId} onClose={onCloseReports} />
           </Panel>
         </>
@@ -200,7 +242,13 @@ export const SplitView = memo(function SplitView({
       {timeVisible && (
         <>
           <ResizeHandle />
-          <Panel defaultSize={panelSizes.sidePanelSize} minSize={18} maxSize={45}>
+          <Panel
+            id="time"
+            order={6}
+            defaultSize={panelSizes.sidePanelSize}
+            minSize={18}
+            maxSize={45}
+          >
             <TimePanel caseId={caseId} onClose={onCloseTime} />
           </Panel>
         </>

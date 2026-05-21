@@ -1,6 +1,6 @@
 # Desktop Workflow Mapping (v1 UI → v2)
 
-**Status:** Backend P0 commands **implemented**. UI port **U1–U6 done/MVP**; U7/U8/U10 started; U9/U11 next. Plan: [ui-port-plan.md](ui-port-plan.md).
+**Status:** Backend P0 commands **implemented**. UI port **U1–U6 done/MVP**; U7/U8/U9/U10 in progress; U11 gate/cleanup active. Plan: [ui-port-plan.md](ui-port-plan.md).
 
 ## v1 → v2 component map
 
@@ -19,11 +19,11 @@
 | `components/workspace/CaseHeader` | `components/workspace/case-header.tsx` | U4 | **done** |
 | `components/workspace/IntegratedFileViewer` | `components/viewer/file-viewer.tsx` + previews | U5 | **done** |
 | `components/viewer/PdfViewerWrapper` | `components/viewer/pdf-file-preview.tsx` | U5 | **done** |
-| `components/board/WorkflowBoard` | `components/workspace/board-view.tsx` | U7 | **MVP** — status swimlanes; dnd next |
-| `components/notes/NotePanel` | `components/artifacts/notes-panel.tsx` | U6 | **MVP** — list/create; Tiptap P1 |
-| `components/findings/FindingsPanel` | `components/artifacts/findings-panel.tsx` | U6 | **MVP** |
-| `components/timeline/TimelineView` | `components/artifacts/timeline-panel.tsx` | U6 | **MVP** |
-| `components/duplicates/*` | `components/artifacts/duplicates-panel.tsx` | U7 | **MVP** — list groups + set primary |
+| `components/board/WorkflowBoard` | `components/workspace/board-view.tsx` | U7 | **MVP** — status swimlanes + drag/drop |
+| `components/notes/NotePanel` | `components/artifacts/notes-panel.tsx` | U6 | **MVP** — CRUD + pin; Tiptap P1 |
+| `components/findings/FindingsPanel` | `components/artifacts/findings-panel.tsx` | U6 | **MVP** — CRUD |
+| `components/timeline/TimelineView` | `components/artifacts/timeline-panel.tsx` | U6 | **MVP** — CRUD |
+| `components/duplicates/*` | `components/artifacts/duplicates-panel.tsx` | U7 | **MVP** — list groups + set primary + metadata merge |
 | `components/search/SearchDialog` | `components/search/search-dialog.tsx` | U10 | **MVP** — cmdk search wired |
 | `components/time/TimerWidget` | `components/billing/timer-widget.tsx` | U8 | **MVP** — start/stop + elapsed |
 | `components/time/TimeManagementPage` | `components/billing/time-panel.tsx` | U8 | **MVP** — entries + billing summary + controls |
@@ -46,7 +46,7 @@ No `invoke()` in components. Expand `lib/command-client.ts` as each surface ship
 |--------------|----------|
 | `app/page.tsx` | Case hub — `CaseListView` |
 | `app/case/page.tsx` + `page-client.tsx` | `CaseWorkspaceShell` — navigator, viewer, panels |
-| `components/case-workspace.tsx` | **Legacy — unused; delete in U11** |
+| `components/case-workspace.tsx` | **Removed** |
 | `lib/command-client.ts` | Typed P0 command wrappers |
 | `lib/file-preview.ts` | Preview kind router (pdf/docx/xlsx/unsupported/…) |
 | `lib/open-file.ts` | External open for unsupported types only |
@@ -58,11 +58,10 @@ No `invoke()` in components. Expand `lib/command-client.ts` as each surface ship
 2. `/case?id=` — Workspace (navigator \| viewer \| notes/findings/timeline) ✅
 3. Modals: create ✅, delete ✅; edit/large-folder — U3 tail
 4. Command palette: global search ✅ (U10 MVP)
-5. Board + duplicates — U7 (duplicates panel MVP; board parity pending)
+5. Board + duplicates — U7 (duplicates panel MVP + board drag/drop shipped; parity polish pending)
 
 ## Drop at UX gate (U11)
 
-- `components/case-workspace.tsx` legacy monolith
 - Enterprise case filters (unless U3 tail)
 - Full v1 kanban parity if simplified board/table suffices
 

@@ -28,6 +28,7 @@ export default function RootLayout({
     <html
       lang="en"
       className={montserrat.variable}
+      data-scroll-behavior="smooth"
       suppressHydrationWarning
     >
       <body

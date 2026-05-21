@@ -13,8 +13,8 @@ Continuation plan after **Core Parity backend gate** passed locally. Backend com
 | UI foundation + case hub (U1–U3) | **implemented** |
 | Workspace + ingest/sync (U4) | **implemented** |
 | Viewers (U5) | **implemented** — in-app PDF/DOCX/XLSX; external only for unsupported types |
-| Artifact panels (U6) | **MVP implemented** — notes/findings/timeline list+create; rich editors deferred |
-| U7 duplicates + board | **in progress** — duplicates panel MVP + status swimlanes shipped; dnd pending |
+| Artifact panels (U6) | **MVP implemented** — notes/findings/timeline CRUD (notes pin included); rich editors deferred |
+| U7 duplicates + board | **in progress** — duplicates panel MVP + metadata merge + board swimlanes with drag/drop shipped; conflict dialogs/polish pending |
 | U8 time | **in progress** — timer widget MVP shipped |
 | U9 reports | **in progress** — reports side panel MVP shipped |
 | U10 search/settings | **in progress** — cmdk search + workspace settings dialog shipped; deeper parity pending |
@@ -101,19 +101,19 @@ App theme drives PDF chrome (no in-viewer theme toggle). Custom toolbar: search,
 
 | Panel | Path | Scope |
 |-------|------|-------|
-| Notes | `components/artifacts/notes-panel.tsx` | List + create via `command-client` |
-| Findings | `components/artifacts/findings-panel.tsx` | List + create |
-| Timeline | `components/artifacts/timeline-panel.tsx` | List + create |
+| Notes | `components/artifacts/notes-panel.tsx` | CRUD + pin/unpin via `command-client` |
+| Findings | `components/artifacts/findings-panel.tsx` | CRUD |
+| Timeline | `components/artifacts/timeline-panel.tsx` | CRUD |
 
-**Deferred:** Tiptap rich note editor, create dialogs (v1 parity), duplicate management UI.
+**Deferred:** Tiptap rich note editor, dedicated create dialogs (v1 parity).
 
 ### Phase U7 — Board + duplicates 🚧
 
 - Duplicates panel implemented in split view (`components/artifacts/duplicates-panel.tsx`)
 - Primary-file selection wired via `mark_duplicate_primary`
 - Metadata merge action wired via `merge_duplicate_metadata` (into selected primary)
-- Board upgraded to status swimlanes in `components/workspace/board-view.tsx`
-- Remaining: board drag/drop workflows and conflict resolution dialogs
+- Board upgraded to status swimlanes with drag/drop in `components/workspace/board-view.tsx`
+- Remaining: conflict-resolution dialogs + board/table parity polish
 
 ### Phase U8 — Time management 🚧
 
@@ -148,18 +148,9 @@ App theme drives PDF chrome (no in-viewer theme toggle). Custom toolbar: search,
 - Search upgraded to cross-entity (`search_all`) with panel-aware actions for non-file hits
 - Remaining: mapping/settings parity, advanced column manager workflows
 
-### Phase U9 — Reports UI
-
-- `ReportView` wired to `export_case_report` / `generate_case_report` (five export types)
-
-### Phase U10 — Search + settings
-
-- `SearchDialog` (cmdk) + FTS-backed result groups
-- `SettingsDialog`, column manager; mapping UI P1
-
 ### Phase U11 — UX gate + cleanup
 
-- Delete legacy `components/case-workspace.tsx` (unused; shell is `case-workspace-shell.tsx`)
+- Legacy `components/case-workspace.tsx` removed (shell is `case-workspace-shell.tsx`)
 - Manual E2E on [spec/user-flow-map.md](spec/user-flow-map.md)
 - `pnpm ops:validate:local`
 - Refresh [desktop-workflow-mapping.md](desktop-workflow-mapping.md), [spec/feature-catalog.md](spec/feature-catalog.md) row statuses
@@ -174,10 +165,10 @@ All must pass before AINative:
 | G2 | Workspace: navigator + viewer + notes/findings/timeline panels | **done** (panels MVP) |
 | G3 | File review status + ingest/sync from header | **done** |
 | G4 | In-app viewers for PDF/Office/spreadsheets + text/image/CSV | **done** |
-| G5 | Global search dialog (cmdk) with FTS | pending U10 |
-| G6 | Timer + time management entry | pending U8 |
-| G7 | Report mode (five export types) | pending U9 |
-| G8 | Duplicate review UI | pending U7 |
+| G5 | Global search dialog (cmdk) with FTS | **in progress** — cross-entity MVP shipped |
+| G6 | Timer + time management entry | **in progress** — header widget + side panel MVP shipped |
+| G7 | Report mode (five export types) | **in progress** — reports panel MVP + exports/preview shipped |
+| G8 | Duplicate review UI | **in progress** — duplicate groups + primary + metadata merge shipped |
 | G9 | Theme/splash/error boundary on all routes | **done** |
 | G10 | No `invoke()` in components; `command-client` only | **done** |
 | G11 | `pnpm dev` smoke on primary flows | validate at U11 |

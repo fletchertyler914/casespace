@@ -97,10 +97,21 @@ export const WorkspaceLayout = memo(function WorkspaceLayout({
   const boardFiles = filterFilesByFolder(files, selectedFolderPath);
 
   return (
-    <PanelGroup direction="horizontal" className="min-h-0 flex-1 overflow-hidden">
+    <PanelGroup
+      direction="horizontal"
+      className="min-h-0 flex-1 overflow-hidden"
+      id="workspace-shell"
+    >
       {navigatorOpen && (
         <>
-          <Panel defaultSize={22} minSize={15} maxSize={40} className="flex min-h-0 flex-col">
+          <Panel
+            id="navigator"
+            order={0}
+            defaultSize={22}
+            minSize={15}
+            maxSize={40}
+            className="flex min-h-0 flex-col"
+          >
             <FileNavigator
               files={files}
               currentFile={viewingFile}
@@ -114,7 +125,11 @@ export const WorkspaceLayout = memo(function WorkspaceLayout({
         </>
       )}
 
-      <Panel className="relative flex min-h-0 flex-col overflow-hidden">
+      <Panel
+        id="workspace-main"
+        order={1}
+        className="relative flex min-h-0 flex-col overflow-hidden"
+      >
         {viewMode === "split" ? (
           <SplitView
             viewingFile={viewingFile}

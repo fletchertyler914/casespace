@@ -45,21 +45,21 @@ Active workstream. Backend commands exist; v1-shaped UI is ported to `apps/deskt
 - [x] **U3** Case hub — `CaseListView`, cards, create/delete dialogs, `/` route
 - [x] **U4** Workspace shell — layout, header, navigator, split/board, ingest/sync UI
 - [x] **U5** Viewers — PDF/DOCX/XLSX in-app; image/text/markdown/CSV; external for unsupported only
-- [x] **U6** Artifact panels MVP — notes, findings, timeline (list + create)
+- [x] **U6** Artifact panels MVP — notes/findings/timeline CRUD (notes pin included)
 - [x] DevX — `pnpm dev` = full Tauri; Next 16.2.6 catalog pin
 
 ### Next
 
 - [ ] **U3 tail** — Edit case, large-folder warning, filters (optional)
-- [ ] **U7** Board / review + duplicate groups UI (**in progress**: duplicates panel MVP + set primary + merge metadata + swimlanes)
+- [ ] **U7** Board / review + duplicate groups UI (**in progress**: duplicates panel MVP + set primary + merge metadata + swimlanes + drag/drop)
 - [ ] **U8** Time management UI (**in progress**: timer widget + time panel MVP)
 - [ ] **U9** Reports UI (**in progress**: reports panel MVP + export actions)
 - [ ] **U10** Search palette (cmdk) + settings (**in progress**: cmdk + workspace settings dialog wired)
-- [ ] **U11** UX gate validation + remove legacy `components/case-workspace.tsx`
+- [ ] **U11** UX gate validation + final cleanup sweep
 
 Detail: [ui-port-plan.md](ui-port-plan.md).
 
-**Routing:** `/case?id=` → `case-workspace-shell.tsx`. Legacy `components/case-workspace.tsx` is unused (delete in U11).
+**Routing:** `/case?id=` → `case-workspace-shell.tsx`. Legacy `components/case-workspace.tsx` has been removed.
 
 ## Phase 3: AINative (blocked)
 
