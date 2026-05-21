@@ -67,7 +67,7 @@ jobs:
         run: pnpm --filter desktop build
 
       - name: Build Tauri bundles
-        run: pnpm --filter desktop-backend tauri build -- --target ${{ matrix.target }}
+        run: pnpm --filter desktop-backend exec tauri build --target ${{ matrix.target }}
 
       - name: Package deterministic release asset
         id: package
