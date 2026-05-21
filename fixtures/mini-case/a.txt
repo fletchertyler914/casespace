@@ -1,0 +1,1 @@
+Sample evidence document A for CaseSpace parity tests.

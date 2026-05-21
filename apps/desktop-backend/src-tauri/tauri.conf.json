@@ -4,7 +4,7 @@
   "version": "0.1.2",
   "identifier": "com.casespace.desktop",
   "build": {
-    "beforeDevCommand": "pnpm --filter desktop dev",
+    "beforeDevCommand": "pnpm --filter desktop dev:next",
     "devUrl": "http://localhost:3000",
     "beforeBuildCommand": "pnpm --filter desktop build",
     "frontendDist": "../../desktop/out"

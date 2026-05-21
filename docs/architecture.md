@@ -40,7 +40,7 @@ flowchart LR
 | `desktop-backend` | Single `lib.rs`, ~20 commands, JSON file store |
 | `desktop` | `case-workspace.tsx` demo + partial `command-client.ts` |
 | `web` | Marketing, download, static pages |
-| Persistence | `casespace-v2-store.json` (scaffold only) |
+| Persistence | `casespace.db` (SQLite + WAL + FTS5); legacy JSON auto-imported once |
 | Search | In-memory substring (not production) |
 
 ## Target implementation (CoreParity)

@@ -27,7 +27,8 @@ export interface CommandResponse<TData = undefined> {
 export interface CaseSummary {
   id: string;
   name: string;
-  status: "active" | "archived";
+  status: string;
+  sourcePaths?: string[];
   createdAt: string;
   updatedAt: string;
 }
@@ -37,25 +38,21 @@ export interface CreateCasePayload {
   sourcePaths: string[];
 }
 
-export interface InventoryItem {
+export interface CaseFile {
   id: string;
   caseId: string;
   fileName: string;
   filePath: string;
-  hash?: string;
+  folderPath?: string;
+  fileHash?: string;
   sizeBytes: number;
   modifiedAt: string;
+  status: string;
 }
 
-export interface SearchRequest {
-  caseId: string;
-  query: string;
-  limit?: number;
-}
-
-export interface SearchResult {
+export interface SearchHit {
   id: string;
-  type: "file" | "note" | "finding" | "timeline";
+  entityType: string;
   title: string;
   snippet: string;
 }
@@ -64,7 +61,27 @@ export interface Note {
   id: string;
   caseId: string;
   content: string;
+  pinned?: boolean;
   createdAt: string;
+  updatedAt?: string;
+}
+
+export interface Finding {
+  id: string;
+  caseId: string;
+  title: string;
+  description: string;
+  severity?: string;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface TimelineEvent {
+  id: string;
+  caseId: string;
+  description: string;
+  occurredAt: string;
+  createdAt?: string;
 }
 
 export interface TimeEntry {
@@ -73,6 +90,25 @@ export interface TimeEntry {
   startedAt: string;
   endedAt?: string;
   billableMinutes: number;
+}
+
+export interface BillingSummary {
+  caseId: string;
+  totalMinutes: number;
+  amount: number;
+  billingType: string;
+}
+
+export interface ReportExport {
+  reportType: string;
+  filePath: string;
+  generatedAt: string;
+}
+
+export interface SearchRequest {
+  caseId: string;
+  query: string;
+  limit?: number;
 }
 
 export interface OcrPreview {

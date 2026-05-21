@@ -17,11 +17,19 @@ Current state: implemented Tauri-native command baseline with local validation; 
 
 ## Local development
 
-Run Tauri command:
+**Recommended:** from the repo root:
+
+```bash
+pnpm dev
+```
+
+Equivalent:
 
 ```bash
 pnpm --filter desktop-backend dev
 ```
+
+`tauri dev` runs this package and, via `beforeDevCommand` in `tauri.conf.json`, starts `pnpm --filter desktop dev:next` for the Next.js UI at `http://localhost:3000`.
 
 This package does not own a separate desktop UI. It wraps the Next frontend from `apps/desktop` via Tauri (`devUrl` / `frontendDist` in `tauri.conf.json`).
 

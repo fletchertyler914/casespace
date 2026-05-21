@@ -1,0 +1,18 @@
+{
+  "fixtureVersion": 1,
+  "totalFiles": 50,
+  "extensionCounts": {
+    "txt": 20,
+    "md": 5,
+    "json": 5,
+    "csv": 5,
+    "log": 5,
+    "png": 5,
+    "bin": 5
+  },
+  "requiredTokens": [
+    "ALPHA_TOKEN",
+    "BILLING_TOKEN",
+    "TIMELINE_TOKEN"
+  ]
+}

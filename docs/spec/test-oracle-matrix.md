@@ -11,7 +11,7 @@ Maps P0 flows to acceptance criteria and test suites. All tests trace to require
 
 | Flow | AC ID | Criterion | Suite |
 |------|-------|-----------|-------|
-| FLOW-001 | AC-INGEST-01 | 10k files ingest completes without crash; progress cancellable | perf, integration |
+| FLOW-001 | AC-INGEST-01 | 10k files ingest completes without crash; progress cancellable | perf, integration (`test:hardening`) |
 | FLOW-001 | AC-INGEST-02 | File count in DB matches filesystem scan (minus system skips) | integration |
 | FLOW-001 | AC-INGEST-03 | Re-open case loads inventory in < 2s for 10k files (target hardware TBD) | perf |
 | FLOW-002 | AC-REVIEW-01 | Status change persists and filters correctly | integration, e2e |
@@ -23,7 +23,7 @@ Maps P0 flows to acceptance criteria and test suites. All tests trace to require
 | FLOW-006 | AC-TIME-01 | Timer start/stop creates valid entry | integration |
 | FLOW-006 | AC-TIME-02 | Case switch stops active timer | integration, e2e |
 | FLOW-006 | AC-TIME-03 | Billing export matches time entries | integration |
-| REQ-SEC-001 | AC-SEC-01 | `../` and out-of-root paths rejected | unit, security |
+| REQ-SEC-001 | AC-SEC-01 | `../` and out-of-root paths rejected | unit, security (`test:hardening`) |
 | REQ-SEC-001 | AC-SEC-02 | delete_case requires confirmation in UI | e2e |
 
 ## AI-phase oracles (deferred)
@@ -41,10 +41,10 @@ Maps P0 flows to acceptance criteria and test suites. All tests trace to require
 
 | Fixture | Purpose |
 |---------|---------|
-| `fixtures/mini-case/` | 50 files, mixed types, 5 notes |
-| `fixtures/large-case/` | 10k files perf ingest |
-| `fixtures/v1-mini.db` | Import parity golden test (P1) |
-| `fixtures/malformed-store.json` | Fail-closed load test |
+| `fixtures/golden/v1-mini.expected.json` | Golden manifest for deterministic seed corpus |
+| runtime-generated seed corpus | 50 files mixed types + token checks (`test:hardening`) |
+| runtime-generated large corpus | 10k files perf ingest (`test:hardening`) |
+| `fixtures/malformed-store.json` | Fail-closed load test (`test:hardening`) |
 
 ## CI gates (target)
 

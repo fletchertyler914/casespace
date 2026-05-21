@@ -1,0 +1,9 @@
+{
+  "cases": {
+    "c1": {
+      "id": "c1",
+      "name": "broken"
+    }
+  },
+  "notes": [ this is not valid json ]
+}

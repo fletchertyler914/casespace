@@ -30,15 +30,15 @@ Core parity is complete only when **all** are true:
 
 | # | Criterion | Status |
 |---|-----------|--------|
-| C1 | P0 non-AI workflows pass E2E | not started |
-| C2 | Backend P0 commands implemented per [command-parity-ledger.md](command-parity-ledger.md) | not started |
-| C3 | SQLite persistence replaces JSON store | not started |
-| C4 | FTS search live | not started |
-| C5 | Five report exports + billing package | not started |
-| C6 | No critical/high defects in P0 paths | not started |
-| C7 | Evidence recorded in [readiness.md](readiness.md) | not started |
+| C1 | P0 non-AI workflows pass E2E | **complete** (`pnpm test:parity` + `pnpm test:hardening`) |
+| C2 | Backend P0 commands implemented per [command-parity-ledger.md](command-parity-ledger.md) | **complete** |
+| C3 | SQLite persistence replaces JSON store | **complete** |
+| C4 | FTS search live | **complete** |
+| C5 | Five report exports + billing package | **complete** |
+| C6 | No critical/high defects in P0 paths | **complete** (parity suite) |
+| C7 | Evidence recorded in [readiness.md](readiness.md) | **complete** |
 
-**AI-Native Enablement cannot start until C1–C7 pass.**
+**Core Parity Build Gate status: PASS (C1–C7 complete locally). AI-Native implementation may begin.**
 
 ## Implementation kickoff order
 
@@ -55,6 +55,6 @@ Core parity is complete only when **all** are true:
 | Decision | Recommendation |
 |----------|----------------|
 | Start CoreParity port? | **GO** — planning gate satisfied |
-| Start AINative? | **NO** — blocked until Core Parity gate |
+| Start AINative? | **GO** — Core Parity gate passed locally |
 
-Last updated: planning phase completion.
+Last updated: Core Parity gate completion (local validation).

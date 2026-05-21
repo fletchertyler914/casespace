@@ -1,13 +1,18 @@
-import "@repo/ui/styles.css";
 import "./globals.css";
 import type { Metadata } from "next";
-import { Geist } from "next/font/google";
+import { Montserrat } from "next/font/google";
+import { AppProviders } from "@/components/providers/app-providers";
 
-const geist = Geist({ subsets: ["latin"] });
+const montserrat = Montserrat({
+  subsets: ["latin"],
+  variable: "--font-montserrat",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: "CaseSpace Desktop",
-  description: "CaseSpace desktop investigation workspace",
+  description:
+    "CaseSpace \u2014 case-first investigation workspace with native ingest, review, artifacts, search, billing, and reporting.",
   icons: {
     icon: "/favicon.ico",
     apple: "/apple-touch-icon.png",
@@ -20,8 +25,17 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
-      <body className={geist.className}>{children}</body>
+    <html
+      lang="en"
+      className={montserrat.variable}
+      suppressHydrationWarning
+    >
+      <body
+        className="min-h-screen bg-background text-foreground antialiased"
+        style={{ fontFamily: "var(--font-montserrat), sans-serif" }}
+      >
+        <AppProviders>{children}</AppProviders>
+      </body>
     </html>
   );
 }

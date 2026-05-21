@@ -56,10 +56,20 @@ corepack enable
 pnpm install
 ```
 
-Run workspace dev tasks:
+Run the full desktop app (Tauri shell + Next.js UI + Rust backend):
 
 ```bash
 pnpm dev
+```
+
+This starts `desktop-backend` (`tauri dev`), which automatically runs the `desktop` Next dev server on port 3000.
+
+Optional dev entrypoints:
+
+```bash
+pnpm dev:ui    # Next.js UI only in the browser (no Tauri; native commands unavailable)
+pnpm dev:web   # marketing site on port 3001
+pnpm dev:all   # web + full desktop (Tauri) + @repo/ui watchers (no duplicate Next on :3000)
 ```
 
 Run lint and type checks:

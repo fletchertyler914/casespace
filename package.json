@@ -4,7 +4,11 @@
   "license": "BUSL-1.1",
   "scripts": {
     "build": "turbo run build --filter=!desktop-backend && pnpm --filter desktop-backend build",
-    "dev": "turbo run dev",
+    "dev": "pnpm --filter desktop-backend dev",
+    "dev:desktop": "pnpm --filter desktop-backend dev",
+    "dev:ui": "pnpm --filter desktop dev:next",
+    "dev:web": "pnpm --filter web dev",
+    "dev:all": "turbo run dev --filter=web --filter=desktop-backend --filter=@repo/ui",
     "lint": "turbo run lint --filter=!desktop-backend",
     "check-types": "turbo run check-types --filter=!desktop-backend",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
@@ -12,10 +16,12 @@
     "release:verify-links": "node ./scripts/verify-release-links.mjs",
     "release:status": "node ./scripts/release-automation.mjs status",
     "release:validate": "node ./scripts/release-automation.mjs validate",
-    "ops:validate:local": "pnpm arch:check && pnpm lint && pnpm check-types && pnpm build && node ./scripts/validate-unified-release-system.mjs",
+    "ops:validate:local": "pnpm arch:check && pnpm lint && pnpm check-types && pnpm test:parity && pnpm test:hardening && pnpm build && node ./scripts/validate-unified-release-system.mjs",
     "ops:validate:remote": "pnpm release:status",
     "ops:validate:prod": "pnpm release:validate",
-    "ops:validate": "pnpm ops:validate:local && pnpm ops:validate:remote"
+    "ops:validate": "pnpm ops:validate:local && pnpm ops:validate:remote",
+    "test:parity": "cargo test --manifest-path apps/desktop-backend/src-tauri/Cargo.toml",
+    "test:hardening": "cargo test --manifest-path apps/desktop-backend/src-tauri/Cargo.toml --test hardening_pass"
   },
   "devDependencies": {
     "@types/culori": "^4.0.1",

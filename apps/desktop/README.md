@@ -12,15 +12,20 @@ Current state: scaffold-level shell; migration-rebuild in progress.
 
 ## Local development
 
-Run only desktop app:
+**Recommended (full desktop app):** from the repo root:
 
 ```bash
-pnpm --filter desktop dev
+pnpm dev
 ```
 
-Default dev URL:
+That runs Tauri via `desktop-backend`, which starts this app's Next dev server automatically.
 
-- `http://localhost:3000`
+**UI-only** (browser at `http://localhost:3000`, no native Tauri APIs — useful for layout work only):
+
+```bash
+pnpm dev:ui
+# or: pnpm --filter desktop dev:next
+```
 
 ## Quality checks
 
