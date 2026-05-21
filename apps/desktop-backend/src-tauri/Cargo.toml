@@ -1,6 +1,6 @@
 [package]
 name = "desktop-backend"
-version = "0.1.3"
+version = "0.1.4"
 description = "CaseSpace native desktop backend"
 authors = ["Tyler Fletcher <fletchertyler914@yahoo.com>"]
 license = "BUSL-1.1"
