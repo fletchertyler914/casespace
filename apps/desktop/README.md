@@ -2,7 +2,7 @@
 
 This app is the Next.js desktop UX shell for CaseSpace v2.
 
-Current state: **UX port in progress** — foundation + case hub (U1–U3) shipped; workspace/viewer (U4+) next. `/case` still uses legacy `case-workspace.tsx`. Plan: [docs/ui-port-plan.md](../../docs/ui-port-plan.md).
+Current state: **UX port in progress** — case hub (U1–U3) + workspace shell (U4) shipped. `/case?id=` uses `components/workspace/*`. Viewers/panels polish in U5–U6. Plan: [docs/ui-port-plan.md](../../docs/ui-port-plan.md).
 
 ## Role in v2 architecture
 

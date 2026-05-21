@@ -1,4 +1,5 @@
 pub mod database;
+pub mod ingest;
 pub mod path;
 mod search;
 
@@ -145,6 +146,24 @@ where
     f(&db)
 }
 
+fn with_conn_mut<F, T>(state: &State<AppState>, f: F) -> Result<T, String>
+where
+    F: FnOnce(&mut rusqlite::Connection) -> Result<T, String>,
+{
+    let mut db = state.db.conn.lock().map_err(|_| "db lock poisoned")?;
+    f(&mut db)
+}
+
+fn list_sources_for_case(conn: &rusqlite::Connection, case_id: &str) -> Result<Vec<String>, String> {
+    let mut stmt = conn
+        .prepare("SELECT source_path FROM case_sources WHERE case_id = ?1 ORDER BY added_at")
+        .map_err(|e| e.to_string())?;
+    let rows = stmt
+        .query_map(params![case_id], |row| row.get(0))
+        .map_err(|e| e.to_string())?;
+    Ok(rows.filter_map(Result::ok).collect())
+}
+
 fn case_exists(conn: &rusqlite::Connection, case_id: &str) -> Result<bool, String> {
     let count: i64 = conn
         .query_row(
@@ -160,6 +179,26 @@ fn hash_file(path: &Path) -> Option<String> {
     let data = fs::read(path).ok()?;
     let digest = Sha256::digest(data);
     Some(format!("{:x}", digest))
+}
+
+/// Parent directory of `file`, relative to the ingested case `root` (empty → None).
+fn relative_folder_path(file: &Path, root: &Path) -> Option<String> {
+    let parent = file.parent()?;
+    let rel = parent.strip_prefix(root).ok()?;
+    if rel.as_os_str().is_empty() {
+        return None;
+    }
+    Some(rel.to_string_lossy().replace('\\', "/"))
+}
+
+fn folder_path_for_file_under_roots(file: &Path, roots: &[String]) -> Option<String> {
+    for root_str in roots {
+        let root = Path::new(root_str);
+        if let Some(rel) = relative_folder_path(file, root) {
+            return Some(rel);
+        }
+    }
+    file.parent().map(|p| p.to_string_lossy().replace('\\', "/"))
 }
 
 fn scan_files_under(
@@ -186,10 +225,7 @@ fn scan_files_under(
         }
         let abs = entry.path().to_string_lossy().to_string();
         let file_name = entry.file_name().to_string_lossy().to_string();
-        let folder = entry
-            .path()
-            .parent()
-            .map(|p| p.to_string_lossy().to_string());
+        let folder = relative_folder_path(entry.path(), root);
         let modified = metadata
             .modified()
             .ok()
@@ -248,15 +284,22 @@ fn create_case(
             params![id, now],
         )
         .map_err(|e| e.to_string())?;
-        Ok(CaseSummary {
+        let summary = CaseSummary {
             id: id.clone(),
             name: name.trim().to_string(),
             status: "active".to_string(),
-            source_paths,
+            source_paths: source_paths.clone(),
             created_at: now.clone(),
             updated_at: now,
-        })
-    })
+        };
+        Ok(summary)
+    })?;
+    if !source_paths.is_empty() {
+        with_conn_mut(&state, |conn| {
+            ingest::ingest_all_sources(conn, &id, &source_paths, false, 50_000)
+        })?;
+    }
+    get_case(id, state)
 }
 
 #[tauri::command]
@@ -409,6 +452,10 @@ fn add_case_source(
         )
         .map_err(|e| e.to_string())?;
         Ok(())
+    })?;
+    with_conn_mut(&state, |conn| {
+        ingest::ingest_source(conn, &case_id, source_path.trim(), false, 50_000)?;
+        Ok(())
     })
 }
 
@@ -434,58 +481,26 @@ fn count_directory_files(path: String) -> Result<u64, String> {
 #[tauri::command]
 fn ingest_files_to_case(
     case_id: String,
+    source_path: Option<String>,
+    incremental: Option<bool>,
     max_files: Option<u32>,
     state: State<AppState>,
-) -> Result<u64, String> {
+) -> Result<ingest::IngestResult, String> {
     let limit = max_files.unwrap_or(50_000) as usize;
-    let roots = state.db.list_case_roots(Some(&case_id))?;
-    if roots.is_empty() {
-        return Err("no source paths configured for case".into());
-    }
-    let mut ingested = 0u64;
-    with_conn(&state, |conn| {
+    let incremental = incremental.unwrap_or(true);
+    with_conn_mut(&state, |conn| {
         if !case_exists(conn, &case_id)? {
             return Err("case not found".into());
         }
-        for root in roots {
-            let root_path = Path::new(&root);
-            if !root_path.exists() {
-                continue;
-            }
-            for (id, cid, file_name, abs, folder, size, hash, modified) in
-                scan_files_under(root_path, &case_id, limit)
-            {
-                let hash_opt = if hash.is_empty() { None } else { Some(hash) };
-                conn.execute(
-                    "INSERT INTO files (id, case_id, file_name, folder_path, absolute_path, file_hash, file_size, modified_at, status, deleted_at)
-                     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, 'unreviewed', NULL)
-                     ON CONFLICT(case_id, absolute_path) DO UPDATE SET
-                       file_name = excluded.file_name,
-                       file_size = excluded.file_size,
-                       modified_at = excluded.modified_at,
-                       file_hash = excluded.file_hash,
-                       deleted_at = NULL",
-                    params![
-                        id,
-                        cid,
-                        file_name,
-                        folder,
-                        abs,
-                        hash_opt,
-                        size as i64,
-                        modified
-                    ],
-                )
-                .map_err(|e| e.to_string())?;
-                ingested += 1;
-            }
+        let sources: Vec<String> = if let Some(path) = source_path.filter(|p| !p.trim().is_empty()) {
+            vec![path]
+        } else {
+            list_sources_for_case(conn, &case_id)?
+        };
+        if sources.is_empty() {
+            return Err("no source paths configured for case".into());
         }
-        conn.execute(
-            "UPDATE cases SET updated_at = ?1 WHERE id = ?2",
-            params![now_iso(), case_id],
-        )
-        .map_err(|e| e.to_string())?;
-        Ok(ingested)
+        ingest::ingest_all_sources(conn, &case_id, &sources, incremental, limit)
     })
 }
 
@@ -571,10 +586,11 @@ fn load_case_files_with_inventory(
 #[tauri::command]
 fn sync_case_all_sources(
     case_id: String,
+    incremental: Option<bool>,
     max_files: Option<u32>,
     state: State<AppState>,
-) -> Result<u64, String> {
-    ingest_files_to_case(case_id, max_files, state)
+) -> Result<ingest::IngestResult, String> {
+    ingest_files_to_case(case_id, None, incremental, max_files, state)
 }
 
 #[tauri::command]
@@ -593,7 +609,7 @@ fn refresh_single_file(
         .file_name()
         .map(|v| v.to_string_lossy().to_string())
         .ok_or("file name unavailable")?;
-    let folder = safe.parent().map(|v| v.to_string_lossy().to_string());
+    let folder = folder_path_for_file_under_roots(&safe, &roots);
     let modified = metadata
         .modified()
         .ok()
@@ -1898,6 +1914,22 @@ pub fn run() {
 mod parity_unit {
     use super::*;
     use crate::database::Database;
+    use std::path::Path;
+
+    #[test]
+    fn relative_folder_path_strips_case_root() {
+        let root = Path::new("/cases/divorce-case-2024");
+        let file = Path::new(
+            "/cases/divorce-case-2024/01-legal-documents/court-orders/notice.pdf",
+        );
+        assert_eq!(
+            relative_folder_path(file, root).as_deref(),
+            Some("01-legal-documents/court-orders")
+        );
+        let at_root = Path::new("/cases/divorce-case-2024/readme.txt");
+        assert_eq!(relative_folder_path(at_root, root), None);
+    }
+
     #[test]
     fn json_migration_imports_legacy_store() {
         let dir = std::env::temp_dir().join(format!("casespace-json-{}", Uuid::new_v4()));

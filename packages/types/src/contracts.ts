@@ -38,6 +38,26 @@ export interface CreateCasePayload {
   sourcePaths: string[];
 }
 
+/** Result of ingest / sync across one or more case sources. */
+export interface IngestResult {
+  filesInserted: number;
+  filesUpdated: number;
+  filesSkipped: number;
+  filesDeleted?: number;
+  filesProtected?: number;
+  errors?: string[] | null;
+}
+
+export interface WorkspacePreferences {
+  viewMode?: "split" | "board";
+  navigatorOpen?: boolean;
+  notesVisible?: boolean;
+  findingsVisible?: boolean;
+  timelineVisible?: boolean;
+  autoSyncEnabled?: boolean;
+  autoSyncIntervalMinutes?: number;
+}
+
 export interface CaseFile {
   id: string;
   caseId: string;

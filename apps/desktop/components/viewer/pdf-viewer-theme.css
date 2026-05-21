@@ -1,0 +1,158 @@
+/**
+ * CaseSpace-native PDF viewer — maps react-pdf-viewer vars to app design tokens.
+ * App theme (html.light / html.dark) drives reader chrome; PDF pages stay paper-white.
+ */
+
+.pdf-preview-root {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  color: var(--foreground);
+
+  --rpv-default-layout__body-background-color: var(--background);
+  --rpv-default-layout__container-border-color: transparent;
+  --rpv-default-layout__toolbar-background-color: var(--card);
+  --rpv-default-layout__toolbar-border-bottom-color: color-mix(
+    in srgb,
+    var(--border) 40%,
+    transparent
+  );
+  --rpv-default-layout__sidebar-border-color: color-mix(
+    in srgb,
+    var(--border) 40%,
+    transparent
+  );
+  --rpv-default-layout__sidebar--opened-background-color: var(--card);
+  --rpv-default-layout__sidebar-headers-background-color: var(--card);
+  --rpv-default-layout__sidebar-content--opened-background-color: var(--background);
+  --rpv-default-layout__sidebar-content--opened-border-color: color-mix(
+    in srgb,
+    var(--border) 40%,
+    transparent
+  );
+  --rpv-default-layout__sidebar-content--opened-color: var(--foreground);
+
+  --rpv-core__inner-page-background-color: oklch(0.99 0.002 85);
+  --rpv-core__full-screen-target-background-color: var(--background);
+  --rpv-core__doc-loading-background-color: var(--background);
+  --rpv-core__doc-error-background-color: var(--background);
+  --rpv-core__page-layer-box-shadow: var(--shadow-md);
+
+  --rpv-core__primary-button-background-color: var(--primary);
+  --rpv-core__primary-button-color: var(--primary-foreground);
+  --rpv-core__progress-bar-progress-background-color: var(--primary);
+  --rpv-core__minimal-button-color: var(--foreground);
+  --rpv-core__minimal-button--hover-background-color: var(--accent);
+  --rpv-core__minimal-button--selected-background-color: color-mix(
+    in srgb,
+    var(--primary) 22%,
+    var(--accent)
+  );
+  --rpv-core__minimal-button--disabled-color: var(--muted-foreground);
+  --rpv-core__textbox-background-color: var(--background);
+  --rpv-core__textbox-border-color: color-mix(in srgb, var(--border) 50%, transparent);
+  --rpv-core__textbox-color: var(--foreground);
+  --rpv-core__menu-item-color: var(--popover-foreground);
+  --rpv-core__menu-item--hover-background-color: var(--accent);
+  --rpv-core__popover-body-background-color: var(--popover);
+  --rpv-core__popover-body-color: var(--popover-foreground);
+  --rpv-thumbnail__item--selected-background-color: color-mix(
+    in srgb,
+    var(--primary) 28%,
+    var(--accent)
+  );
+  --rpv-bookmark__item-color: var(--foreground);
+  --rpv-bookmark__item--hover-background-color: var(--accent);
+  --rpv-attachment__item-color: var(--foreground);
+  --rpv-attachment__item--hover-background-color: var(--accent);
+  --rpv-toolbar__label--color: var(--foreground);
+}
+
+/* Library dark class — keep in sync when Viewer theme="dark" */
+.pdf-preview-root .rpv-core__viewer--dark {
+  --rpv-default-layout__body-background-color: var(--background);
+  --rpv-default-layout__toolbar-background-color: var(--card);
+  --rpv-default-layout__sidebar-headers-background-color: var(--card);
+  --rpv-default-layout__sidebar-content--opened-background-color: var(--background);
+  --rpv-core__minimal-button--selected-background-color: color-mix(
+    in srgb,
+    var(--primary) 35%,
+    var(--accent)
+  );
+}
+
+.pdf-preview-root .rpv-core__viewer {
+  flex: 1;
+  height: 100% !important;
+  min-height: 0 !important;
+  font-family: var(--font-sans) !important;
+}
+
+.pdf-preview-root .rpv-default-layout__container {
+  height: 100% !important;
+  border: none !important;
+}
+
+.pdf-preview-root .rpv-default-layout__body {
+  flex: 1;
+  min-height: 0 !important;
+  background-color: var(--background) !important;
+}
+
+.pdf-preview-root .rpv-default-layout__toolbar,
+.pdf-preview-root .rpv-default-layout__sidebar-headers {
+  background-color: var(--card) !important;
+}
+
+.pdf-preview-root .rpv-default-layout__sidebar-content--opened {
+  background-color: var(--background) !important;
+  color: var(--foreground) !important;
+}
+
+.pdf-preview-root .rpv-core__inner-pages {
+  background-color: var(--background) !important;
+}
+
+.pdf-preview-root .rpv-core__minimal-button {
+  color: var(--muted-foreground) !important;
+  border-radius: var(--radius) !important;
+}
+
+.pdf-preview-root .rpv-core__minimal-button:hover {
+  background-color: var(--accent) !important;
+  color: var(--accent-foreground) !important;
+}
+
+.pdf-preview-root .rpv-core__minimal-button--selected {
+  background-color: color-mix(in srgb, var(--primary) 28%, var(--accent)) !important;
+  color: var(--primary) !important;
+}
+
+/* Safety: hide actions we removed from custom toolbar */
+.pdf-preview-root [data-testid="open__button"],
+.pdf-preview-root [data-testid="full-screen__button"],
+.pdf-preview-root [data-testid="theme__button"],
+.pdf-preview-root [data-testid="switch-theme__button"],
+.pdf-preview-root button[aria-label*="Switch to dark"],
+.pdf-preview-root button[aria-label*="Switch to light"],
+.pdf-preview-root button[aria-label*="Open file"],
+.pdf-preview-root button[aria-label*="Full screen"] {
+  display: none !important;
+}
+
+.pdf-preview-root .rpv-core__viewer ::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.pdf-preview-root .rpv-core__viewer ::-webkit-scrollbar-track {
+  background: var(--muted);
+}
+
+.pdf-preview-root .rpv-core__viewer ::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 4px;
+}

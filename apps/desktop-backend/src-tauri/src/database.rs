@@ -3,7 +3,12 @@ use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 
-const SCHEMA_VERSION: i32 = 1;
+const SCHEMA_VERSION: i32 = 2;
+
+const MIGRATION_V2: &str = r#"
+ALTER TABLE files ADD COLUMN source_path TEXT;
+CREATE INDEX IF NOT EXISTS idx_files_source_path ON files(case_id, source_path);
+"#;
 
 const MIGRATION_V1: &str = r#"
 CREATE TABLE IF NOT EXISTS _migrations (
@@ -243,21 +248,33 @@ impl Database {
         let conn = self.conn.lock().map_err(|_| "db lock poisoned")?;
         conn.execute_batch(MIGRATION_V1)
             .map_err(|e| format!("migration failed: {e}"))?;
+        for version in 1..=SCHEMA_VERSION {
+            self.apply_migration(&conn, version)?;
+        }
+        Ok(())
+    }
+
+    fn apply_migration(&self, conn: &Connection, version: i32) -> Result<(), String> {
         let count: i64 = conn
             .query_row(
                 "SELECT COUNT(*) FROM _migrations WHERE version = ?1",
-                params![SCHEMA_VERSION],
+                params![version],
                 |row| row.get(0),
             )
             .unwrap_or(0);
-        if count == 0 {
-            let now = chrono::Utc::now().to_rfc3339();
-            conn.execute(
-                "INSERT INTO _migrations (version, applied_at) VALUES (?1, ?2)",
-                params![SCHEMA_VERSION, now],
-            )
-            .map_err(|e| format!("record migration failed: {e}"))?;
+        if count > 0 {
+            return Ok(());
         }
+        if version == 2 {
+            conn.execute_batch(MIGRATION_V2)
+                .map_err(|e| format!("migration v2 failed: {e}"))?;
+        }
+        let now = chrono::Utc::now().to_rfc3339();
+        conn.execute(
+            "INSERT INTO _migrations (version, applied_at) VALUES (?1, ?2)",
+            params![version, now],
+        )
+        .map_err(|e| format!("record migration failed: {e}"))?;
         Ok(())
     }
 

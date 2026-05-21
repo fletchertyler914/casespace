@@ -54,23 +54,29 @@ Button, card, input, textarea, label, dialog, alert-dialog, dropdown, context-me
 
 ## Active / next phases
 
-### Phase U4 — Workspace shell (next)
+### Phase U4 — Workspace shell ✅
 
-Replace monolithic `components/case-workspace.tsx` with v1-shaped layout:
+`case-workspace-shell.tsx`, resizable layout, navigator, split/board, ingest/sync (see ingest section below).
 
-| Component | v2 target |
-|-----------|-----------|
-| `CaseHeader` | `components/workspace/case-header.tsx` |
-| `WorkspaceLayout` | `components/workspace/workspace-layout.tsx` (`react-resizable-panels`) |
-| `FileNavigator` | `components/workspace/file-navigator.tsx` (virtualized tree) |
-| `SplitView` | `components/workspace/split-view.tsx` |
-| `BoardView` / table | `components/workspace/board-view.tsx` or `components/review/file-table.tsx` |
+### Phase U5 — Viewers ✅ (elite router; no heavy PDF/Office deps yet)
 
-**Adapter pattern:** `lib/hooks/*` → `lib/command-client.ts` (expand as needed); no `invoke()` in components.
+| Component | Path |
+|-----------|------|
+| Preview router | `lib/file-preview.ts` + `components/viewer/file-viewer.tsx` |
+| Image / text / markdown / CSV | `components/viewer/*-file-preview.tsx` |
+| External (PDF, Office, etc.) | `components/viewer/external-file-preview.tsx` + `lib/open-file.ts` |
 
-**Deps to add:** `react-resizable-panels`, `@tanstack/react-virtual`, `zustand` (match v1 patterns).
+### Phase U6 — Artifact panels ✅ (MVP)
 
-### Phase U5 — Viewers
+| Panel | Path |
+|-------|------|
+| Notes | `components/artifacts/notes-panel.tsx` |
+| Findings | `components/artifacts/findings-panel.tsx` |
+| Timeline | `components/artifacts/timeline-panel.tsx` |
+
+Tiptap rich editor and duplicate UI remain P1/U7+.
+
+### Phase U7+ — Next
 
 | Viewer | Deps | Priority |
 |--------|------|----------|
@@ -135,6 +141,18 @@ Backend regression: `pnpm test:parity` + `pnpm test:hardening` remain required o
 ## Backend gaps for full v1 hub parity (optional Phase U3 tail)
 
 Extend `CaseSummary` / SQLite `cases` table for: `caseId`, `department`, `client`, `deployment_mode`, `last_opened_at` if product requires v1 card fidelity. Until then, hub UI omits those badges/filters.
+
+## Ingest / sync / dedup (implemented core)
+
+| Capability | Status |
+|------------|--------|
+| Multiple folder and file sources | done — create + **Add folders or files** in workspace |
+| Per-source ingest (`ingest.rs`) | dir walk or single file; relative `folder_path` |
+| Incremental sync | skip unchanged; update on change; rename-by-hash |
+| Duplicate groups (SHA-256) | rebuild `duplicate_groups` each ingest |
+| Orphan cleanup | soft-delete when missing from source and no file notes |
+| Auto-sync | default 5 min; toggle in header ⋮ menu |
+| Duplicate UI / merge decisions | pending — commands exist; panel in U6+ |
 
 ## Related docs
 

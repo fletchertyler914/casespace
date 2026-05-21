@@ -45,8 +45,8 @@ Active workstream. Backend commands exist; v1-shaped UI is being ported to `apps
 
 ### In progress / next
 
-- [ ] **U3 tail** — Edit case, large-folder warning, filters (optional before U4)
-- [ ] **U4** Workspace shell — layout, header, file navigator, split view
+- [ ] **U3 tail** — Edit case, large-folder warning, filters (optional)
+- [x] **U4** Workspace shell — layout, header, file navigator, split/board views, basic viewer
 - [ ] **U5** Viewers — text/image/CSV P0; PDF/DOCX/XLSX P1
 - [ ] **U6** Artifact panels — notes, findings, timeline
 - [ ] **U7** Board / review table
@@ -57,7 +57,7 @@ Active workstream. Backend commands exist; v1-shaped UI is being ported to `apps
 
 Detail: [ui-port-plan.md](ui-port-plan.md).
 
-**Interim:** `/case?id=` uses legacy `components/case-workspace.tsx` (functional demo, not v1 UX).
+**Interim:** `/case?id=` uses `case-workspace-shell.tsx`; legacy `case-workspace.tsx` unused (remove in U11).
 
 ## Phase 3: AINative (blocked)
 

@@ -7,6 +7,7 @@ import type {
   CaseSummary,
   CommandResponse,
   CreateCasePayload,
+  IngestResult,
   Finding,
   Note,
   ReportExport,
@@ -60,14 +61,40 @@ export const commandClient = {
   deleteCase(caseId: string) {
     return safeInvoke<void>("delete_case", { caseId });
   },
-  ingestFilesToCase(caseId: string, maxFiles?: number) {
-    return safeInvoke<number>("ingest_files_to_case", { caseId, maxFiles });
+  addCaseSource(caseId: string, sourcePath: string) {
+    return safeInvoke<void>("add_case_source", { caseId, sourcePath });
+  },
+  listCaseSources(caseId: string) {
+    return safeInvoke<string[]>("list_case_sources", { caseId });
+  },
+  ingestFilesToCase(
+    caseId: string,
+    options?: {
+      sourcePath?: string;
+      incremental?: boolean;
+      maxFiles?: number;
+    },
+  ) {
+    return safeInvoke<IngestResult>("ingest_files_to_case", {
+      caseId,
+      sourcePath: options?.sourcePath,
+      incremental: options?.incremental,
+      maxFiles: options?.maxFiles,
+    });
   },
   loadCaseFilesWithInventory(caseId: string) {
     return safeInvoke<CaseFile[]>("load_case_files_with_inventory", { caseId });
   },
-  syncCaseAllSources(caseId: string, maxFiles?: number) {
-    return safeInvoke<number>("sync_case_all_sources", { caseId, maxFiles });
+  syncCaseAllSources(
+    caseId: string,
+    incremental = true,
+    maxFiles?: number,
+  ) {
+    return safeInvoke<IngestResult>("sync_case_all_sources", {
+      caseId,
+      incremental,
+      maxFiles,
+    });
   },
   refreshSingleFile(caseId: string, filePath: string) {
     return safeInvoke<CaseFile>("refresh_single_file", { caseId, filePath });
@@ -174,6 +201,9 @@ export const commandClient = {
   },
   readFileText(caseId: string, path: string) {
     return safeInvoke<string>("read_file_text", { caseId, path });
+  },
+  openFile(caseId: string, path: string) {
+    return safeInvoke<string>("open_file", { caseId, path });
   },
   readFileBase64(caseId: string, path: string) {
     return safeInvoke<string>("read_file_base64", { caseId, path });
