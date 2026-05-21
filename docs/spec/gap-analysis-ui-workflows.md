@@ -3,7 +3,7 @@
 ## Scope and source refs
 
 - **v1:** `inventory-generator/src/` — `App.tsx`, `components/workspace/*`, `services/*`, `hooks/*`, `store/*`
-- **v2:** `casespace/apps/desktop/` — `case-workspace.tsx`, `command-client.ts`
+- **v2:** `casespace/apps/desktop/` — case hub in `components/case/*`; legacy `case-workspace.tsx` on `/case`; active plan [ui-port-plan.md](../ui-port-plan.md)
 
 ## UX invariants to preserve exactly
 
@@ -13,10 +13,10 @@ See [user-flows-and-ux-invariants.md](user-flows-and-ux-invariants.md) UX-001 th
 
 | flow_id | flow_name | v1 components/hooks | v2 status | classification | launch tier | recommendation | requirement_id | test |
 |---------|-----------|---------------------|-----------|----------------|-------------|----------------|----------------|------|
-| UI-001 | Case hub | `CaseListView`, `App.tsx` | missing | portable-with-redesign | P0 | rewrite | REQ-CASE-001 | e2e |
-| UI-002 | Create case | `CreateCaseDialog` | missing | portable-with-redesign | P0 | rewrite | REQ-CASE-001 | e2e |
-| UI-003 | Open case / ingest | `App.tsx`, `fileService` | missing | portable-with-redesign | P0 | rewrite | REQ-INGEST-001 | e2e |
-| UI-004 | Workspace shell | `CaseWorkspace`, `WorkspaceLayout` | missing | portable-with-redesign | P0 | rewrite | REQ-VIEW-001 | e2e |
+| UI-001 | Case hub | `CaseListView`, `App.tsx` | **partial** (U3) | portable-with-redesign | P0 | rewrite | REQ-CASE-001 | e2e |
+| UI-002 | Create case | `CreateCaseDialog` | **partial** (U3) | portable-with-redesign | P0 | rewrite | REQ-CASE-001 | e2e |
+| UI-003 | Open case / ingest | `App.tsx`, `fileService` | partial (legacy workspace) | portable-with-redesign | P0 | rewrite | REQ-INGEST-001 | e2e |
+| UI-004 | Workspace shell | `CaseWorkspace`, `WorkspaceLayout` | missing (U4) | portable-with-redesign | P0 | rewrite | REQ-VIEW-001 | e2e |
 | UI-005 | File navigator | `FileNavigator` | missing | portable-with-redesign | P0 | rewrite | REQ-REVIEW-001 | e2e |
 | UI-006 | Viewer | `IntegratedFileViewer` | missing | not-portable-replace | P0 | rewrite | REQ-VIEW-001 | e2e |
 | UI-007 | Review status | `WorkflowBoard` / table | missing | portable-with-redesign | P0 | rewrite | REQ-REVIEW-001 | e2e |

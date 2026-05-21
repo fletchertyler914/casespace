@@ -2,7 +2,7 @@
 
 CaseSpace v2 is an elite, net-new rebuild of the CaseSpace product foundation using a 3-app architecture.
 
-Current status: **planning complete; CoreParity port in progress**. Web/download surface deployed; desktop product parity (ingest, workspace, billing, reports) not yet implemented. See [docs/readiness.md](docs/readiness.md).
+Current status: **Core Parity backend complete (local)**; **UX port in progress** (case hub shipped; workspace/viewer phases next). AINative blocked until UX gate. See [docs/readiness.md](docs/readiness.md) and [docs/ui-port-plan.md](docs/ui-port-plan.md).
 
 ## Repository purpose
 
@@ -40,6 +40,7 @@ Contact for commercial licensing: `fletchertyler914@yahoo.com`
 - `docs/implementation-readiness-gate.md` - planning / parity / AI gates
 - `docs/architecture.md` - v2 architecture (current vs target)
 - `docs/readiness.md` - readiness and blockers
+- `docs/ui-port-plan.md` - active UI port phases (U1–U11) and UX gate
 - `docs/migrating-from-v1.md` - migration playbook (status-tagged manifest)
 - `docs/command-parity-ledger.md` - v1 ↔ v2 command mapping
 - `docs/v1-reference.md` - v1 capability inventory
@@ -117,5 +118,6 @@ The script bakes the rounded squircle into every layer (including each `.icns` s
 
 ## Notes
 
-- Implemented baseline: backend/desktop command-workflow scaffolding and release-pipeline definitions.
-- Validation boundary: full v1 parity still requires remaining migration phase gates.
+- **Backend:** P0 commands, SQLite/FTS, parity + hardening suites — validated locally.
+- **Desktop UX:** Foundation + case hub; workspace/viewer UI — see [docs/ui-port-plan.md](docs/ui-port-plan.md).
+- **AINative:** blocked until UX Parity Build Gate passes.

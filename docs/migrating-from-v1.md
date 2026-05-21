@@ -7,7 +7,7 @@ This guide defines the deterministic migration/rebuild strategy from:
 
 **Canonical specs:** [product-spec-bible.md](product-spec-bible.md) · [command-parity-ledger.md](command-parity-ledger.md) · [gap-analysis-master.md](spec/gap-analysis-master.md)
 
-**Execution order:** CoreParity (non-AI) → E2E validation → AINative (blocked until [Core Parity gate](implementation-readiness-gate.md#core-parity-build-gate))
+**Execution order:** CoreParity backend ✅ → UX port (active) → UX gate → AINative (blocked until [UX Parity gate](ui-port-plan.md))
 
 ## Strategic posture
 
@@ -69,15 +69,16 @@ Command-level detail: [command-parity-ledger.md](command-parity-ledger.md)
 
 | v1 source | v2 target | Status | Notes |
 | --------- | --------- | ------ | ----- |
-| `src-tauri/src/lib.rs` | `src-tauri/src/lib.rs` (interim) → `commands/*` | exists / planned | Monolithic today; split planned |
-| `src-tauri/src/database.rs` | `src-tauri/src/database.rs` | planned | SQLite + FTS |
-| `src-tauri/src/time_tracking.rs` | `src-tauri/src/time_tracking.rs` | planned | REQ-TIME-001 |
-| `src-tauri/src/scanner.rs` | `src-tauri/src/scanner.rs` | planned | REQ-INGEST-001 |
-| `src-tauri/src/file_ingestion.rs` | `src-tauri/src/file_ingestion.rs` | planned | REQ-INGEST-001 |
-| `src-tauri/src/repositories/*` | `src-tauri/src/repositories/*` | planned | After schema freeze |
-| `src/components/workspace/*` | `apps/desktop/components/workspace/*` | planned | P0 CoreParity |
-| `src/components/viewer/*` | `apps/desktop/components/viewer/*` | planned | MVP P0, rich P1 |
-| `src/components/notes/*` | `apps/desktop/components/artifacts/*` | planned | REQ-ARTIFACT-001 |
+| `src-tauri/src/lib.rs` | `apps/desktop-backend/src-tauri/src/lib.rs` → `commands/*` | exists | P0 commands; module split planned |
+| `src-tauri/src/database.rs` | `src-tauri/src/database.rs` | exists | SQLite + FTS |
+| `src-tauri/src/time_tracking.rs` | inlined in `lib.rs` / DB | exists | REQ-TIME-001 |
+| `src-tauri/src/scanner.rs` | ingest in `lib.rs` | exists | REQ-INGEST-001 |
+| `src-tauri/src/file_ingestion.rs` | ingest in `lib.rs` | exists | REQ-INGEST-001 |
+| `src-tauri/src/repositories/*` | `database.rs` + SQL | exists | v2 schema; not 1:1 v1 repos |
+| `src/components/case/*` | `apps/desktop/components/case/*` | partial | Hub ported; edit/filters pending |
+| `src/components/workspace/*` | `apps/desktop/components/workspace/*` | planned | U4 — legacy `case-workspace.tsx` interim |
+| `src/components/viewer/*` | `apps/desktop/components/viewer/*` | planned | U5 |
+| `src/components/notes/*` | `apps/desktop/components/artifacts/*` | planned | U6 |
 | `src/components/findings/*` | `apps/desktop/components/artifacts/*` | planned | REQ-ARTIFACT-001 |
 | `src/components/timeline/*` | `apps/desktop/components/artifacts/*` | planned | REQ-ARTIFACT-001 |
 | `src/components/search/*` | `apps/desktop/components/search/*` | planned | REQ-SEARCH-001 |

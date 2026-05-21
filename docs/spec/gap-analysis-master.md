@@ -2,7 +2,7 @@
 
 ## Executive summary
 
-v2 is a **thin scaffold** (~20 backend commands, JSON store, single demo UI). v1 is a **full solo-investigator product** (~77 commands, SQLite+FTS, rich workspace). Domain outcomes are portable; **implementation must be redesigned**. Execution order: **CoreParity first, AINative second**.
+v2 **backend** now matches v1 P0 command + SQLite/FTS outcomes (parity suites pass locally). **Desktop UX** is mid-port: case hub shipped; workspace/viewers/panels pending ([ui-port-plan.md](../ui-port-plan.md)). v1 remains the reference for layout and interaction. Execution order: **backend parity ✅ → UX parity → AINative**.
 
 ## Classification totals dashboard
 
@@ -25,15 +25,14 @@ v2 is a **thin scaffold** (~20 backend commands, JSON store, single demo UI). v1
 
 ## Launch critical path
 
-1. Author and lock spec pack (this planning phase) ✅
-2. Node 24 toolchain policy
-3. SQLite + migrations + core schema
-4. Ingest + load case files (persisted)
-5. Workspace UI shell (case hub → navigator → viewer)
-6. Artifacts CRUD + FTS search
-7. Review status + report exports + timer/billing core
-8. E2E validation → **Core Parity Build Gate**
-9. AINative phase
+1. Author and lock spec pack ✅
+2. Node 24 toolchain policy ✅
+3. SQLite + migrations + core schema ✅
+4. Ingest + load case files (persisted) ✅
+5. Case hub UI ✅ — workspace UI **in progress** ([ui-port-plan.md](../ui-port-plan.md))
+6. Artifacts CRUD + FTS search (backend ✅; UI panels pending)
+7. Review status + report exports + timer/billing (backend ✅; UI pending)
+8. UX Parity Build Gate → then AINative
 
 ## Deferred backlog with rationale
 
@@ -51,7 +50,7 @@ v2 is a **thin scaffold** (~20 backend commands, JSON store, single demo UI). v1
 
 **Implementation go:** After gate passes → start persistence + P0 port (see [implementation-readiness-gate.md](../implementation-readiness-gate.md)).
 
-**AI go:** Only after Core Parity Build Gate passes.
+**AI go:** Only after **UX Parity Build Gate** passes (backend gate already passed locally).
 
 ## Track documents
 

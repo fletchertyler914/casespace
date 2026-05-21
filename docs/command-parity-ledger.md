@@ -3,7 +3,8 @@
 v1 command → v2 target → status. Source: v1 `lib.rs` + `time_tracking.rs`.
 
 **Status:** `implemented` | `stub` | `planned`  
-**Phase:** CoreParity commands only until parity gate passes.
+**Backend:** P0 non-AI commands **implemented** (local parity + hardening validated).  
+**UX:** UI surfaces wired per [ui-port-plan.md](ui-port-plan.md) — case hub only today.
 
 | v1 command | v2 target module | v2 command (current/planned) | status | requirement_id | tests | security/perf gate |
 |------------|------------------|------------------------------|--------|----------------|-------|-------------------|

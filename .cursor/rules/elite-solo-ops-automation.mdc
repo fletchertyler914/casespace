@@ -6,10 +6,16 @@ alwaysApply: true
 # Elite Solo Ops Automation
 
 - Favor single-command operations over manual multi-step execution.
-- Use these canonical commands:
+- **Local dev (desktop):**
+  - `pnpm dev` — full Tauri app (Rust + Next on :3000); canonical daily driver
+  - `pnpm dev:ui` — Next only (`desktop dev:next`); no native APIs
+  - `pnpm dev:web` — marketing site (:3001)
+  - `pnpm dev:all` — web + Tauri desktop + `@repo/ui` watchers (does not start duplicate Next on :3000)
+- **Validation:**
   - `pnpm ops:validate:local` before merging local changes
   - `pnpm ops:validate` for daily operational checks
   - `pnpm ops:validate:prod` for release/prod sign-off
+  - `pnpm test:parity` and `pnpm test:hardening` on backend/UI merges touching commands or persistence
 - Keep CI/CD and local validation cohesive:
   - if release workflow behavior changes, update local validation scripts and docs in the same change
   - if web download resolver behavior changes, update release-system contract checks in the same change

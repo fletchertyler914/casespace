@@ -2,7 +2,7 @@
 
 This app is the Next.js desktop UX shell for CaseSpace v2.
 
-Current state: scaffold-level shell; migration-rebuild in progress.
+Current state: **UX port in progress** — foundation + case hub (U1–U3) shipped; workspace/viewer (U4+) next. `/case` still uses legacy `case-workspace.tsx`. Plan: [docs/ui-port-plan.md](../../docs/ui-port-plan.md).
 
 ## Role in v2 architecture
 
@@ -37,7 +37,8 @@ pnpm --filter desktop check-types
 ## Notes
 
 - This is intentionally Next.js-first for v2.
-- Feature parity with v1 is tracked in `docs/migrating-from-v1.md`.
+- Active UI port: `docs/ui-port-plan.md`
+- v1 migration manifest: `docs/migrating-from-v1.md`
 
 ## References
 

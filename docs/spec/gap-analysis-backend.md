@@ -3,7 +3,7 @@
 ## Scope and source refs
 
 - **v1:** `inventory-generator/src-tauri/src/lib.rs`, `time_tracking.rs`, `database.rs`, `scanner.rs`, `file_ingestion.rs`, `repositories/*`
-- **v2:** `casespace/apps/desktop-backend/src-tauri/src/lib.rs` (~20 commands, JSON store)
+- **v2:** `casespace/apps/desktop-backend/src-tauri/src/` — `lib.rs`, `database.rs`, `path.rs`, `search.rs`; P0 command matrix **implemented** (see [command-parity-ledger.md](../command-parity-ledger.md)). Rows below are planning-era classifications; verify against ledger before porting.
 
 ## Command/domain inventory table
 

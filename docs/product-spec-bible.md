@@ -62,7 +62,7 @@ Win dimensions: time-to-final-report, ingest throughput, billing capture complet
 | **CoreParity** | All P0 non-AI workflows; production persistence; FTS search; viewer MVP; time/billing core |
 | **AINative** | Summaries, entities, synthesis, report drafting assist, auto-triage, billing narrative assist |
 
-AI work is **blocked** until [Core Parity Build Gate](implementation-readiness-gate.md#core-parity-build-gate) passes.
+AI work is **blocked** until the **UX Parity Build Gate** passes ([ui-port-plan.md](ui-port-plan.md); backend gate already passed locally).
 
 ## P0 launch outputs (locked)
 

@@ -2,13 +2,15 @@
 
 All features tagged: `P0-CoreParity` | `P1-CoreParity` | `AI-Phase` | `deferred`
 
+**Snapshot (2026-05-21):** Backend P0 commands largely **implemented** (see [command-parity-ledger.md](../command-parity-ledger.md)). UI column below reflects **desktop UX** only — update rows as [ui-port-plan.md](../ui-port-plan.md) phases land.
+
 | Feature ID | Domain | Feature | Phase tag | Requirement | Status v2 |
 |------------|--------|---------|-----------|-------------|-----------|
-| F-CASE-01 | cases | Create/list/open/close case | P0-CoreParity | REQ-CASE-001 | partial |
-| F-CASE-02 | cases | Case metadata edit | P1-CoreParity | REQ-CASE-001 | planned |
-| F-CASE-03 | cases | Multi-source paths per case | P0-CoreParity | REQ-CASE-001 | partial |
-| F-CASE-04 | cases | Delete case with confirm | P0-CoreParity | REQ-CASE-001 | backend only |
-| F-INGEST-01 | ingest | Directory ingest + persist | P0-CoreParity | REQ-INGEST-001 | planned |
+| F-CASE-01 | cases | Create/list/open/close case | P0-CoreParity | REQ-CASE-001 | partial (hub UI) |
+| F-CASE-02 | cases | Case metadata edit | P1-CoreParity | REQ-CASE-001 | planned (U3 tail) |
+| F-CASE-03 | cases | Multi-source paths per case | P0-CoreParity | REQ-CASE-001 | backend yes; UI partial |
+| F-CASE-04 | cases | Delete case with confirm | P0-CoreParity | REQ-CASE-001 | implemented (hub) |
+| F-INGEST-01 | ingest | Directory ingest + persist | P0-CoreParity | REQ-INGEST-001 | backend yes; workspace UI pending |
 | F-INGEST-02 | ingest | Large-folder warning | P0-CoreParity | REQ-INGEST-001 | planned |
 | F-INGEST-03 | ingest | Metadata extraction on ingest | P0-CoreParity | REQ-INGEST-001 | planned |
 | F-INGEST-04 | ingest | Incremental sync / refresh | P1-CoreParity | REQ-INGEST-001 | planned |

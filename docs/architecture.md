@@ -37,20 +37,19 @@ flowchart LR
 
 | Component | Reality |
 |-----------|---------|
-| `desktop-backend` | Single `lib.rs`, ~20 commands, JSON file store |
-| `desktop` | `case-workspace.tsx` demo + partial `command-client.ts` |
+| `desktop-backend` | `lib.rs` + `database.rs`, `path.rs`, `search.rs`; full P0 non-AI command matrix; SQLite + FTS5 |
+| `desktop` | Case hub ported (`components/case/*`, shadcn `components/ui/*`); `/case` still uses legacy `case-workspace.tsx` |
 | `web` | Marketing, download, static pages |
 | Persistence | `casespace.db` (SQLite + WAL + FTS5); legacy JSON auto-imported once |
-| Search | In-memory substring (not production) |
+| Dev entry | `pnpm dev` → Tauri + Next via `dev:next` (single :3000) |
 
-## Target implementation (CoreParity)
+## Target implementation (CoreParity UX + module split)
 
 | Component | Target |
 |-----------|--------|
-| `desktop-backend` | `commands/*`, `domain/*`, `persistence/*` modules |
-| Persistence | SQLite + WAL + migrations + FTS5 |
-| `desktop` | `lib/services`, `lib/hooks`, `lib/state`, `components/workspace/*` |
-| Contracts | `CommandResponse<T>` envelope, camelCase IPC |
+| `desktop-backend` | `commands/*`, `domain/*`, `persistence/*` modules (split from monolithic `lib.rs`) |
+| `desktop` | `lib/hooks`, `lib/services`, `components/workspace/*`, `components/viewer/*` — see [ui-port-plan.md](ui-port-plan.md) |
+| Contracts | `CommandResponse<T>` envelope, camelCase IPC aligned with `@repo/types` |
 
 ## Responsibility boundaries
 
@@ -96,10 +95,16 @@ See [spec/perf-security-reliability-gates.md](spec/perf-security-reliability-gat
 
 ## Phase sequencing
 
-**CoreParity first** → validate E2E → **AINative second**. See [product-spec-bible.md](product-spec-bible.md).
+1. **Core Parity backend** — complete (local gate)
+2. **Core Parity UX port** — in progress ([ui-port-plan.md](ui-port-plan.md))
+3. **AINative** — blocked until UX Parity Build Gate
+
+See [product-spec-bible.md](product-spec-bible.md).
 
 ## Related docs
 
 - [readiness.md](readiness.md)
+- [ui-port-plan.md](ui-port-plan.md)
 - [implementation-readiness-gate.md](implementation-readiness-gate.md)
 - [command-parity-ledger.md](command-parity-ledger.md)
+- [desktop-workflow-mapping.md](desktop-workflow-mapping.md)

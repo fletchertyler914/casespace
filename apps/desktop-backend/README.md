@@ -2,7 +2,7 @@
 
 This app is the native/core backend engine for CaseSpace v2.
 
-Current state: implemented Tauri-native command baseline with local validation; remaining work is production persistence, full matrix coverage, and remote release proof.
+Current state: **Core Parity backend complete (local)** — SQLite/FTS, full P0 non-AI command matrix, parity + hardening suites. Remaining: module split (`commands/*`), AI commands (post-UX gate), remote release proof.
 
 ## Role in v2 architecture
 
@@ -36,5 +36,6 @@ This package does not own a separate desktop UI. It wraps the Next frontend from
 ## Implementation notes
 
 - Command-risk and hardening requirements are defined in `docs/migrating-from-v1.md`.
-- Readiness/blockers are tracked in `docs/readiness.md`.
+- Readiness/blockers: `docs/readiness.md`
+- Desktop UX port (separate app): `docs/ui-port-plan.md`
 - v1 command and capability reference is documented in `docs/v1-reference.md`.

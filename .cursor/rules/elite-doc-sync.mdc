@@ -11,8 +11,16 @@ alwaysApply: true
   - `docs/readiness.md`
   - `docs/phase-gates.md`
   - relevant app READMEs
+- **Desktop UX port** changes must update:
+  - `docs/ui-port-plan.md` (phase status)
+  - `docs/desktop-workflow-mapping.md`
+  - `docs/spec/feature-catalog.md` (UI-facing rows)
 - Use precise status language:
   - `implemented` only when code exists
   - `validated` only when corresponding checks were executed
   - `100% complete` only when all local and remote gates are proven
+- Split gates explicitly:
+  - **Core Parity backend** — command matrix + SQLite/FTS + parity/hardening
+  - **UX Parity** — v1-shaped UI per `docs/ui-port-plan.md`
+  - **AINative** — blocked until UX Parity Build Gate
 - Never leave stale statements that conflict with current code.

@@ -2,6 +2,8 @@
 
 Maps P0 flows to acceptance criteria and test suites. All tests trace to requirement IDs in [product-spec-bible.md](../product-spec-bible.md).
 
+**Coverage today:** `pnpm test:parity` and `pnpm test:hardening` validate **backend/integration** oracles. Rows marked `e2e` require **desktop UX** ([ui-port-plan.md](../ui-port-plan.md)) before full product sign-off.
+
 ## Oracle conventions
 
 - **AC-*** = acceptance criterion ID

@@ -1,8 +1,8 @@
 # Implementation Readiness Gate
 
-Checklist that must pass before **feature-port implementation** begins. Planning artifacts from Elite Migration Realignment must be complete first.
+Checklists for planning, backend port, UX port, and AI enablement.
 
-## Implementation Readiness Gate
+## Implementation Readiness Gate (planning)
 
 | # | Item | Status | Evidence |
 |---|------|--------|----------|
@@ -14,47 +14,52 @@ Checklist that must pass before **feature-port implementation** begins. Planning
 | 2.4 | Dependency gap analysis | complete | [spec/gap-analysis-dependencies.md](spec/gap-analysis-dependencies.md) |
 | 2.5 | Master gap analysis + critical path | complete | [spec/gap-analysis-master.md](spec/gap-analysis-master.md) |
 | 3.1 | P0-CoreParity / P1 / AI-Phase tags on features | complete | [spec/feature-catalog.md](spec/feature-catalog.md) |
-| 3.2 | AI deferred until parity gate | complete | [spec/out-of-scope.md](spec/out-of-scope.md) |
+| 3.2 | AI deferred until UX parity gate | complete | [spec/out-of-scope.md](spec/out-of-scope.md) |
 | 4.1 | PII policy documented | complete | [spec/ai-capability-matrix.md](spec/ai-capability-matrix.md) |
 | 4.2 | Out-of-scope list approved | complete | [spec/out-of-scope.md](spec/out-of-scope.md) |
-| 5.1 | Node 24 policy applied | complete | package.json, workflows, .nvmrc; local validate 2026-05-20 (Node v24.15.0) |
+| 5.1 | Node 24 policy applied | complete | package.json, workflows, `.nvmrc` |
 | 5.2 | Validation commands documented | complete | README, [readiness.md](readiness.md) |
 | 6.1 | Traceability matrix complete | complete | [spec/traceability-matrix.md](spec/traceability-matrix.md) |
 | 6.2 | Test oracles for P0 flows | complete | [spec/test-oracle-matrix.md](spec/test-oracle-matrix.md) |
 
-**Gate status:** PASS for planning/documentation and toolchain validation (5.1). **Core Parity port** may proceed per kickoff order below.
+**Gate status:** **PASS** — planning and toolchain.
 
-## Core Parity Build Gate
+## Core Parity backend Build Gate
 
-Core parity is complete only when **all** are true:
+Backend parity is complete only when **all** are true:
 
 | # | Criterion | Status |
 |---|-----------|--------|
-| C1 | P0 non-AI workflows pass E2E | **complete** (`pnpm test:parity` + `pnpm test:hardening`) |
-| C2 | Backend P0 commands implemented per [command-parity-ledger.md](command-parity-ledger.md) | **complete** |
+| C1 | P0 non-AI workflows pass integration suites | **complete** — `pnpm test:parity`, `pnpm test:hardening` |
+| C2 | Backend P0 commands per [command-parity-ledger.md](command-parity-ledger.md) | **complete** |
 | C3 | SQLite persistence replaces JSON store | **complete** |
 | C4 | FTS search live | **complete** |
-| C5 | Five report exports + billing package | **complete** |
-| C6 | No critical/high defects in P0 paths | **complete** (parity suite) |
-| C7 | Evidence recorded in [readiness.md](readiness.md) | **complete** |
+| C5 | Five report exports + billing package (commands) | **complete** |
+| C6 | No critical/high defects in parity paths | **complete** |
+| C7 | Evidence in [readiness.md](readiness.md) | **complete** |
 
-**Core Parity Build Gate status: PASS (C1–C7 complete locally). AI-Native implementation may begin.**
+**Status: PASS (local).** Does not include full v1 UX.
 
-## Implementation kickoff order
+## UX Parity Build Gate
 
-1. Apply Node 24 policy (toolchain)
-2. Build persistence + FTS foundation
-3. Port P0 backend commands by domain module
-4. Build P0 desktop workspace UI
-5. Wire E2E tests + `pnpm ops:validate:local`
-6. Validate Core Parity Build Gate
-7. Begin AI phase per [spec/ai-capability-matrix.md](spec/ai-capability-matrix.md)
+Product UX matches v1 P0 outcomes. Criteria in [ui-port-plan.md](ui-port-plan.md) (U1–U9). **Status: not started** (U1–U3 partial).
 
-## Go/no-go for porting
+AINative is blocked until this gate passes.
+
+## Implementation kickoff order (current)
+
+1. ~~Node 24 policy~~
+2. ~~Persistence + FTS + P0 backend commands~~
+3. **UX port U4–U11** — [ui-port-plan.md](ui-port-plan.md)
+4. UX Parity Build Gate + manual E2E
+5. AINative per [spec/ai-capability-matrix.md](spec/ai-capability-matrix.md)
+
+## Go/no-go
 
 | Decision | Recommendation |
 |----------|----------------|
-| Start CoreParity port? | **GO** — planning gate satisfied |
-| Start AINative? | **GO** — Core Parity gate passed locally |
+| Continue UX port? | **GO** — backend gate satisfied |
+| Start AINative? | **NO** — until UX Parity Build Gate |
+| Cut prod release claiming full product parity? | **NO** — until UX gate + `release:validate` |
 
-Last updated: Core Parity gate completion (local validation).
+Last updated: 2026-05-21 (backend gate pass; UX port active).
