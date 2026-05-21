@@ -11,6 +11,7 @@ on:
         required: true
 
 permissions:
+  actions: write
   contents: write
 
 jobs:
@@ -41,3 +42,11 @@ jobs:
           set -euo pipefail
           git tag "${{ github.event.inputs.prod_tag }}" "${{ steps.rc.outputs.commit }}"
           git push origin "${{ github.event.inputs.prod_tag }}"
+
+      - name: Trigger release workflow for production tag
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh workflow run "Release" --ref "${{ github.event.inputs.prod_tag }}" -f tag="${{ github.event.inputs.prod_tag }}"
