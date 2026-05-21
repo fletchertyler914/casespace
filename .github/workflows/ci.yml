@@ -39,7 +39,7 @@ jobs:
         run: pnpm check-types
 
       - name: Build apps and packages
-        run: pnpm build
+        run: pnpm turbo run build --filter=!desktop-backend
 
   desktop-auto-build:
     name: Desktop Auto Build (${{ matrix.os }})
