@@ -1,34 +1,48 @@
+import Image from "next/image";
 import Link from "next/link";
 
 export default function Page() {
   return (
     <main className="mx-auto max-w-5xl min-h-screen px-6 py-16 md:px-10">
-      <section className="space-y-6">
-        <p className="text-sm uppercase tracking-[0.2em] text-neutral-400">
-          CaseSpace
-        </p>
-        <h1 className="text-5xl font-semibold leading-tight max-w-3xl">
-          Investigative case intelligence built for speed, security, and offline
-          execution.
-        </h1>
-        <p className="text-neutral-300 max-w-2xl">
-          CaseSpace helps investigators and analysts ingest large evidence sets,
-          manage findings, and produce defensible outputs from a single desktop
-          workflow.
-        </p>
-        <div className="flex flex-wrap gap-3">
-          <Link
-            className="rounded-md bg-white text-black px-5 py-2 font-medium hover:opacity-90"
-            href="/download"
-          >
-            Download Desktop
-          </Link>
-          <Link
-            className="rounded-md border border-neutral-700 px-5 py-2 hover:bg-neutral-900"
-            href="/docs"
-          >
-            Read Docs
-          </Link>
+      <section className="grid gap-10 md:grid-cols-[1.4fr_1fr] items-center">
+        <div className="space-y-6">
+          <p className="text-sm uppercase tracking-[0.2em] text-neutral-400">
+            CaseSpace
+          </p>
+          <h1 className="text-5xl font-semibold leading-tight max-w-3xl">
+            Investigative case intelligence built for speed, security, and offline
+            execution.
+          </h1>
+          <p className="text-neutral-300 max-w-2xl">
+            CaseSpace helps investigators and analysts ingest large evidence sets,
+            manage findings, and produce defensible outputs from a single desktop
+            workflow.
+          </p>
+          <div className="flex flex-wrap gap-3">
+            <Link
+              className="rounded-md bg-white text-black px-5 py-2 font-medium hover:opacity-90"
+              href="/download"
+            >
+              Download Desktop
+            </Link>
+            <Link
+              className="rounded-md border border-neutral-700 px-5 py-2 hover:bg-neutral-900"
+              href="/docs"
+            >
+              Read Docs
+            </Link>
+          </div>
+        </div>
+        <div className="relative mx-auto md:mx-0 w-full max-w-sm aspect-square">
+          <div className="absolute inset-6 rounded-full bg-amber-400/10 blur-3xl" />
+          <Image
+            src="/casespace-owl.png"
+            alt="The CaseSpace owl mascot"
+            fill
+            priority
+            sizes="(min-width: 768px) 22rem, 18rem"
+            className="relative object-contain drop-shadow-[0_8px_24px_rgba(0,0,0,0.4)]"
+          />
         </div>
       </section>
 

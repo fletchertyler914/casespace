@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useCallback, useEffect, useState } from "react";
 import type { CaseSummary } from "@repo/types";
 import { commandClient } from "../lib/command-client";
@@ -86,12 +87,22 @@ export function CaseWorkspace() {
 
   return (
     <main className="mx-auto max-w-5xl p-8 space-y-8">
-      <section className="rounded-xl border border-neutral-800 p-6">
-        <h1 className="text-3xl font-semibold mb-3">CaseSpace Desktop</h1>
-        <p className="text-sm text-neutral-300">
-          Core case workspace rebuilt in Next.js against typed backend command
-          adapters.
-        </p>
+      <section className="rounded-xl border border-neutral-800 p-6 flex items-center gap-5">
+        <Image
+          src="/casespace-owl-icon.png"
+          alt="CaseSpace"
+          width={64}
+          height={64}
+          priority
+          className="drop-shadow-md"
+        />
+        <div>
+          <h1 className="text-3xl font-semibold mb-1">CaseSpace Desktop</h1>
+          <p className="text-sm text-neutral-300">
+            Core case workspace rebuilt in Next.js against typed backend command
+            adapters.
+          </p>
+        </div>
       </section>
 
       <section className="rounded-xl border border-neutral-800 p-6 space-y-3">

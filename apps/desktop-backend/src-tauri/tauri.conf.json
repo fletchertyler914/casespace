@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "desktop-backend",
+  "productName": "CaseSpace",
   "version": "0.1.2",
-  "identifier": "com.casespace.desktop-backend",
+  "identifier": "com.casespace.app",
   "build": {
     "beforeDevCommand": "pnpm --filter desktop dev",
     "devUrl": "http://localhost:3000",
@@ -13,9 +13,13 @@
     "withGlobalTauri": true,
     "windows": [
       {
-        "title": "desktop-backend",
-        "width": 800,
-        "height": 600
+        "title": "CaseSpace",
+        "width": 1280,
+        "height": 800,
+        "minWidth": 960,
+        "minHeight": 640,
+        "center": true,
+        "resizable": true
       }
     ],
     "security": {

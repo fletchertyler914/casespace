@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { DownloadChooser } from "./download-chooser";
 import {
   classifyAsset,
@@ -20,10 +21,22 @@ export default async function DownloadPage() {
 
   return (
     <main className="mx-auto max-w-4xl min-h-screen p-8 md:p-16">
-      <h1 className="text-4xl font-bold mb-4">Download CaseSpace</h1>
-      <p className="text-neutral-300 mb-8">
-        Download the latest production release artifact for your machine.
-      </p>
+      <div className="flex items-center gap-4 mb-6">
+        <Image
+          src="/casespace-owl-icon.png"
+          alt="CaseSpace"
+          width={64}
+          height={64}
+          priority
+          className="drop-shadow-md"
+        />
+        <div>
+          <h1 className="text-4xl font-bold">Download CaseSpace</h1>
+          <p className="text-neutral-300">
+            Get the latest production build for your machine.
+          </p>
+        </div>
+      </div>
 
       <DownloadChooser assets={assets} />
 
