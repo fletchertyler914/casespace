@@ -1,0 +1,15 @@
+---
+description: Enforce elite architecture boundaries and no dead scaffolds
+alwaysApply: true
+---
+
+# Elite Architecture Guardrails
+
+- `apps/desktop` is the only desktop frontend. Do not add a separate frontend runtime under `apps/desktop-backend`.
+- `apps/desktop-backend` owns native command/domain/persistence logic only.
+- Reject dead scaffold artifacts and duplicate entrypoints (unused HTML/Vite shells, orphan scripts, stale config).
+- Preserve strict 3-app boundaries:
+  - `desktop`: product UX + command adapters
+  - `desktop-backend`: Tauri/Rust engine
+  - `web`: marketing/sales/docs/download only
+- If a change introduces architectural ambiguity, stop and enforce the canonical boundary before adding features.

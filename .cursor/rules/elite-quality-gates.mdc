@@ -1,0 +1,20 @@
+---
+description: Require elite quality gates for security, performance, and maintainability
+alwaysApply: true
+---
+
+# Elite Quality Gates
+
+- No change is complete without: lint, typecheck, tests, and build verification.
+- Security-first defaults:
+  - least privilege
+  - path/capability validation
+  - no broad filesystem access without explicit need
+- Performance discipline:
+  - prevent unnecessary runtime overhead
+  - keep workflows responsive on low-power hardware
+- Maintainability discipline:
+  - remove dead code/config immediately
+  - keep module ownership clear
+  - avoid introducing hidden coupling across apps
+- If quality gates fail, fix before proceeding; do not defer known regressions.

@@ -1,0 +1,97 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-publish:
+    name: Publish release asset (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    environment: ${{ contains(github.ref_name, '-rc.') && 'rc' || 'prod' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Setup node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: "./apps/desktop-backend/src-tauri -> target"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build desktop frontend
+        run: pnpm --filter desktop build
+
+      - name: Build Tauri bundles
+        run: pnpm --filter desktop-backend tauri build
+
+      - name: Package deterministic release asset
+        id: package
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="${GITHUB_REF_NAME#v}"
+          MACHINE_ARCH="$(uname -m)"
+          if [[ "$MACHINE_ARCH" == "x86_64" ]]; then ARCH="x64"; elif [[ "$MACHINE_ARCH" == "arm64" || "$MACHINE_ARCH" == "aarch64" ]]; then ARCH="arm64"; else ARCH="$MACHINE_ARCH"; fi
+
+          mkdir -p release-assets
+          if [[ "${{ runner.os }}" == "macOS" ]]; then
+            SOURCE_FILE="$(ls apps/desktop-backend/src-tauri/target/release/bundle/dmg/*.dmg | head -n 1)"
+            TARGET_FILE="release-assets/casespace-v${VERSION}-macos-${ARCH}.dmg"
+          else
+            SOURCE_FILE="$(ls apps/desktop-backend/src-tauri/target/release/bundle/msi/*.msi | head -n 1)"
+            TARGET_FILE="release-assets/casespace-v${VERSION}-windows-${ARCH}.msi"
+          fi
+
+          cp "$SOURCE_FILE" "$TARGET_FILE"
+          echo "asset_path=$TARGET_FILE" >> "$GITHUB_OUTPUT"
+
+      - name: Upload release asset
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ steps.package.outputs.asset_path }}
+          prerelease: ${{ contains(github.ref_name, '-rc.') }}
+          generate_release_notes: true
+
+  verify-download-links:
+    name: Verify release links for web resolver
+    needs: build-and-publish
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Verify latest stable release has required assets
+        env:
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node scripts/verify-release-links.mjs

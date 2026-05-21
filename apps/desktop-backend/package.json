@@ -1,0 +1,17 @@
+{
+  "name": "desktop-backend",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "tauri dev",
+    "build": "tauri build",
+    "check-types": "cargo check --manifest-path src-tauri/Cargo.toml",
+    "lint": "cargo check --manifest-path src-tauri/Cargo.toml",
+    "tauri": "tauri"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@tauri-apps/cli": "^2"
+  }
+}

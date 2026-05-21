@@ -1,6 +1,12 @@
 {
   "$schema": "https://turborepo.com/schema.json",
   "ui": "tui",
+  "globalEnv": [
+    "GITHUB_TOKEN",
+    "GITHUB_REPOSITORY",
+    "CASESPACE_RELEASE_REPO",
+    "NEXT_PUBLIC_RELEASE_REPOSITORY"
+  ],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],

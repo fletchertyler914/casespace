@@ -1,58 +1,58 @@
-# Turborepo Tailwind CSS starter
+# CaseSpace v2 Monorepo
 
-This Turborepo starter is maintained by the Turborepo core team.
+CaseSpace v2 is an elite, net-new rebuild of the CaseSpace product foundation using a 3-app architecture.
 
-## Using this example
+Current status: **foundation + migration documentation complete, core implementation in progress**.
 
-Run the following command:
+## Repository purpose
 
-```sh
-npx create-turbo@latest -e with-tailwind
+This repository is the implementation home for:
+
+- `apps/desktop-backend`: Tauri/Rust native core engine
+- `apps/desktop`: Next.js desktop UX shell
+- `apps/web`: future browser surface
+- shared packages for contracts, UI, and configuration
+
+v1 reference source path:
+
+- `/Users/tyler/projects/malissa_projects/inventory-generator`
+
+## Core principles
+
+- Preserve v1 business intent and user outcomes
+- Rebuild implementation layers for v2 architecture quality
+- Optimize for performance, security, scalability, maintainability, and cost efficiency
+- Keep architecture extensible for future hybrid monetization
+
+## Documentation map
+
+- `docs/architecture.md` - v2 architecture and ownership boundaries
+- `docs/readiness.md` - current readiness and blockers
+- `docs/migrating-from-v1.md` - deterministic migration playbook and contract matrix
+- `docs/v1-reference.md` - consolidated v1 capability inventory
+
+## Quickstart
+
+Install dependencies:
+
+```bash
+pnpm install
 ```
 
-## What's inside?
+Run workspace dev tasks:
 
-This Turborepo includes the following packages/apps:
-
-### Apps and Packages
-
-- `docs`: a [Next.js](https://nextjs.org/) app with [Tailwind CSS](https://tailwindcss.com/)
-- `web`: another [Next.js](https://nextjs.org/) app with [Tailwind CSS](https://tailwindcss.com/)
-- `ui`: a stub React component library with [Tailwind CSS](https://tailwindcss.com/) shared by both `web` and `docs` applications
-- `@repo/eslint-config`: `eslint` configurations (includes `eslint-config-next` and `eslint-config-prettier`)
-- `@repo/typescript-config`: `tsconfig.json`s used throughout the monorepo
-
-Each package/app is 100% [TypeScript](https://www.typescriptlang.org/).
-
-### Building packages/ui
-
-This example is set up to produce compiled styles for `ui` components into the `dist` directory. The component `.tsx` files are consumed by the Next.js apps directly using `transpilePackages` in `next.config.ts`. This was chosen for several reasons:
-
-- Make sharing one `tailwind.config.ts` to apps and packages as easy as possible.
-- Make package compilation simple by only depending on the Next.js Compiler and `tailwindcss`.
-- Ensure Tailwind classes do not overwrite each other. The `ui` package uses a `ui-` prefix for it's classes.
-- Maintain clear package export boundaries.
-
-Another option is to consume `packages/ui` directly from source without building. If using this option, you will need to update the `tailwind.config.ts` in your apps to be aware of your package locations, so it can find all usages of the `tailwindcss` class names for CSS compilation.
-
-For example, in [tailwind.config.ts](packages/tailwind-config/tailwind.config.ts):
-
-```js
-  content: [
-    // app content
-    `src/**/*.{js,ts,jsx,tsx}`,
-    // include packages if not transpiling
-    "../../packages/ui/*.{js,ts,jsx,tsx}",
-  ],
+```bash
+pnpm dev
 ```
 
-If you choose this strategy, you can remove the `tailwindcss` and `autoprefixer` dependencies from the `ui` package.
+Run lint and type checks:
 
-### Utilities
+```bash
+pnpm lint
+pnpm check-types
+```
 
-This Turborepo has some additional tools already setup for you:
+## Notes
 
-- [Tailwind CSS](https://tailwindcss.com/) for styles
-- [TypeScript](https://www.typescriptlang.org/) for static type checking
-- [ESLint](https://eslint.org/) for code linting
-- [Prettier](https://prettier.io) for code formatting
+- This repository currently contains scaffold-level app code plus execution-grade migration docs.
+- Do not assume v1 feature parity is implemented until migration phases are completed and quality gates pass.

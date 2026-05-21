@@ -1,0 +1,43 @@
+name: Promote RC to Prod
+
+on:
+  workflow_dispatch:
+    inputs:
+      rc_tag:
+        description: "Existing RC tag (example: v1.2.0-rc.1)"
+        required: true
+      prod_tag:
+        description: "New production tag (example: v1.2.0)"
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  promote:
+    runs-on: ubuntu-latest
+    environment: prod
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Resolve RC commit
+        id: rc
+        shell: bash
+        run: |
+          set -euo pipefail
+          RC_COMMIT="$(git rev-list -n 1 "${{ github.event.inputs.rc_tag }}")"
+          if [[ -z "$RC_COMMIT" ]]; then
+            echo "Unable to resolve RC tag commit."
+            exit 1
+          fi
+          echo "commit=$RC_COMMIT" >> "$GITHUB_OUTPUT"
+
+      - name: Create and push production tag
+        shell: bash
+        run: |
+          set -euo pipefail
+          git tag "${{ github.event.inputs.prod_tag }}" "${{ steps.rc.outputs.commit }}"
+          git push origin "${{ github.event.inputs.prod_tag }}"

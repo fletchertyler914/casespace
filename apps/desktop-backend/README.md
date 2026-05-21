@@ -1,0 +1,32 @@
+# CaseSpace Desktop Backend (`apps/desktop-backend`)
+
+This app is the native/core backend engine for CaseSpace v2.
+
+Current state: scaffold-level Tauri shell; domain command implementation pending.
+
+## Role in v2 architecture
+
+- Own Tauri command handlers and native integrations.
+- Own persistence schema/migrations and data access patterns.
+- Own security boundaries for filesystem and destructive operations.
+
+## Intended runtime relationship
+
+- `apps/desktop` (Next desktop UX) calls this backend through typed command contracts.
+- `apps/web` does not directly depend on native-only capabilities.
+
+## Local development
+
+Run Tauri command:
+
+```bash
+pnpm --filter desktop-backend dev
+```
+
+This package does not own a separate desktop UI. It wraps the Next frontend from `apps/desktop` via Tauri (`devUrl` / `frontendDist` in `tauri.conf.json`).
+
+## Implementation notes
+
+- Command-risk and hardening requirements are defined in `docs/migrating-from-v1.md`.
+- Readiness/blockers are tracked in `docs/readiness.md`.
+- v1 command and capability reference is documented in `docs/v1-reference.md`.
