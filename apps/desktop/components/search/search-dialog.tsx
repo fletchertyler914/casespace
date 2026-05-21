@@ -19,6 +19,7 @@ interface SearchDialogProps {
   caseId: string;
   files: CaseFile[];
   onFileOpen: (file: CaseFile) => void;
+  onOpenEntityPanel: (entityType: string) => void;
 }
 
 function getEntityIcon(entityType: string) {
@@ -36,12 +37,21 @@ export function SearchDialog({
   caseId,
   files,
   onFileOpen,
+  onOpenEntityPanel,
 }: SearchDialogProps) {
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(false);
   const [hits, setHits] = useState<SearchHit[]>([]);
 
   const fileIndex = useMemo(() => new Map(files.map((f) => [f.id, f])), [files]);
+  const groupedHits = useMemo(() => {
+    const groups = new Map<string, SearchHit[]>();
+    for (const hit of hits) {
+      const key = hit.entityType || "other";
+      groups.set(key, [...(groups.get(key) ?? []), hit]);
+    }
+    return groups;
+  }, [hits]);
 
   useEffect(() => {
     if (!open) {
@@ -61,7 +71,7 @@ export function SearchDialog({
     let cancelled = false;
     setLoading(true);
     const timer = setTimeout(async () => {
-      const res = await commandClient.searchFiles(caseId, trimmed, 50);
+      const res = await commandClient.searchAll(caseId, trimmed, 80);
       if (cancelled) return;
       if (res.ok && res.data) {
         setHits(res.data);
@@ -88,36 +98,38 @@ export function SearchDialog({
         <CommandEmpty>
           {loading ? "Searching…" : query.trim().length < 2 ? "Type at least 2 characters." : "No results."}
         </CommandEmpty>
-        <CommandGroup heading="Results">
-          {hits.map((hit) => {
-            const Icon = getEntityIcon(hit.entityType);
-            const value = `${hit.entityType}:${hit.id}:${hit.title}`;
-            const matchingFile =
-              fileIndex.get(hit.id) ??
-              files.find((f) => f.fileName.toLowerCase() === hit.title.toLowerCase());
+        {Array.from(groupedHits.entries()).map(([entityType, entityHits]) => (
+          <CommandGroup key={entityType} heading={entityType}>
+            {entityHits.map((hit) => {
+              const Icon = getEntityIcon(hit.entityType);
+              const value = `${hit.entityType}:${hit.id}:${hit.title}`;
+              const matchingFile =
+                fileIndex.get(hit.id) ??
+                files.find((f) => f.fileName.toLowerCase() === hit.title.toLowerCase());
 
-            return (
-              <CommandItem
-                key={value}
-                value={value}
-                onSelect={() => {
-                  if (matchingFile) {
-                    onFileOpen(matchingFile);
-                  }
-                  onOpenChange(false);
-                }}
-              >
-                <Icon className="h-4 w-4 text-muted-foreground" />
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-medium">{hit.title}</p>
-                  <p className="truncate text-xs text-muted-foreground">
-                    {hit.entityType} · {hit.snippet}
-                  </p>
-                </div>
-              </CommandItem>
-            );
-          })}
-        </CommandGroup>
+              return (
+                <CommandItem
+                  key={value}
+                  value={value}
+                  onSelect={() => {
+                    if (matchingFile) {
+                      onFileOpen(matchingFile);
+                    } else {
+                      onOpenEntityPanel(hit.entityType);
+                    }
+                    onOpenChange(false);
+                  }}
+                >
+                  <Icon className="h-4 w-4 text-muted-foreground" />
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium">{hit.title}</p>
+                    <p className="truncate text-xs text-muted-foreground">{hit.snippet}</p>
+                  </div>
+                </CommandItem>
+              );
+            })}
+          </CommandGroup>
+        ))}
       </CommandList>
     </CommandDialog>
   );

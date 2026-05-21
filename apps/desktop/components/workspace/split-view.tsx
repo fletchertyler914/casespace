@@ -9,6 +9,8 @@ import { useWorkspacePanels } from "@/hooks/use-workspace-panels";
 import { FindingsPanel } from "@/components/artifacts/findings-panel";
 import { NotesPanel } from "@/components/artifacts/notes-panel";
 import { TimelinePanel } from "@/components/artifacts/timeline-panel";
+import { ReportsPanel } from "@/components/artifacts/reports-panel";
+import { TimePanel } from "@/components/billing/time-panel";
 import {
   DuplicatesPanel,
   type DuplicateGroup,
@@ -30,6 +32,8 @@ interface SplitViewProps {
   findingsVisible: boolean;
   timelineVisible: boolean;
   duplicatesVisible: boolean;
+  reportsVisible: boolean;
+  timeVisible: boolean;
   notes: Note[];
   findings: Finding[];
   timeline: TimelineEvent[];
@@ -48,6 +52,8 @@ interface SplitViewProps {
   onCloseFindings: () => void;
   onCloseTimeline: () => void;
   onCloseDuplicates: () => void;
+  onCloseReports: () => void;
+  onCloseTime: () => void;
   onArtifactsChanged: () => void;
   sourceRoots: string[];
 }
@@ -59,6 +65,8 @@ export const SplitView = memo(function SplitView({
   findingsVisible,
   timelineVisible,
   duplicatesVisible,
+  reportsVisible,
+  timeVisible,
   notes,
   findings,
   timeline,
@@ -77,6 +85,8 @@ export const SplitView = memo(function SplitView({
   onCloseFindings,
   onCloseTimeline,
   onCloseDuplicates,
+  onCloseReports,
+  onCloseTime,
   onArtifactsChanged,
   sourceRoots,
 }: SplitViewProps) {
@@ -174,6 +184,24 @@ export const SplitView = memo(function SplitView({
               onClose={onCloseDuplicates}
               onChanged={onArtifactsChanged}
             />
+          </Panel>
+        </>
+      )}
+
+      {reportsVisible && (
+        <>
+          <ResizeHandle />
+          <Panel defaultSize={panelSizes.sidePanelSize} minSize={18} maxSize={45}>
+            <ReportsPanel caseId={caseId} onClose={onCloseReports} />
+          </Panel>
+        </>
+      )}
+
+      {timeVisible && (
+        <>
+          <ResizeHandle />
+          <Panel defaultSize={panelSizes.sidePanelSize} minSize={18} maxSize={45}>
+            <TimePanel caseId={caseId} onClose={onCloseTime} />
           </Panel>
         </>
       )}

@@ -14,10 +14,10 @@ Continuation plan after **Core Parity backend gate** passed locally. Backend com
 | Workspace + ingest/sync (U4) | **implemented** |
 | Viewers (U5) | **implemented** — in-app PDF/DOCX/XLSX; external only for unsupported types |
 | Artifact panels (U6) | **MVP implemented** — notes/findings/timeline list+create; rich editors deferred |
-| U7 duplicates + board | **in progress** — duplicates panel MVP shipped; board/dnd pending |
+| U7 duplicates + board | **in progress** — duplicates panel MVP + status swimlanes shipped; dnd pending |
 | U8 time | **in progress** — timer widget MVP shipped |
-| U9 reports | **next** |
-| U10 search | **in progress** — cmdk search dialog shipped; settings pending |
+| U9 reports | **in progress** — reports side panel MVP shipped |
+| U10 search/settings | **in progress** — cmdk search + workspace settings dialog shipped; deeper parity pending |
 | UX gate + legacy cleanup (U11) | **pending** |
 | AINative | **blocked** — until UX Parity Build Gate |
 | Toolchain | Next **16.2.6** pinned via pnpm catalog — see [Supply chain](#supply-chain) |
@@ -111,12 +111,15 @@ App theme drives PDF chrome (no in-viewer theme toggle). Custom toolbar: search,
 
 - Duplicates panel implemented in split view (`components/artifacts/duplicates-panel.tsx`)
 - Primary-file selection wired via `mark_duplicate_primary`
-- Remaining: board drag/drop workflows, merge-duplicates UX, conflict resolution dialogs
+- Metadata merge action wired via `merge_duplicate_metadata` (into selected primary)
+- Board upgraded to status swimlanes in `components/workspace/board-view.tsx`
+- Remaining: board drag/drop workflows and conflict resolution dialogs
 
 ### Phase U8 — Time management 🚧
 
 - Timer widget MVP in header (`components/billing/timer-widget.tsx`) with start/stop + live elapsed
-- Remaining: pause/resume UX, daily summary, segment editing, billing config dialogs
+- Time side panel MVP in split view (`components/billing/time-panel.tsx`) with entries, billing summary, and start/pause/resume/stop controls
+- Remaining: daily summary, segment editing, billing config dialogs
 
 ## Next phases (execution order)
 
@@ -129,6 +132,21 @@ App theme drives PDF chrome (no in-viewer theme toggle). Custom toolbar: search,
 ### Phase U8 continuation — Time parity
 
 - Time management page, calendar day UI, segment edit, billing config
+
+### Phase U9 — Reports 🚧
+
+- Reports side panel MVP implemented (`components/artifacts/reports-panel.tsx`)
+- Exports wired to `export_case_report` for: narrative, executive, evidence index, financial, billing invoice
+- Narrative preview wired via `generate_case_report`
+- In-panel recent export history added
+- Remaining: full report workspace/page UX, templating controls, richer filters
+
+### Phase U10 — Search + settings 🚧
+
+- Cmdk search dialog shipped (`components/search/search-dialog.tsx`)
+- Workspace settings dialog shipped (`components/workspace/settings-dialog.tsx`) with auto-sync and panel default controls
+- Search upgraded to cross-entity (`search_all`) with panel-aware actions for non-file hits
+- Remaining: mapping/settings parity, advanced column manager workflows
 
 ### Phase U9 — Reports UI
 

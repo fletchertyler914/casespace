@@ -22,6 +22,8 @@ export function NotesPanel({
 }: NotesPanelProps) {
   const [draft, setDraft] = useState("");
   const [saving, setSaving] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingContent, setEditingContent] = useState("");
 
   async function createNote() {
     if (!draft.trim()) return;
@@ -30,6 +32,34 @@ export function NotesPanel({
     setSaving(false);
     if (res.ok) {
       setDraft("");
+      onChanged();
+    }
+  }
+
+  async function saveEdit(noteId: string) {
+    if (!editingContent.trim()) return;
+    setSaving(true);
+    const res = await commandClient.updateNote(noteId, editingContent.trim());
+    setSaving(false);
+    if (res.ok) {
+      setEditingId(null);
+      setEditingContent("");
+      onChanged();
+    }
+  }
+
+  async function deleteNote(noteId: string) {
+    setSaving(true);
+    const res = await commandClient.deleteNote(noteId);
+    setSaving(false);
+    if (res.ok) {
+      onChanged();
+    }
+  }
+
+  async function togglePinned(noteId: string) {
+    const res = await commandClient.toggleNotePinned(noteId);
+    if (res.ok) {
       onChanged();
     }
   }
@@ -61,7 +91,71 @@ export function NotesPanel({
                 key={n.id}
                 className="rounded-md border border-border/50 p-2 text-xs leading-relaxed"
               >
-                {n.content}
+                {editingId === n.id ? (
+                  <div className="space-y-2">
+                    <Textarea
+                      value={editingContent}
+                      onChange={(e) => setEditingContent(e.target.value)}
+                      rows={3}
+                      className="text-xs"
+                    />
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        className="h-7 px-2 text-[11px]"
+                        disabled={saving}
+                        onClick={() => void saveEdit(n.id)}
+                      >
+                        Save
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-7 px-2 text-[11px]"
+                        onClick={() => {
+                          setEditingId(null);
+                          setEditingContent("");
+                        }}
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <p>{n.content}</p>
+                    <div className="flex gap-1">
+                      <Button
+                        size="sm"
+                        variant={n.pinned ? "default" : "outline"}
+                        className="h-6 px-2 text-[11px]"
+                        onClick={() => void togglePinned(n.id)}
+                      >
+                        {n.pinned ? "Pinned" : "Pin"}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-6 px-2 text-[11px]"
+                        onClick={() => {
+                          setEditingId(n.id);
+                          setEditingContent(n.content);
+                        }}
+                      >
+                        Edit
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-6 px-2 text-[11px]"
+                        disabled={saving}
+                        onClick={() => void deleteNote(n.id)}
+                      >
+                        Delete
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </li>
             ))
           )}

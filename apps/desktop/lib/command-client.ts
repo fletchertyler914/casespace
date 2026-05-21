@@ -148,6 +148,9 @@ export const commandClient = {
   updateNote(noteId: string, content: string) {
     return safeInvoke<Note>("update_note", { noteId, content });
   },
+  toggleNotePinned(noteId: string) {
+    return safeInvoke<Note>("toggle_note_pinned", { noteId });
+  },
   deleteNote(noteId: string) {
     return safeInvoke<void>("delete_note", { noteId });
   },
@@ -160,6 +163,16 @@ export const commandClient = {
   },
   listFindings(caseId: string) {
     return safeInvoke<Finding[]>("list_findings", { caseId });
+  },
+  updateFinding(findingId: string, title: string, description: string) {
+    return safeInvoke<Finding>("update_finding", {
+      findingId,
+      title,
+      description,
+    });
+  },
+  deleteFinding(findingId: string) {
+    return safeInvoke<void>("delete_finding", { findingId });
   },
   createTimelineEvent(
     caseId: string,
@@ -175,8 +188,18 @@ export const commandClient = {
   listTimelineEvents(caseId: string) {
     return safeInvoke<TimelineEvent[]>("list_timeline_events", { caseId });
   },
+  updateTimelineEvent(eventId: string, description: string, occurredAt?: string) {
+    return safeInvoke<TimelineEvent>("update_timeline_event", {
+      eventId,
+      description,
+      occurredAt,
+    });
+  },
+  deleteTimelineEvent(eventId: string) {
+    return safeInvoke<void>("delete_timeline_event", { eventId });
+  },
   searchAll(caseId: string, query: string, limit?: number) {
-    return safeInvoke<string[]>("search_all", { caseId, query, limit });
+    return safeInvoke<SearchHit[]>("search_all", { caseId, query, limit });
   },
   searchFiles(caseId: string, query: string, limit?: number) {
     return safeInvoke<SearchHit[]>("search_files", { caseId, query, limit });

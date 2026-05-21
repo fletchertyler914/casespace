@@ -24,6 +24,9 @@ export function FindingsPanel({
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [saving, setSaving] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingTitle, setEditingTitle] = useState("");
+  const [editingBody, setEditingBody] = useState("");
 
   async function createFinding() {
     if (!title.trim()) return;
@@ -37,6 +40,32 @@ export function FindingsPanel({
     if (res.ok) {
       setTitle("");
       setBody("");
+      onChanged();
+    }
+  }
+
+  async function saveFinding(findingId: string) {
+    if (!editingTitle.trim()) return;
+    setSaving(true);
+    const res = await commandClient.updateFinding(
+      findingId,
+      editingTitle.trim(),
+      editingBody.trim(),
+    );
+    setSaving(false);
+    if (res.ok) {
+      setEditingId(null);
+      setEditingTitle("");
+      setEditingBody("");
+      onChanged();
+    }
+  }
+
+  async function deleteFinding(findingId: string) {
+    setSaving(true);
+    const res = await commandClient.deleteFinding(findingId);
+    setSaving(false);
+    if (res.ok) {
       onChanged();
     }
   }
@@ -74,8 +103,71 @@ export function FindingsPanel({
                 key={f.id}
                 className="rounded-md border border-border/50 p-2 text-xs"
               >
-                <p className="font-medium">{f.title}</p>
-                <p className="text-muted-foreground">{f.description}</p>
+                {editingId === f.id ? (
+                  <div className="space-y-2">
+                    <Input
+                      value={editingTitle}
+                      onChange={(e) => setEditingTitle(e.target.value)}
+                      className="h-8 text-xs"
+                    />
+                    <Textarea
+                      value={editingBody}
+                      onChange={(e) => setEditingBody(e.target.value)}
+                      rows={2}
+                      className="text-xs"
+                    />
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        className="h-7 px-2 text-[11px]"
+                        disabled={saving}
+                        onClick={() => void saveFinding(f.id)}
+                      >
+                        Save
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-7 px-2 text-[11px]"
+                        onClick={() => {
+                          setEditingId(null);
+                          setEditingTitle("");
+                          setEditingBody("");
+                        }}
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <p className="font-medium">{f.title}</p>
+                    <p className="text-muted-foreground">{f.description}</p>
+                    <div className="flex gap-1">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-6 px-2 text-[11px]"
+                        onClick={() => {
+                          setEditingId(f.id);
+                          setEditingTitle(f.title);
+                          setEditingBody(f.description);
+                        }}
+                      >
+                        Edit
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-6 px-2 text-[11px]"
+                        disabled={saving}
+                        onClick={() => void deleteFinding(f.id)}
+                      >
+                        Delete
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </li>
             ))
           )}

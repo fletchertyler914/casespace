@@ -2,7 +2,7 @@
 
 Next.js desktop UX shell for CaseSpace v2.
 
-**Status (2026-05-21):** U1–U6 shipped — case hub, workspace shell, in-app viewers (PDF/DOCX/XLSX/image/text/CSV), artifact panel MVP. **Next:** U7 board/duplicates, U10 search, U8–U9 time/reports, U11 gate. Plan: [docs/ui-port-plan.md](../../docs/ui-port-plan.md).
+**Status (2026-05-21):** U1–U6 shipped — case hub, workspace shell, in-app viewers (PDF/DOCX/XLSX/image/text/CSV), artifact panel MVP. U7/U8/U9/U10 MVP work is in place (swimlanes, duplicates, timer widget, reports panel, cmdk search). **Next:** parity polish + U11 gate. Plan: [docs/ui-port-plan.md](../../docs/ui-port-plan.md).
 
 ## Role in v2 architecture
 

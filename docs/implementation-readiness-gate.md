@@ -47,8 +47,8 @@ Product UX matches v1 P0 outcomes. Criteria G1–G12 in [ui-port-plan.md](ui-por
 | Progress | Items |
 |----------|-------|
 | **Done** | G1 hub, G2 workspace+panels MVP, G3 ingest/sync, G4 in-app viewers, G9 theme/splash, G10 adapters |
-| **Partial** | G5 search (cmdk MVP), G6 time (timer widget MVP), G8 duplicates (panel MVP) |
-| **Pending** | G7 reports, G11 dev smoke, G12 ongoing backend regression |
+| **Partial** | G5 search (cmdk MVP), G6 time (timer widget MVP), G7 reports (panel MVP), G8 duplicates (panel MVP + primary select) |
+| **Pending** | G11 dev smoke, G12 ongoing backend regression |
 
 **Status: in progress** (not passed).
 

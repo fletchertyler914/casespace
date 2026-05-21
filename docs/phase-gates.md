@@ -51,10 +51,10 @@ Active workstream. Backend commands exist; v1-shaped UI is ported to `apps/deskt
 ### Next
 
 - [ ] **U3 tail** — Edit case, large-folder warning, filters (optional)
-- [ ] **U7** Board / review + duplicate groups UI (**in progress**: duplicates panel MVP + set primary)
-- [ ] **U8** Time management UI (**in progress**: timer widget MVP)
-- [ ] **U9** Reports UI
-- [ ] **U10** Search palette (cmdk) + settings (**in progress**: cmdk dialog wired)
+- [ ] **U7** Board / review + duplicate groups UI (**in progress**: duplicates panel MVP + set primary + merge metadata + swimlanes)
+- [ ] **U8** Time management UI (**in progress**: timer widget + time panel MVP)
+- [ ] **U9** Reports UI (**in progress**: reports panel MVP + export actions)
+- [ ] **U10** Search palette (cmdk) + settings (**in progress**: cmdk + workspace settings dialog wired)
 - [ ] **U11** UX gate validation + remove legacy `components/case-workspace.tsx`
 
 Detail: [ui-port-plan.md](ui-port-plan.md).

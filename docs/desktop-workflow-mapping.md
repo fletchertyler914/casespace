@@ -19,14 +19,15 @@
 | `components/workspace/CaseHeader` | `components/workspace/case-header.tsx` | U4 | **done** |
 | `components/workspace/IntegratedFileViewer` | `components/viewer/file-viewer.tsx` + previews | U5 | **done** |
 | `components/viewer/PdfViewerWrapper` | `components/viewer/pdf-file-preview.tsx` | U5 | **done** |
-| `components/board/WorkflowBoard` | `components/workspace/board-view.tsx` | U7 | stub — dnd/swimlanes next |
+| `components/board/WorkflowBoard` | `components/workspace/board-view.tsx` | U7 | **MVP** — status swimlanes; dnd next |
 | `components/notes/NotePanel` | `components/artifacts/notes-panel.tsx` | U6 | **MVP** — list/create; Tiptap P1 |
 | `components/findings/FindingsPanel` | `components/artifacts/findings-panel.tsx` | U6 | **MVP** |
 | `components/timeline/TimelineView` | `components/artifacts/timeline-panel.tsx` | U6 | **MVP** |
 | `components/duplicates/*` | `components/artifacts/duplicates-panel.tsx` | U7 | **MVP** — list groups + set primary |
 | `components/search/SearchDialog` | `components/search/search-dialog.tsx` | U10 | **MVP** — cmdk search wired |
 | `components/time/TimerWidget` | `components/billing/timer-widget.tsx` | U8 | **MVP** — start/stop + elapsed |
-| `components/reports/ReportView` | `components/reports/report-view.tsx` | U9 | planned |
+| `components/time/TimeManagementPage` | `components/billing/time-panel.tsx` | U8 | **MVP** — entries + billing summary + controls |
+| `components/reports/ReportView` | `components/artifacts/reports-panel.tsx` | U9 | **MVP** — export + preview; full report view pending |
 | `src/services/*` | `lib/command-client.ts` (+ future `lib/services/*`) | P0 | **partial** |
 | `src/hooks/*` | `hooks/*`, `hooks/use-workspace-panels.ts`, etc. | P0 | **partial** |
 | `components/mapping/*` | — | P1 | defer |

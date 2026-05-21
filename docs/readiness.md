@@ -10,7 +10,7 @@ Tracks implemented scope, validated scope, and gates required before production 
 |------|--------|
 | Planning / spec pack | **Complete** — [product-spec-bible.md](product-spec-bible.md) |
 | Core Parity **backend** | **Complete (local)** — SQLite, FTS, P0 commands, parity + hardening suites |
-| Core Parity **UX** (v1 port) | **In progress** — U1–U6 done/MVP; U7/U8/U10 started; U9/U11 next — [ui-port-plan.md](ui-port-plan.md) |
+| Core Parity **UX** (v1 port) | **In progress** — U1–U6 done/MVP; U7/U8/U9/U10 started; U11 next — [ui-port-plan.md](ui-port-plan.md) |
 | Toolchain | Next **16.2.6** catalog-pinned; `minimumReleaseAge` 48h |
 | AINative phase | **Blocked** — until UX Parity Build Gate |
 | Remote CI evidence | Partial — push for fresh CI on Node 24 |
@@ -33,7 +33,7 @@ Tracks implemented scope, validated scope, and gates required before production 
 |------|-----------|---------------|
 | Monorepo foundation | pnpm + Turbo + arch guard; catalog-pinned Next | Remote CI green on Node 24 after next push |
 | Desktop backend | Full non-AI command matrix + SQLite/FTS + ingest v2 | AI-native commands; `commands/*` module split |
-| Desktop UI | Hub, workspace shell, file navigator, in-app viewers, artifact panel MVP, cmdk search, duplicates panel MVP, timer widget MVP | Board/dnd parity, duplicate merge UX, time pages/dialogs, reports UI, settings parity |
+| Desktop UI | Hub, workspace shell, file navigator, in-app viewers, artifact panel MVP, cross-entity cmdk search, workspace settings dialog, duplicates panel MVP, timer widget MVP, time panel MVP, reports panel MVP + export history | Board/dnd parity polish, time pages/dialogs polish, full report workspace UX, deeper settings parity |
 | Web surface | Marketing + download page | Content polish only |
 | Shared packages | `@repo/types` contracts (partial) | Full DTO parity + adapter envelopes |
 | Documentation | Spec pack + port plan synced to code | Feature catalog row-by-row as U7–U10 land |
@@ -46,7 +46,7 @@ Tracks implemented scope, validated scope, and gates required before production 
 |------|--------|----------|
 | Implementation Readiness (planning) | **PASS** | [implementation-readiness-gate.md](implementation-readiness-gate.md) |
 | Core Parity **backend** Build Gate | **PASS (local)** | C1–C7 below |
-| UX Parity Build Gate | **In progress** | G1–G4 done; G5/G6/G8 partial; G7 pending — [ui-port-plan.md](ui-port-plan.md) |
+| UX Parity Build Gate | **In progress** | G1–G4 done; G5/G6/G7/G8 partial; G11 pending — [ui-port-plan.md](ui-port-plan.md) |
 
 ### Core Parity backend (passed)
 

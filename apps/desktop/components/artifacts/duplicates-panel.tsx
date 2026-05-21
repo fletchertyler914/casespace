@@ -42,6 +42,19 @@ export function DuplicatesPanel({
     }
   }
 
+  async function mergeGroup(groupId: string, primaryFileId: string) {
+    setBusyGroup(groupId);
+    const res = await commandClient.mergeDuplicateMetadata(
+      caseId,
+      groupId,
+      primaryFileId,
+    );
+    setBusyGroup(null);
+    if (res.ok) {
+      onChanged();
+    }
+  }
+
   return (
     <WorkspaceSidePanel title="Duplicates" onClose={onClose}>
       <div className="space-y-3 p-3">
@@ -81,6 +94,21 @@ export function DuplicatesPanel({
                   );
                 })}
               </ul>
+              {group.primaryFileId ? (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="mt-2 h-7 w-full text-[11px]"
+                  disabled={busyGroup === group.groupId}
+                  onClick={() => void mergeGroup(group.groupId, group.primaryFileId!)}
+                >
+                  Merge metadata into primary
+                </Button>
+              ) : (
+                <p className="mt-2 text-[11px] text-muted-foreground">
+                  Set a primary file before merging metadata.
+                </p>
+              )}
             </div>
           ))
         )}

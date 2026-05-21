@@ -22,6 +22,8 @@ export function TimelinePanel({
 }: TimelinePanelProps) {
   const [draft, setDraft] = useState("");
   const [saving, setSaving] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingDescription, setEditingDescription] = useState("");
 
   async function createEvent() {
     if (!draft.trim()) return;
@@ -30,6 +32,30 @@ export function TimelinePanel({
     setSaving(false);
     if (res.ok) {
       setDraft("");
+      onChanged();
+    }
+  }
+
+  async function saveEvent(eventId: string) {
+    if (!editingDescription.trim()) return;
+    setSaving(true);
+    const res = await commandClient.updateTimelineEvent(
+      eventId,
+      editingDescription.trim(),
+    );
+    setSaving(false);
+    if (res.ok) {
+      setEditingId(null);
+      setEditingDescription("");
+      onChanged();
+    }
+  }
+
+  async function deleteEvent(eventId: string) {
+    setSaving(true);
+    const res = await commandClient.deleteTimelineEvent(eventId);
+    setSaving(false);
+    if (res.ok) {
       onChanged();
     }
   }
@@ -61,8 +87,64 @@ export function TimelinePanel({
                 key={e.id}
                 className="rounded-md border border-border/50 p-2 text-xs"
               >
-                <p>{e.description}</p>
-                <p className="text-muted-foreground">{e.occurredAt}</p>
+                {editingId === e.id ? (
+                  <div className="space-y-2">
+                    <Textarea
+                      value={editingDescription}
+                      onChange={(event) => setEditingDescription(event.target.value)}
+                      rows={2}
+                      className="text-xs"
+                    />
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        className="h-7 px-2 text-[11px]"
+                        disabled={saving}
+                        onClick={() => void saveEvent(e.id)}
+                      >
+                        Save
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-7 px-2 text-[11px]"
+                        onClick={() => {
+                          setEditingId(null);
+                          setEditingDescription("");
+                        }}
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <p>{e.description}</p>
+                    <p className="text-muted-foreground">{e.occurredAt}</p>
+                    <div className="flex gap-1">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-6 px-2 text-[11px]"
+                        onClick={() => {
+                          setEditingId(e.id);
+                          setEditingDescription(e.description);
+                        }}
+                      >
+                        Edit
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-6 px-2 text-[11px]"
+                        disabled={saving}
+                        onClick={() => void deleteEvent(e.id)}
+                      >
+                        Delete
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </li>
             ))
           )}

@@ -23,6 +23,7 @@ import {
 } from "@/lib/workspace-preferences";
 import { AddSourcesDialog } from "./add-sources-dialog";
 import { CaseHeader } from "./case-header";
+import { SettingsDialog } from "./settings-dialog";
 import { WorkspaceLayout } from "./workspace-layout";
 import { SearchDialog } from "@/components/search/search-dialog";
 import type { DuplicateGroup } from "@/components/artifacts/duplicates-panel";
@@ -55,9 +56,13 @@ export function CaseWorkspaceShell({ caseId }: CaseWorkspaceShellProps) {
   const [findingsVisible, setFindingsVisible] = useState(false);
   const [timelineVisible, setTimelineVisible] = useState(false);
   const [duplicatesVisible, setDuplicatesVisible] = useState(false);
+  const [reportsVisible, setReportsVisible] = useState(false);
+  const [timeVisible, setTimeVisible] = useState(false);
   const [sourceRoots, setSourceRoots] = useState<string[]>([]);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [duplicateGroups, setDuplicateGroups] = useState<DuplicateGroup[]>([]);
+  const autoSyncIntervals = [1, 5, 15] as const;
 
   const applyFiles = useCallback((raw: CaseFile[], roots: string[]) => {
     setFiles(relativizeCaseFiles(raw, roots));
@@ -125,6 +130,21 @@ export function CaseWorkspaceShell({ caseId }: CaseWorkspaceShellProps) {
     [caseId, prefsLoaded],
   );
 
+  const applyPrefs = useCallback(
+    async (next: WorkspacePreferences) => {
+      setViewMode(next.viewMode ?? "split");
+      setNavigatorOpen(next.navigatorOpen ?? true);
+      setNotesVisible(next.notesVisible ?? false);
+      setFindingsVisible(next.findingsVisible ?? false);
+      setTimelineVisible(next.timelineVisible ?? false);
+      setDuplicatesVisible(next.duplicatesVisible ?? false);
+      setReportsVisible(next.reportsVisible ?? false);
+      setTimeVisible(next.timeVisible ?? false);
+      await persistPrefs(next);
+    },
+    [persistPrefs],
+  );
+
   const loadCase = useCallback(async () => {
     setLoading(true);
     const caseRes = await commandClient.getCase(caseId);
@@ -150,6 +170,8 @@ export function CaseWorkspaceShell({ caseId }: CaseWorkspaceShellProps) {
     setFindingsVisible(loadedPrefs.findingsVisible ?? false);
     setTimelineVisible(loadedPrefs.timelineVisible ?? false);
     setDuplicatesVisible(loadedPrefs.duplicatesVisible ?? false);
+    setReportsVisible(loadedPrefs.reportsVisible ?? false);
+    setTimeVisible(loadedPrefs.timeVisible ?? false);
 
     const syncRes = await commandClient.syncCaseAllSources(caseId, true);
     if (syncRes.ok && syncRes.data) {
@@ -203,6 +225,8 @@ export function CaseWorkspaceShell({ caseId }: CaseWorkspaceShellProps) {
       findingsVisible,
       timelineVisible,
       duplicatesVisible,
+      reportsVisible,
+      timeVisible,
       autoSyncEnabled: prefs.autoSyncEnabled,
       autoSyncIntervalMinutes: prefs.autoSyncIntervalMinutes,
     });
@@ -215,6 +239,8 @@ export function CaseWorkspaceShell({ caseId }: CaseWorkspaceShellProps) {
     findingsVisible,
     timelineVisible,
     duplicatesVisible,
+    reportsVisible,
+    timeVisible,
     prefs.autoSyncEnabled,
     prefs.autoSyncIntervalMinutes,
   ]);
@@ -307,10 +333,14 @@ export function CaseWorkspaceShell({ caseId }: CaseWorkspaceShellProps) {
         findingsVisible={findingsVisible}
         timelineVisible={timelineVisible}
         duplicatesVisible={duplicatesVisible}
+        reportsVisible={reportsVisible}
+        timeVisible={timeVisible}
         onToggleNotes={() => setNotesVisible((v) => !v)}
         onToggleFindings={() => setFindingsVisible((v) => !v)}
         onToggleTimeline={() => setTimelineVisible((v) => !v)}
         onToggleDuplicates={() => setDuplicatesVisible((v) => !v)}
+        onToggleReports={() => setReportsVisible((v) => !v)}
+        onToggleTime={() => setTimeVisible((v) => !v)}
         onSyncFiles={() => void syncNow()}
         isSyncing={isSyncing}
         autoSyncEnabled={prefs.autoSyncEnabled ?? true}
@@ -320,8 +350,19 @@ export function CaseWorkspaceShell({ caseId }: CaseWorkspaceShellProps) {
             autoSyncEnabled: !(prefs.autoSyncEnabled ?? true),
           })
         }
+        autoSyncIntervalMinutes={prefs.autoSyncIntervalMinutes ?? 5}
+        onCycleAutoSyncInterval={() => {
+          const current = prefs.autoSyncIntervalMinutes ?? 5;
+          const idx = autoSyncIntervals.indexOf(current as (typeof autoSyncIntervals)[number]);
+          const next = autoSyncIntervals[(idx + 1 + autoSyncIntervals.length) % autoSyncIntervals.length];
+          void persistPrefs({
+            ...prefs,
+            autoSyncIntervalMinutes: next,
+          });
+        }}
         onAddSources={() => setAddSourcesOpen(true)}
         onOpenSearch={() => setSearchOpen(true)}
+        onOpenSettings={() => setSettingsOpen(true)}
         onClose={() => router.push("/")}
       />
       <WorkspaceLayout
@@ -334,6 +375,8 @@ export function CaseWorkspaceShell({ caseId }: CaseWorkspaceShellProps) {
         findingsVisible={findingsVisible}
         timelineVisible={timelineVisible}
         duplicatesVisible={duplicatesVisible}
+        reportsVisible={reportsVisible}
+        timeVisible={timeVisible}
         caseId={caseId}
         notes={notes}
         findings={findings}
@@ -360,6 +403,8 @@ export function CaseWorkspaceShell({ caseId }: CaseWorkspaceShellProps) {
         onCloseFindings={() => setFindingsVisible(false)}
         onCloseTimeline={() => setTimelineVisible(false)}
         onCloseDuplicates={() => setDuplicatesVisible(false)}
+        onCloseReports={() => setReportsVisible(false)}
+        onCloseTime={() => setTimeVisible(false)}
         onArtifactsChanged={() => {
           void refreshArtifacts(caseId);
           void refreshDuplicateGroups(caseId);
@@ -376,6 +421,33 @@ export function CaseWorkspaceShell({ caseId }: CaseWorkspaceShellProps) {
         caseId={caseId}
         files={files}
         onFileOpen={handleFileSelect}
+        onOpenEntityPanel={(entityType) => {
+          const normalized = entityType.toLowerCase();
+          if (normalized.includes("note")) setNotesVisible(true);
+          if (normalized.includes("finding")) setFindingsVisible(true);
+          if (normalized.includes("timeline")) setTimelineVisible(true);
+          if (normalized.includes("duplicate")) setDuplicatesVisible(true);
+          if (normalized.includes("report")) setReportsVisible(true);
+          if (normalized.includes("time")) setTimeVisible(true);
+        }}
+      />
+      <SettingsDialog
+        open={settingsOpen}
+        onOpenChange={setSettingsOpen}
+        prefs={{
+          ...prefs,
+          viewMode,
+          navigatorOpen,
+          notesVisible,
+          findingsVisible,
+          timelineVisible,
+          duplicatesVisible,
+          reportsVisible,
+          timeVisible,
+        }}
+        onSave={(next) => {
+          void applyPrefs(next);
+        }}
       />
     </div>
   );

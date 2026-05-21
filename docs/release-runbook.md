@@ -42,6 +42,7 @@ Notes:
 
 - `release:status` prints latest run states for `CI`, `Release`, and `Promote RC to Prod`.
 - `release:validate` enforces successful latest `CI` + `Release`, validates stable release assets, and runs `scripts/verify-release-links.mjs`.
+- `Promote RC to Prod` should use repo secret `RELEASE_TOKEN` (PAT with `repo` + `workflow`) so tag pushes referencing workflow changes are allowed.
 - `ops:validate:local` is the canonical solo-ops local gate (quality + build + release-system integrity checks).
 - `ops:validate` is the canonical day-to-day command (local gate + remote workflow status).
 - `ops:validate:prod` is the canonical production sign-off command.

@@ -18,6 +18,10 @@ jobs:
   promote:
     runs-on: ubuntu-latest
     environment: prod
+    env:
+      # Use a PAT with `repo` + `workflow` scope when available.
+      # Falls back to GITHUB_TOKEN for repos that do not require workflow-scope pushes.
+      RELEASE_TOKEN: ${{ secrets.RELEASE_TOKEN != '' && secrets.RELEASE_TOKEN || secrets.GITHUB_TOKEN }}
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -41,11 +45,11 @@ jobs:
         run: |
           set -euo pipefail
           git tag "${{ github.event.inputs.prod_tag }}" "${{ steps.rc.outputs.commit }}"
-          git push origin "${{ github.event.inputs.prod_tag }}"
+          git push "https://x-access-token:${RELEASE_TOKEN}@github.com/${{ github.repository }}.git" "${{ github.event.inputs.prod_tag }}"
 
       - name: Trigger release workflow for production tag
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ env.RELEASE_TOKEN }}
         shell: bash
         run: |
           set -euo pipefail

@@ -27,6 +27,8 @@ interface WorkspaceLayoutProps {
   findingsVisible: boolean;
   timelineVisible: boolean;
   duplicatesVisible: boolean;
+  reportsVisible: boolean;
+  timeVisible: boolean;
   caseId: string;
   notes: Note[];
   findings: Finding[];
@@ -48,6 +50,8 @@ interface WorkspaceLayoutProps {
   onCloseFindings: () => void;
   onCloseTimeline: () => void;
   onCloseDuplicates: () => void;
+  onCloseReports: () => void;
+  onCloseTime: () => void;
   sourceRoots: string[];
   onArtifactsChanged: () => void;
 }
@@ -62,6 +66,8 @@ export const WorkspaceLayout = memo(function WorkspaceLayout({
   findingsVisible,
   timelineVisible,
   duplicatesVisible,
+  reportsVisible,
+  timeVisible,
   caseId,
   notes,
   findings,
@@ -83,6 +89,8 @@ export const WorkspaceLayout = memo(function WorkspaceLayout({
   onCloseFindings,
   onCloseTimeline,
   onCloseDuplicates,
+  onCloseReports,
+  onCloseTime,
   sourceRoots,
   onArtifactsChanged,
 }: WorkspaceLayoutProps) {
@@ -115,6 +123,8 @@ export const WorkspaceLayout = memo(function WorkspaceLayout({
             findingsVisible={findingsVisible}
             timelineVisible={timelineVisible}
             duplicatesVisible={duplicatesVisible}
+            reportsVisible={reportsVisible}
+            timeVisible={timeVisible}
             notes={notes}
             findings={findings}
             timeline={timeline}
@@ -133,6 +143,8 @@ export const WorkspaceLayout = memo(function WorkspaceLayout({
             onCloseFindings={onCloseFindings}
             onCloseTimeline={onCloseTimeline}
             onCloseDuplicates={onCloseDuplicates}
+            onCloseReports={onCloseReports}
+            onCloseTime={onCloseTime}
             sourceRoots={sourceRoots}
             onArtifactsChanged={onArtifactsChanged}
           />

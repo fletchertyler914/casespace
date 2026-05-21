@@ -4,7 +4,9 @@ import { memo } from "react";
 import {
   AlertTriangle,
   Calendar,
+  Clock3,
   Copy,
+  FileText,
   FolderPlus,
   LayoutGrid,
   MoreVertical,
@@ -38,16 +40,23 @@ interface CaseHeaderProps {
   findingsVisible: boolean;
   timelineVisible: boolean;
   duplicatesVisible: boolean;
+  reportsVisible: boolean;
+  timeVisible: boolean;
   onToggleNotes: () => void;
   onToggleFindings: () => void;
   onToggleTimeline: () => void;
   onToggleDuplicates: () => void;
+  onToggleReports: () => void;
+  onToggleTime: () => void;
   onSyncFiles: () => void;
   isSyncing: boolean;
   autoSyncEnabled: boolean;
+  autoSyncIntervalMinutes: number;
   onToggleAutoSync: () => void;
+  onCycleAutoSyncInterval: () => void;
   onAddSources: () => void;
   onOpenSearch: () => void;
+  onOpenSettings: () => void;
   onClose: () => void;
 }
 
@@ -62,16 +71,23 @@ export const CaseHeader = memo(function CaseHeader({
   findingsVisible,
   timelineVisible,
   duplicatesVisible,
+  reportsVisible,
+  timeVisible,
   onToggleNotes,
   onToggleFindings,
   onToggleTimeline,
   onToggleDuplicates,
+  onToggleReports,
+  onToggleTime,
   onSyncFiles,
   isSyncing,
   autoSyncEnabled,
+  autoSyncIntervalMinutes,
   onToggleAutoSync,
+  onCycleAutoSyncInterval,
   onAddSources,
   onOpenSearch,
+  onOpenSettings,
   onClose,
 }: CaseHeaderProps) {
   return (
@@ -144,6 +160,24 @@ export const CaseHeader = memo(function CaseHeader({
             >
               <Copy className="h-4 w-4" />
             </Button>
+            <Button
+              variant={reportsVisible ? "default" : "ghost"}
+              size="icon"
+              className="h-8 w-8"
+              title="Reports panel"
+              onClick={onToggleReports}
+            >
+              <FileText className="h-4 w-4" />
+            </Button>
+            <Button
+              variant={timeVisible ? "default" : "ghost"}
+              size="icon"
+              className="h-8 w-8"
+              title="Time panel"
+              onClick={onToggleTime}
+            >
+              <Clock3 className="h-4 w-4" />
+            </Button>
           </div>
         )}
 
@@ -174,7 +208,17 @@ export const CaseHeader = memo(function CaseHeader({
                 checked={autoSyncEnabled}
                 className="mr-2 pointer-events-none"
               />
-              Auto-sync (5 min)
+              Auto-sync
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={onCycleAutoSyncInterval}>
+              Auto-sync interval
+              <span className="ml-auto text-xs text-muted-foreground">
+                {autoSyncIntervalMinutes}m
+              </span>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={onOpenSettings}>
+              Workspace settings
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={onOpenSearch}>
