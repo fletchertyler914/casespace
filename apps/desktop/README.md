@@ -1,30 +1,40 @@
 # CaseSpace Desktop UX (`apps/desktop`)
 
-This app is the Next.js desktop UX shell for CaseSpace v2.
+Next.js desktop UX shell for CaseSpace v2.
 
-Current state: **UX port in progress** — case hub (U1–U3) + workspace shell (U4) shipped. `/case?id=` uses `components/workspace/*`. Viewers/panels polish in U5–U6. Plan: [docs/ui-port-plan.md](../../docs/ui-port-plan.md).
+**Status (2026-05-21):** U1–U6 shipped — case hub, workspace shell, in-app viewers (PDF/DOCX/XLSX/image/text/CSV), artifact panel MVP. **Next:** U7 board/duplicates, U10 search, U8–U9 time/reports, U11 gate. Plan: [docs/ui-port-plan.md](../../docs/ui-port-plan.md).
 
 ## Role in v2 architecture
 
-- Host analyst-facing desktop workflows.
-- Own UI state orchestration and feature composition.
-- Call `apps/desktop-backend` through typed command adapters/contracts.
+- Analyst-facing desktop workflows
+- UI state and composition only
+- Native I/O via `apps/desktop-backend` through `lib/command-client.ts` (no `invoke()` in components)
+
+## Key directories
+
+| Path | Purpose |
+|------|---------|
+| `app/` | Routes: `/` hub, `/case` workspace |
+| `components/case/` | Case list, cards, dialogs |
+| `components/workspace/` | Shell, navigator, header, split/board |
+| `components/viewer/` | File preview router + PDF/Office/text previews |
+| `components/artifacts/` | Notes, findings, timeline panels |
+| `lib/command-client.ts` | Typed Tauri command adapters |
+| `lib/file-preview.ts` | Preview kind detection |
+| `public/pdf.worker.min.js` | PDF.js worker for in-app PDF viewer |
 
 ## Local development
 
-**Recommended (full desktop app):** from the repo root:
+**Full desktop (recommended):** from repo root:
 
 ```bash
 pnpm dev
 ```
 
-That runs Tauri via `desktop-backend`, which starts this app's Next dev server automatically.
-
-**UI-only** (browser at `http://localhost:3000`, no native Tauri APIs — useful for layout work only):
+**UI-only** (browser at `http://localhost:3000`, no Tauri APIs):
 
 ```bash
 pnpm dev:ui
-# or: pnpm --filter desktop dev:next
 ```
 
 ## Quality checks
@@ -32,17 +42,16 @@ pnpm dev:ui
 ```bash
 pnpm --filter desktop lint
 pnpm --filter desktop check-types
+pnpm --filter desktop build
 ```
 
-## Notes
+## Framework version
 
-- This is intentionally Next.js-first for v2.
-- Active UI port: `docs/ui-port-plan.md`
-- v1 migration manifest: `docs/migrating-from-v1.md`
+Next.js version comes from the workspace catalog (`pnpm-workspace.yaml` → currently **16.2.6**). Apps declare `"next": "catalog:"` — do not add floating `^` ranges.
 
 ## References
 
-- `docs/architecture.md`
-- `docs/readiness.md`
-- `docs/migrating-from-v1.md`
-- `docs/v1-reference.md`
+- [docs/ui-port-plan.md](../../docs/ui-port-plan.md)
+- [docs/desktop-workflow-mapping.md](../../docs/desktop-workflow-mapping.md)
+- [docs/architecture.md](../../docs/architecture.md)
+- [docs/readiness.md](../../docs/readiness.md)

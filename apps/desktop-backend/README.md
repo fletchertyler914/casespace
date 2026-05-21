@@ -2,7 +2,7 @@
 
 This app is the native/core backend engine for CaseSpace v2.
 
-Current state: **Core Parity backend complete (local)** — SQLite/FTS, full P0 non-AI command matrix, parity + hardening suites. Remaining: module split (`commands/*`), AI commands (post-UX gate), remote release proof.
+Current state: **Core Parity backend complete (local)** — SQLite/FTS, ingest v2 (multi-source, incremental sync, duplicate rebuild), full P0 non-AI command matrix, parity + hardening suites. **UX port U7–U11** is frontend-only. Remaining backend: module split (`commands/*`), AI commands (post-UX gate), remote release proof.
 
 ## Role in v2 architecture
 

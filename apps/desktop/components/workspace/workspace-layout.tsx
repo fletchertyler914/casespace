@@ -7,6 +7,7 @@ import { FileNavigator } from "./file-navigator";
 import { SplitView } from "./split-view";
 import { BoardView } from "./board-view";
 import { filterFilesByFolder } from "@/lib/file-tree-utils";
+import type { DuplicateGroup } from "@/components/artifacts/duplicates-panel";
 
 function ResizeHandle() {
   return (
@@ -25,10 +26,12 @@ interface WorkspaceLayoutProps {
   notesVisible: boolean;
   findingsVisible: boolean;
   timelineVisible: boolean;
+  duplicatesVisible: boolean;
   caseId: string;
   notes: Note[];
   findings: Finding[];
   timeline: TimelineEvent[];
+  duplicateGroups: DuplicateGroup[];
   onFileSelect: (file: CaseFile) => void;
   onFolderSelect: (folderPath: string | null) => void;
   onToggleNavigator: () => void;
@@ -44,6 +47,7 @@ interface WorkspaceLayoutProps {
   onCloseNotes: () => void;
   onCloseFindings: () => void;
   onCloseTimeline: () => void;
+  onCloseDuplicates: () => void;
   sourceRoots: string[];
   onArtifactsChanged: () => void;
 }
@@ -57,10 +61,12 @@ export const WorkspaceLayout = memo(function WorkspaceLayout({
   notesVisible,
   findingsVisible,
   timelineVisible,
+  duplicatesVisible,
   caseId,
   notes,
   findings,
   timeline,
+  duplicateGroups,
   onFileSelect,
   onFolderSelect,
   onToggleNavigator,
@@ -76,6 +82,7 @@ export const WorkspaceLayout = memo(function WorkspaceLayout({
   onCloseNotes,
   onCloseFindings,
   onCloseTimeline,
+  onCloseDuplicates,
   sourceRoots,
   onArtifactsChanged,
 }: WorkspaceLayoutProps) {
@@ -107,9 +114,12 @@ export const WorkspaceLayout = memo(function WorkspaceLayout({
             notesVisible={notesVisible}
             findingsVisible={findingsVisible}
             timelineVisible={timelineVisible}
+            duplicatesVisible={duplicatesVisible}
             notes={notes}
             findings={findings}
             timeline={timeline}
+            duplicateGroups={duplicateGroups}
+            files={files}
             navigatorOpen={navigatorOpen}
             onExpandNavigator={onExpandNavigator}
             onFileClose={onFileClose}
@@ -122,6 +132,7 @@ export const WorkspaceLayout = memo(function WorkspaceLayout({
             onCloseNotes={onCloseNotes}
             onCloseFindings={onCloseFindings}
             onCloseTimeline={onCloseTimeline}
+            onCloseDuplicates={onCloseDuplicates}
             sourceRoots={sourceRoots}
             onArtifactsChanged={onArtifactsChanged}
           />

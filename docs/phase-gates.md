@@ -17,6 +17,7 @@ Linked to [product-spec-bible.md](product-spec-bible.md), [implementation-readin
 - [x] Web download page with release-aware resolver
 - [x] Rollback runbook drafted
 - [x] Node 24 toolchain policy (engines, CI, `.nvmrc`)
+- [x] Next.js 16.2.6 catalog pin + lockfile discipline
 - [ ] Live GitHub Actions CI matrix proven green on Node 24 (post-push)
 - [ ] Live release publishing with multi-arch artifacts
 - [ ] Live download links validated against stable release
@@ -26,6 +27,7 @@ Linked to [product-spec-bible.md](product-spec-bible.md), [implementation-readin
 - [x] Shared contracts package (`@repo/types`)
 - [x] SQLite + migrations + FTS (`database.rs`, `casespace.db`)
 - [x] JSON store migration on first launch
+- [x] Ingest v2 (`source_path`, multi-source, incremental sync, duplicate rebuild)
 - [x] Command-risk baseline path checks
 - [x] P0 command slice per [command-parity-ledger.md](command-parity-ledger.md)
 - [x] Parity integration suite (`pnpm test:parity`)
@@ -34,30 +36,30 @@ Linked to [product-spec-bible.md](product-spec-bible.md), [implementation-readin
 
 ## Phase 2b: Core Parity UX port (in progress)
 
-Active workstream. Backend commands exist; v1-shaped UI is being ported to `apps/desktop`.
+Active workstream. Backend commands exist; v1-shaped UI is ported to `apps/desktop`.
 
 ### Complete
 
 - [x] **U1** Foundation — OKLCH tokens, providers, theme, splash, utils
 - [x] **U2** shadcn primitives (22 components)
 - [x] **U3** Case hub — `CaseListView`, cards, create/delete dialogs, `/` route
-- [x] DevX — `pnpm dev` = full Tauri; `dev:next` avoids port 3000 conflict
+- [x] **U4** Workspace shell — layout, header, navigator, split/board, ingest/sync UI
+- [x] **U5** Viewers — PDF/DOCX/XLSX in-app; image/text/markdown/CSV; external for unsupported only
+- [x] **U6** Artifact panels MVP — notes, findings, timeline (list + create)
+- [x] DevX — `pnpm dev` = full Tauri; Next 16.2.6 catalog pin
 
-### In progress / next
+### Next
 
 - [ ] **U3 tail** — Edit case, large-folder warning, filters (optional)
-- [x] **U4** Workspace shell — layout, header, file navigator, split/board views, basic viewer
-- [ ] **U5** Viewers — text/image/CSV P0; PDF/DOCX/XLSX P1
-- [ ] **U6** Artifact panels — notes, findings, timeline
-- [ ] **U7** Board / review table
-- [ ] **U8** Time management UI
+- [ ] **U7** Board / review + duplicate groups UI (**in progress**: duplicates panel MVP + set primary)
+- [ ] **U8** Time management UI (**in progress**: timer widget MVP)
 - [ ] **U9** Reports UI
-- [ ] **U10** Search palette + settings
-- [ ] **U11** UX gate validation + remove legacy `case-workspace.tsx`
+- [ ] **U10** Search palette (cmdk) + settings (**in progress**: cmdk dialog wired)
+- [ ] **U11** UX gate validation + remove legacy `components/case-workspace.tsx`
 
 Detail: [ui-port-plan.md](ui-port-plan.md).
 
-**Interim:** `/case?id=` uses `case-workspace-shell.tsx`; legacy `case-workspace.tsx` unused (remove in U11).
+**Routing:** `/case?id=` → `case-workspace-shell.tsx`. Legacy `components/case-workspace.tsx` is unused (delete in U11).
 
 ## Phase 3: AINative (blocked)
 

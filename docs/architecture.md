@@ -37,18 +37,19 @@ flowchart LR
 
 | Component | Reality |
 |-----------|---------|
-| `desktop-backend` | `lib.rs` + `database.rs`, `path.rs`, `search.rs`; full P0 non-AI command matrix; SQLite + FTS5 |
-| `desktop` | Case hub ported (`components/case/*`, shadcn `components/ui/*`); `/case` still uses legacy `case-workspace.tsx` |
+| `desktop-backend` | `lib.rs` + `database.rs`, `path.rs`, `search.rs`, `ingest.rs`; P0 non-AI commands; SQLite + FTS5; ingest v2 |
+| `desktop` | Case hub + workspace shell (`components/case/*`, `components/workspace/*`, `components/viewer/*`, `components/artifacts/*`) |
 | `web` | Marketing, download, static pages |
 | Persistence | `casespace.db` (SQLite + WAL + FTS5); legacy JSON auto-imported once |
 | Dev entry | `pnpm dev` → Tauri + Next via `dev:next` (single :3000) |
+| Framework pin | Next **16.2.6** via `pnpm-workspace.yaml` catalog; lockfile + CI `--frozen-lockfile` |
 
 ## Target implementation (CoreParity UX + module split)
 
 | Component | Target |
 |-----------|--------|
 | `desktop-backend` | `commands/*`, `domain/*`, `persistence/*` modules (split from monolithic `lib.rs`) |
-| `desktop` | `lib/hooks`, `lib/services`, `components/workspace/*`, `components/viewer/*` — see [ui-port-plan.md](ui-port-plan.md) |
+| `desktop` | Expand `lib/hooks`, board/search/time/reports UI — see [ui-port-plan.md](ui-port-plan.md) U7–U10 |
 | Contracts | `CommandResponse<T>` envelope, camelCase IPC aligned with `@repo/types` |
 
 ## Responsibility boundaries
@@ -96,7 +97,7 @@ See [spec/perf-security-reliability-gates.md](spec/perf-security-reliability-gat
 ## Phase sequencing
 
 1. **Core Parity backend** — complete (local gate)
-2. **Core Parity UX port** — in progress ([ui-port-plan.md](ui-port-plan.md))
+2. **Core Parity UX port** — U1–U6 done/MVP; U7–U11 next ([ui-port-plan.md](ui-port-plan.md))
 3. **AINative** — blocked until UX Parity Build Gate
 
 See [product-spec-bible.md](product-spec-bible.md).

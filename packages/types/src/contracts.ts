@@ -54,6 +54,7 @@ export interface WorkspacePreferences {
   notesVisible?: boolean;
   findingsVisible?: boolean;
   timelineVisible?: boolean;
+  duplicatesVisible?: boolean;
   autoSyncEnabled?: boolean;
   autoSyncIntervalMinutes?: number;
 }

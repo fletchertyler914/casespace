@@ -10,7 +10,10 @@ alwaysApply: true
   - `docs/architecture.md`
   - `docs/readiness.md`
   - `docs/phase-gates.md`
+  - `docs/ui-port-plan.md` (when UX port phase status changes)
+  - `docs/desktop-workflow-mapping.md` (when v1→v2 component map changes)
   - relevant app READMEs
+- Framework/catalog pin changes must update `pnpm-workspace.yaml` and note version in `README.md` + `docs/ui-port-plan.md` supply chain section.
 - **Desktop UX port** changes must update:
   - `docs/ui-port-plan.md` (phase status)
   - `docs/desktop-workflow-mapping.md`

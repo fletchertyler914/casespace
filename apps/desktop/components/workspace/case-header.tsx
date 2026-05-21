@@ -4,6 +4,7 @@ import { memo } from "react";
 import {
   AlertTriangle,
   Calendar,
+  Copy,
   FolderPlus,
   LayoutGrid,
   MoreVertical,
@@ -17,6 +18,7 @@ import type { CaseSummary } from "@repo/types";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
+import { TimerWidget } from "@/components/billing/timer-widget";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -26,6 +28,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 interface CaseHeaderProps {
+  caseId: string;
   caseSummary: CaseSummary;
   fileCount: number;
   sourceCount: number;
@@ -34,18 +37,22 @@ interface CaseHeaderProps {
   notesVisible: boolean;
   findingsVisible: boolean;
   timelineVisible: boolean;
+  duplicatesVisible: boolean;
   onToggleNotes: () => void;
   onToggleFindings: () => void;
   onToggleTimeline: () => void;
+  onToggleDuplicates: () => void;
   onSyncFiles: () => void;
   isSyncing: boolean;
   autoSyncEnabled: boolean;
   onToggleAutoSync: () => void;
   onAddSources: () => void;
+  onOpenSearch: () => void;
   onClose: () => void;
 }
 
 export const CaseHeader = memo(function CaseHeader({
+  caseId,
   caseSummary,
   fileCount,
   sourceCount,
@@ -54,14 +61,17 @@ export const CaseHeader = memo(function CaseHeader({
   notesVisible,
   findingsVisible,
   timelineVisible,
+  duplicatesVisible,
   onToggleNotes,
   onToggleFindings,
   onToggleTimeline,
+  onToggleDuplicates,
   onSyncFiles,
   isSyncing,
   autoSyncEnabled,
   onToggleAutoSync,
   onAddSources,
+  onOpenSearch,
   onClose,
 }: CaseHeaderProps) {
   return (
@@ -74,6 +84,7 @@ export const CaseHeader = memo(function CaseHeader({
       </div>
 
       <div className="absolute right-3 top-1/2 flex -translate-y-1/2 items-center gap-1">
+        <TimerWidget caseId={caseId} />
         <div className="flex items-center gap-0.5 rounded-md border border-border/40 p-0.5">
           <Button
             variant={viewMode === "split" ? "default" : "ghost"}
@@ -124,6 +135,15 @@ export const CaseHeader = memo(function CaseHeader({
             >
               <Calendar className="h-4 w-4" />
             </Button>
+            <Button
+              variant={duplicatesVisible ? "default" : "ghost"}
+              size="icon"
+              className="h-8 w-8"
+              title="Duplicates panel"
+              onClick={onToggleDuplicates}
+            >
+              <Copy className="h-4 w-4" />
+            </Button>
           </div>
         )}
 
@@ -157,9 +177,10 @@ export const CaseHeader = memo(function CaseHeader({
               Auto-sync (5 min)
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem disabled>
+            <DropdownMenuItem onClick={onOpenSearch}>
               <PanelLeft className="mr-2 h-4 w-4" />
-              Search (U10)
+              Search
+              <span className="ml-auto text-xs text-muted-foreground">⌘K</span>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

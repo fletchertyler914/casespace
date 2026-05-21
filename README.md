@@ -2,7 +2,7 @@
 
 CaseSpace v2 is an elite, net-new rebuild of the CaseSpace product foundation using a 3-app architecture.
 
-Current status: **Core Parity backend complete (local)**; **UX port in progress** (case hub shipped; workspace/viewer phases next). AINative blocked until UX gate. See [docs/readiness.md](docs/readiness.md) and [docs/ui-port-plan.md](docs/ui-port-plan.md).
+Current status: **Core Parity backend complete (local)**; **UX port in progress** — workspace, in-app viewers (PDF/Office/CSV), and artifact panels shipped; **board, search, time, reports, UX gate next**. AINative blocked until UX gate. See [docs/readiness.md](docs/readiness.md) and [docs/ui-port-plan.md](docs/ui-port-plan.md).
 
 ## Repository purpose
 
@@ -54,8 +54,10 @@ Contact for commercial licensing: `fletchertyler914@yahoo.com`
 
 ```bash
 corepack enable
-pnpm install
+pnpm install   # uses pnpm-lock.yaml; CI uses --frozen-lockfile
 ```
+
+**Dependency policy:** Next.js is pinned in `pnpm-workspace.yaml` (`catalog:` → **16.2.6**). Bump only by editing the catalog and reviewing the lockfile diff. Root `minimumReleaseAge` (48h) blocks very fresh package publishes.
 
 Run the full desktop app (Tauri shell + Next.js UI + Rust backend):
 
@@ -118,6 +120,6 @@ The script bakes the rounded squircle into every layer (including each `.icns` s
 
 ## Notes
 
-- **Backend:** P0 commands, SQLite/FTS, parity + hardening suites — validated locally.
-- **Desktop UX:** Foundation + case hub; workspace/viewer UI — see [docs/ui-port-plan.md](docs/ui-port-plan.md).
+- **Backend:** P0 commands, SQLite/FTS, ingest v2, parity + hardening — validated locally.
+- **Desktop UX:** Hub (U1–U3), workspace + viewers + panel MVP (U4–U6); U7–U11 — [docs/ui-port-plan.md](docs/ui-port-plan.md).
 - **AINative:** blocked until UX Parity Build Gate passes.

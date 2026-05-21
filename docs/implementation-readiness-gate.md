@@ -42,7 +42,15 @@ Backend parity is complete only when **all** are true:
 
 ## UX Parity Build Gate
 
-Product UX matches v1 P0 outcomes. Criteria in [ui-port-plan.md](ui-port-plan.md) (U1–U9). **Status: not started** (U1–U3 partial).
+Product UX matches v1 P0 outcomes. Criteria G1–G12 in [ui-port-plan.md](ui-port-plan.md).
+
+| Progress | Items |
+|----------|-------|
+| **Done** | G1 hub, G2 workspace+panels MVP, G3 ingest/sync, G4 in-app viewers, G9 theme/splash, G10 adapters |
+| **Partial** | G5 search (cmdk MVP), G6 time (timer widget MVP), G8 duplicates (panel MVP) |
+| **Pending** | G7 reports, G11 dev smoke, G12 ongoing backend regression |
+
+**Status: in progress** (not passed).
 
 AINative is blocked until this gate passes.
 
@@ -50,16 +58,17 @@ AINative is blocked until this gate passes.
 
 1. ~~Node 24 policy~~
 2. ~~Persistence + FTS + P0 backend commands~~
-3. **UX port U4–U11** — [ui-port-plan.md](ui-port-plan.md)
-4. UX Parity Build Gate + manual E2E
-5. AINative per [spec/ai-capability-matrix.md](spec/ai-capability-matrix.md)
+3. ~~UX U1–U6 (foundation → workspace → viewers → panel MVP)~~
+4. **UX U7–U11** — board/duplicates, time, reports, search, gate + cleanup
+5. UX Parity Build Gate + manual E2E
+6. AINative per [spec/ai-capability-matrix.md](spec/ai-capability-matrix.md)
 
 ## Go/no-go
 
 | Decision | Recommendation |
 |----------|----------------|
-| Continue UX port? | **GO** — backend gate satisfied |
+| Continue UX port? | **GO** — U7–U11 |
 | Start AINative? | **NO** — until UX Parity Build Gate |
 | Cut prod release claiming full product parity? | **NO** — until UX gate + `release:validate` |
 
-Last updated: 2026-05-21 (backend gate pass; UX port active).
+Last updated: 2026-05-21.

@@ -9,6 +9,10 @@ import { useWorkspacePanels } from "@/hooks/use-workspace-panels";
 import { FindingsPanel } from "@/components/artifacts/findings-panel";
 import { NotesPanel } from "@/components/artifacts/notes-panel";
 import { TimelinePanel } from "@/components/artifacts/timeline-panel";
+import {
+  DuplicatesPanel,
+  type DuplicateGroup,
+} from "@/components/artifacts/duplicates-panel";
 import { FileViewerPane } from "./file-viewer-pane";
 
 function ResizeHandle() {
@@ -25,9 +29,12 @@ interface SplitViewProps {
   notesVisible: boolean;
   findingsVisible: boolean;
   timelineVisible: boolean;
+  duplicatesVisible: boolean;
   notes: Note[];
   findings: Finding[];
   timeline: TimelineEvent[];
+  duplicateGroups: DuplicateGroup[];
+  files: CaseFile[];
   navigatorOpen: boolean;
   onExpandNavigator: () => void;
   onFileClose: () => void;
@@ -40,6 +47,7 @@ interface SplitViewProps {
   onCloseNotes: () => void;
   onCloseFindings: () => void;
   onCloseTimeline: () => void;
+  onCloseDuplicates: () => void;
   onArtifactsChanged: () => void;
   sourceRoots: string[];
 }
@@ -50,9 +58,12 @@ export const SplitView = memo(function SplitView({
   notesVisible,
   findingsVisible,
   timelineVisible,
+  duplicatesVisible,
   notes,
   findings,
   timeline,
+  duplicateGroups,
+  files,
   navigatorOpen,
   onExpandNavigator,
   onFileClose,
@@ -65,6 +76,7 @@ export const SplitView = memo(function SplitView({
   onCloseNotes,
   onCloseFindings,
   onCloseTimeline,
+  onCloseDuplicates,
   onArtifactsChanged,
   sourceRoots,
 }: SplitViewProps) {
@@ -145,6 +157,21 @@ export const SplitView = memo(function SplitView({
               caseId={caseId}
               events={timeline}
               onClose={onCloseTimeline}
+              onChanged={onArtifactsChanged}
+            />
+          </Panel>
+        </>
+      )}
+
+      {duplicatesVisible && (
+        <>
+          <ResizeHandle />
+          <Panel defaultSize={panelSizes.sidePanelSize} minSize={15} maxSize={40}>
+            <DuplicatesPanel
+              caseId={caseId}
+              groups={duplicateGroups}
+              files={files}
+              onClose={onCloseDuplicates}
               onChanged={onArtifactsChanged}
             />
           </Panel>

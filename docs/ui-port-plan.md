@@ -10,9 +10,17 @@ Continuation plan after **Core Parity backend gate** passed locally. Backend com
 | Track | Status |
 |-------|--------|
 | Backend Core Parity | **PASS** — [command-parity-ledger.md](command-parity-ledger.md), `pnpm test:parity`, `pnpm test:hardening` |
-| UI foundation + case hub | **implemented** — design tokens, shadcn primitives, `CaseListView`, dialogs |
-| UI workspace + viewers + panels | **planned** — legacy `case-workspace.tsx` is functional only |
+| UI foundation + case hub (U1–U3) | **implemented** |
+| Workspace + ingest/sync (U4) | **implemented** |
+| Viewers (U5) | **implemented** — in-app PDF/DOCX/XLSX; external only for unsupported types |
+| Artifact panels (U6) | **MVP implemented** — notes/findings/timeline list+create; rich editors deferred |
+| U7 duplicates + board | **in progress** — duplicates panel MVP shipped; board/dnd pending |
+| U8 time | **in progress** — timer widget MVP shipped |
+| U9 reports | **next** |
+| U10 search | **in progress** — cmdk search dialog shipped; settings pending |
+| UX gate + legacy cleanup (U11) | **pending** |
 | AINative | **blocked** — until UX Parity Build Gate |
+| Toolchain | Next **16.2.6** pinned via pnpm catalog — see [Supply chain](#supply-chain) |
 
 ## Local development (canonical)
 
@@ -29,11 +37,11 @@ See [README.md](../README.md).
 
 ### Phase U1 — Foundation ✅
 
-- OKLCH design system in `apps/desktop/app/globals.css` (ported from v1)
-- `lib/utils.ts`, `lib/date-utils.ts`, `lib/tauri-dialog.ts`
+- OKLCH design system in `apps/desktop/app/globals.css`
+- `lib/utils.ts`, `lib/date-utils.ts`, `lib/tauri-dialog.ts`, `lib/binary-from-base64.ts`
 - `ThemeProvider`, `AppProviders`, `ErrorBoundary`, `SplashScreen`, `ThemeToggle`
 - `@/` path alias; Montserrat via `app/layout.tsx`
-- Radix/shadcn primitive set under `components/ui/*` (22 components)
+- shadcn primitives under `components/ui/*` (22 components)
 
 ### Phase U2 — Primitives ✅
 
@@ -41,122 +49,137 @@ Button, card, input, textarea, label, dialog, alert-dialog, dropdown, context-me
 
 ### Phase U3 — Case-first shell ✅
 
-| v1 | v2 (actual path) | Notes |
-|----|------------------|-------|
-| `CaseListView` | `components/case/case-list-view.tsx` | Search, sort, grid/list, recent section |
+| v1 | v2 | Notes |
+|----|-----|-------|
+| `CaseListView` | `components/case/case-list-view.tsx` | Search, sort, grid/list |
 | `CaseListCard` | `components/case/case-list-card.tsx` | |
 | `CreateCaseDialog` | `components/case/create-case-dialog.tsx` | Tauri folder/file pickers |
 | `DeleteCaseConfirmationDialog` | `components/case/delete-case-confirmation-dialog.tsx` | |
 | `CaseListViewMode` | `components/case/case-list-view-mode.tsx` | |
-| App routing | `app/page.tsx` → hub; `app/case/page.tsx` → workspace | Query param `?id=` (static export) |
+| Routing | `app/page.tsx` hub; `app/case/page.tsx` workspace | Query `?id=` (static export) |
 
-**Deferred from v1 hub (Phase U3 tail):** `EditCaseDialog`, `CaseFilters`, `LargeFolderWarningDialog` — needs backend case metadata fields (`caseId`, `department`, `client`) and/or `count_directory_files` wiring.
-
-## Active / next phases
+**Deferred (U3 tail):** `EditCaseDialog`, `CaseFilters`, `LargeFolderWarningDialog` — needs case metadata fields and/or `count_directory_files`.
 
 ### Phase U4 — Workspace shell ✅
 
-`case-workspace-shell.tsx`, resizable layout, navigator, split/board, ingest/sync (see ingest section below).
+| Area | v2 path |
+|------|---------|
+| Shell | `components/workspace/case-workspace-shell.tsx` |
+| Layout | `workspace-layout.tsx`, `split-view.tsx`, `file-navigator.tsx` |
+| Header | `case-header.tsx` — sync, sources, auto-sync, panel toggles |
+| Board stub | `board-view.tsx` |
+| Viewer pane | `file-viewer-pane.tsx` |
+| Paths | `lib/case-path-utils.ts` — relative tree roots |
+| Hooks | `use-workspace-panels.ts`, `use-case-auto-sync.ts` |
 
-### Phase U5 — Viewers ✅ (elite router; no heavy PDF/Office deps yet)
+**Ingest / sync / dedup (backend + UI):**
 
-| Component | Path |
-|-----------|------|
-| Preview router | `lib/file-preview.ts` + `components/viewer/file-viewer.tsx` |
-| Image / text / markdown / CSV | `components/viewer/*-file-preview.tsx` |
-| External (PDF, Office, etc.) | `components/viewer/external-file-preview.tsx` + `lib/open-file.ts` |
+| Capability | Status |
+|------------|--------|
+| Multiple folder/file sources | done — create + add sources in workspace |
+| Incremental sync | `sync_case_all_sources`; auto-sync (5 min, prefs in DB) |
+| Relative `folder_path` | ingest + `relativizeCaseFiles()` |
+| Duplicate groups (SHA-256) | rebuild on ingest; UI panel shipped (set primary), merge UX pending |
+| Orphan cleanup | soft-delete when missing from source |
+
+### Phase U5 — Viewers ✅
+
+| Kind | Implementation |
+|------|----------------|
+| Router | `lib/file-preview.ts` → `components/viewer/file-viewer.tsx` |
+| PDF | `pdf-file-preview.tsx` + `pdf-toolbar.tsx` + `pdf-viewer-theme.css` (`@react-pdf-viewer/*`, worker in `public/pdf.worker.min.js`) |
+| DOCX/DOC | `docx-file-preview.tsx` (`mammoth`) |
+| XLSX/XLS | `xlsx-file-preview.tsx` (`xlsx-js-style`) |
+| Image / text / markdown / CSV | `*-file-preview.tsx` |
+| Unsupported only | `external-file-preview.tsx` — PPT, archives, media, etc.; **Open** toolbar action only for these |
+
+App theme drives PDF chrome (no in-viewer theme toggle). Custom toolbar: search, zoom, page nav, rotate, download, print.
+
+**Deferred:** `MetadataPanel`, `FileChangeWarning`, Tiptap read-only markdown.
 
 ### Phase U6 — Artifact panels ✅ (MVP)
 
-| Panel | Path |
-|-------|------|
-| Notes | `components/artifacts/notes-panel.tsx` |
-| Findings | `components/artifacts/findings-panel.tsx` |
-| Timeline | `components/artifacts/timeline-panel.tsx` |
+| Panel | Path | Scope |
+|-------|------|-------|
+| Notes | `components/artifacts/notes-panel.tsx` | List + create via `command-client` |
+| Findings | `components/artifacts/findings-panel.tsx` | List + create |
+| Timeline | `components/artifacts/timeline-panel.tsx` | List + create |
 
-Tiptap rich editor and duplicate UI remain P1/U7+.
+**Deferred:** Tiptap rich note editor, create dialogs (v1 parity), duplicate management UI.
 
-### Phase U7+ — Next
+### Phase U7 — Board + duplicates 🚧
 
-| Viewer | Deps | Priority |
-|--------|------|----------|
-| Text / markdown | Tiptap read-only | P0 |
-| Image | existing base64 path | P0 |
-| CSV | custom table | P0 |
-| PDF | `@react-pdf-viewer/*` | P1 |
-| DOCX | `mammoth` | P1 |
-| XLSX | `xlsx-js-style` | P1 |
-| `MetadataPanel`, `FileChangeWarning` | — | P0 |
+- Duplicates panel implemented in split view (`components/artifacts/duplicates-panel.tsx`)
+- Primary-file selection wired via `mark_duplicate_primary`
+- Remaining: board drag/drop workflows, merge-duplicates UX, conflict resolution dialogs
 
-### Phase U6 — Artifact panels
+### Phase U8 — Time management 🚧
 
-- `NotePanel` + Tiptap editor, `CreateNoteDialog`
-- `FindingsPanel`, `CreateFindingDialog`
-- `TimelineView`, `CreateTimelineEventDialog`
-- Duplicate panels (`DuplicateManagementPanel`, etc.) — P1
+- Timer widget MVP in header (`components/billing/timer-widget.tsx`) with start/stop + live elapsed
+- Remaining: pause/resume UX, daily summary, segment editing, billing config dialogs
 
-### Phase U7 — Board / review
+## Next phases (execution order)
 
-- Workflow board or simplified swimlane table with `@dnd-kit`
-- Status cells, column manager (config commands exist)
+### Phase U7 continuation — Board parity
 
-### Phase U8 — Time management
+- Workflow board or swimlanes with `@dnd-kit` (improve `board-view.tsx`)
+- File review status polish in board/table
+- Duplicate metadata merge UX (`merge_duplicate_metadata`) and safe confirmation flow
 
-- `TimerWidget`, `TimeManagementPage`, calendar day UI, segment edit, billing config dialogs
+### Phase U8 continuation — Time parity
+
+- Time management page, calendar day UI, segment edit, billing config
 
 ### Phase U9 — Reports UI
 
-- `ReportView`, `ReportSections` wired to `export_case_report` / `generate_case_report`
+- `ReportView` wired to `export_case_report` / `generate_case_report` (five export types)
 
 ### Phase U10 — Search + settings
 
-- `SearchDialog` (cmdk), result groups, search viewer
-- `SettingsDialog`, mapping UI (P1), `ColumnManager`
+- `SearchDialog` (cmdk) + FTS-backed result groups
+- `SettingsDialog`, column manager; mapping UI P1
 
 ### Phase U11 — UX gate + cleanup
 
-- Remove `components/case-workspace.tsx` legacy shell
-- Manual E2E pass on v1 flow map ([spec/user-flow-map.md](spec/user-flow-map.md))
-- `pnpm ops:validate:local` after UI milestones
-- Update [desktop-workflow-mapping.md](desktop-workflow-mapping.md), [readiness.md](readiness.md), feature catalog statuses
+- Delete legacy `components/case-workspace.tsx` (unused; shell is `case-workspace-shell.tsx`)
+- Manual E2E on [spec/user-flow-map.md](spec/user-flow-map.md)
+- `pnpm ops:validate:local`
+- Refresh [desktop-workflow-mapping.md](desktop-workflow-mapping.md), [spec/feature-catalog.md](spec/feature-catalog.md) row statuses
 
 ## UX Parity Build Gate (target)
 
 All must pass before AINative:
 
-| # | Criterion |
-|---|-----------|
-| U1 | Case hub matches v1 outcomes (list, create, open, delete, search/sort) |
-| U2 | Workspace: navigator + viewer + toggleable notes/findings/timeline panels |
-| U3 | File review status workflow + ingest/sync from header |
-| U4 | Global search dialog (cmdk) with FTS-backed results |
-| U5 | Timer widget + time management entry |
-| U6 | Report mode with five export types |
-| U7 | Theme (light/dark/system), splash, error boundary in all routes |
-| U8 | No `invoke()` in components; adapters only |
-| U9 | `pnpm dev` smoke: full Tauri path for primary flows |
+| # | Criterion | Status |
+|---|-----------|--------|
+| G1 | Case hub: list, create, open, delete, search/sort | **done** |
+| G2 | Workspace: navigator + viewer + notes/findings/timeline panels | **done** (panels MVP) |
+| G3 | File review status + ingest/sync from header | **done** |
+| G4 | In-app viewers for PDF/Office/spreadsheets + text/image/CSV | **done** |
+| G5 | Global search dialog (cmdk) with FTS | pending U10 |
+| G6 | Timer + time management entry | pending U8 |
+| G7 | Report mode (five export types) | pending U9 |
+| G8 | Duplicate review UI | pending U7 |
+| G9 | Theme/splash/error boundary on all routes | **done** |
+| G10 | No `invoke()` in components; `command-client` only | **done** |
+| G11 | `pnpm dev` smoke on primary flows | validate at U11 |
+| G12 | Backend regression suites on every merge | **ongoing** |
 
-Backend regression: `pnpm test:parity` + `pnpm test:hardening` remain required on every UI merge.
+## Supply chain
 
-## Backend gaps for full v1 hub parity (optional Phase U3 tail)
+- **Next.js** `16.2.6` (latest stable) pinned in `pnpm-workspace.yaml` `catalog:`; apps use `"next": "catalog:"`
+- **`pnpm-lock.yaml`** is authoritative; CI uses `pnpm install --frozen-lockfile`
+- **`minimumReleaseAge`** 48h (root `package.json`) — delays installing packages published in the last 48 hours
+- Do **not** use `postinstall` npm shims or env vars to silence `baseline-browser-mapping`; upgrade Next when browser data is stale
 
-Extend `CaseSummary` / SQLite `cases` table for: `caseId`, `department`, `client`, `deployment_mode`, `last_opened_at` if product requires v1 card fidelity. Until then, hub UI omits those badges/filters.
+## Backend gaps for full v1 hub parity (optional U3 tail)
 
-## Ingest / sync / dedup (implemented core)
-
-| Capability | Status |
-|------------|--------|
-| Multiple folder and file sources | done — create + **Add folders or files** in workspace |
-| Per-source ingest (`ingest.rs`) | dir walk or single file; relative `folder_path` |
-| Incremental sync | skip unchanged; update on change; rename-by-hash |
-| Duplicate groups (SHA-256) | rebuild `duplicate_groups` each ingest |
-| Orphan cleanup | soft-delete when missing from source and no file notes |
-| Auto-sync | default 5 min; toggle in header ⋮ menu |
-| Duplicate UI / merge decisions | pending — commands exist; panel in U6+ |
+Extend `CaseSummary` / SQLite for `caseId`, `department`, `client`, `deployment_mode`, `last_opened_at` if product requires v1 card fidelity.
 
 ## Related docs
 
 - [desktop-workflow-mapping.md](desktop-workflow-mapping.md)
-- [spec/gap-analysis-ui-workflows.md](spec/gap-analysis-ui-workflows.md)
+- [readiness.md](readiness.md)
+- [phase-gates.md](phase-gates.md)
 - [spec/user-flow-map.md](spec/user-flow-map.md)
 - [implementation-readiness-gate.md](implementation-readiness-gate.md)

@@ -24,6 +24,8 @@ import {
 import { AddSourcesDialog } from "./add-sources-dialog";
 import { CaseHeader } from "./case-header";
 import { WorkspaceLayout } from "./workspace-layout";
+import { SearchDialog } from "@/components/search/search-dialog";
+import type { DuplicateGroup } from "@/components/artifacts/duplicates-panel";
 
 interface CaseWorkspaceShellProps {
   caseId: string;
@@ -52,22 +54,14 @@ export function CaseWorkspaceShell({ caseId }: CaseWorkspaceShellProps) {
   const [notesVisible, setNotesVisible] = useState(false);
   const [findingsVisible, setFindingsVisible] = useState(false);
   const [timelineVisible, setTimelineVisible] = useState(false);
+  const [duplicatesVisible, setDuplicatesVisible] = useState(false);
   const [sourceRoots, setSourceRoots] = useState<string[]>([]);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [duplicateGroups, setDuplicateGroups] = useState<DuplicateGroup[]>([]);
 
   const applyFiles = useCallback((raw: CaseFile[], roots: string[]) => {
     setFiles(relativizeCaseFiles(raw, roots));
   }, []);
-
-  const onFilesRefreshed = useCallback(
-    (raw: CaseFile[]) => {
-      applyFiles(raw, sourceRoots);
-      setViewingFile((prev) => {
-        if (!prev) return prev;
-        return relativizeCaseFiles(raw, sourceRoots).find((f) => f.id === prev.id) ?? null;
-      });
-    },
-    [applyFiles, sourceRoots],
-  );
 
   const refreshArtifacts = useCallback(async (id: string) => {
     const [noteRes, findingRes, timelineRes] = await Promise.all([
@@ -79,6 +73,25 @@ export function CaseWorkspaceShell({ caseId }: CaseWorkspaceShellProps) {
     if (findingRes.ok && findingRes.data) setFindings(findingRes.data);
     if (timelineRes.ok && timelineRes.data) setTimeline(timelineRes.data);
   }, []);
+
+  const refreshDuplicateGroups = useCallback(async (id: string) => {
+    const res = await commandClient.findDuplicateFiles(id);
+    if (res.ok && res.data) {
+      setDuplicateGroups(res.data);
+    }
+  }, []);
+
+  const onFilesRefreshed = useCallback(
+    (raw: CaseFile[]) => {
+      applyFiles(raw, sourceRoots);
+      setViewingFile((prev) => {
+        if (!prev) return prev;
+        return relativizeCaseFiles(raw, sourceRoots).find((f) => f.id === prev.id) ?? null;
+      });
+      void refreshDuplicateGroups(caseId);
+    },
+    [applyFiles, caseId, refreshDuplicateGroups, sourceRoots],
+  );
 
   const refreshFiles = useCallback(
     async (id: string, roots: string[]) => {
@@ -136,6 +149,7 @@ export function CaseWorkspaceShell({ caseId }: CaseWorkspaceShellProps) {
     setNotesVisible(loadedPrefs.notesVisible ?? false);
     setFindingsVisible(loadedPrefs.findingsVisible ?? false);
     setTimelineVisible(loadedPrefs.timelineVisible ?? false);
+    setDuplicatesVisible(loadedPrefs.duplicatesVisible ?? false);
 
     const syncRes = await commandClient.syncCaseAllSources(caseId, true);
     if (syncRes.ok && syncRes.data) {
@@ -154,12 +168,31 @@ export function CaseWorkspaceShell({ caseId }: CaseWorkspaceShellProps) {
     }
 
     await refreshArtifacts(caseId);
+    await refreshDuplicateGroups(caseId);
     setLoading(false);
-  }, [caseId, refreshArtifacts, refreshFiles, router, toast]);
+  }, [
+    caseId,
+    refreshArtifacts,
+    refreshDuplicateGroups,
+    refreshFiles,
+    router,
+    toast,
+  ]);
 
   useEffect(() => {
     void loadCase();
   }, [loadCase]);
+
+  useEffect(() => {
+    const handleKeydown = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        setSearchOpen(true);
+      }
+    };
+    window.addEventListener("keydown", handleKeydown);
+    return () => window.removeEventListener("keydown", handleKeydown);
+  }, []);
 
   useEffect(() => {
     if (!prefsLoaded) return;
@@ -169,6 +202,7 @@ export function CaseWorkspaceShell({ caseId }: CaseWorkspaceShellProps) {
       notesVisible,
       findingsVisible,
       timelineVisible,
+      duplicatesVisible,
       autoSyncEnabled: prefs.autoSyncEnabled,
       autoSyncIntervalMinutes: prefs.autoSyncIntervalMinutes,
     });
@@ -180,6 +214,7 @@ export function CaseWorkspaceShell({ caseId }: CaseWorkspaceShellProps) {
     notesVisible,
     findingsVisible,
     timelineVisible,
+    duplicatesVisible,
     prefs.autoSyncEnabled,
     prefs.autoSyncIntervalMinutes,
   ]);
@@ -262,6 +297,7 @@ export function CaseWorkspaceShell({ caseId }: CaseWorkspaceShellProps) {
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-background">
       <CaseHeader
+        caseId={caseId}
         caseSummary={caseSummary}
         fileCount={files.length}
         sourceCount={sourceRoots.length}
@@ -270,9 +306,11 @@ export function CaseWorkspaceShell({ caseId }: CaseWorkspaceShellProps) {
         notesVisible={notesVisible}
         findingsVisible={findingsVisible}
         timelineVisible={timelineVisible}
+        duplicatesVisible={duplicatesVisible}
         onToggleNotes={() => setNotesVisible((v) => !v)}
         onToggleFindings={() => setFindingsVisible((v) => !v)}
         onToggleTimeline={() => setTimelineVisible((v) => !v)}
+        onToggleDuplicates={() => setDuplicatesVisible((v) => !v)}
         onSyncFiles={() => void syncNow()}
         isSyncing={isSyncing}
         autoSyncEnabled={prefs.autoSyncEnabled ?? true}
@@ -283,6 +321,7 @@ export function CaseWorkspaceShell({ caseId }: CaseWorkspaceShellProps) {
           })
         }
         onAddSources={() => setAddSourcesOpen(true)}
+        onOpenSearch={() => setSearchOpen(true)}
         onClose={() => router.push("/")}
       />
       <WorkspaceLayout
@@ -294,10 +333,12 @@ export function CaseWorkspaceShell({ caseId }: CaseWorkspaceShellProps) {
         notesVisible={notesVisible}
         findingsVisible={findingsVisible}
         timelineVisible={timelineVisible}
+        duplicatesVisible={duplicatesVisible}
         caseId={caseId}
         notes={notes}
         findings={findings}
         timeline={timeline}
+        duplicateGroups={duplicateGroups}
         onFileSelect={handleFileSelect}
         onFolderSelect={setSelectedFolderPath}
         onToggleNavigator={() => setNavigatorOpen(false)}
@@ -318,12 +359,23 @@ export function CaseWorkspaceShell({ caseId }: CaseWorkspaceShellProps) {
         onCloseNotes={() => setNotesVisible(false)}
         onCloseFindings={() => setFindingsVisible(false)}
         onCloseTimeline={() => setTimelineVisible(false)}
-        onArtifactsChanged={() => void refreshArtifacts(caseId)}
+        onCloseDuplicates={() => setDuplicatesVisible(false)}
+        onArtifactsChanged={() => {
+          void refreshArtifacts(caseId);
+          void refreshDuplicateGroups(caseId);
+        }}
       />
       <AddSourcesDialog
         open={addSourcesOpen}
         onOpenChange={setAddSourcesOpen}
         onAdd={handleAddSources}
+      />
+      <SearchDialog
+        open={searchOpen}
+        onOpenChange={setSearchOpen}
+        caseId={caseId}
+        files={files}
+        onFileOpen={handleFileSelect}
       />
     </div>
   );

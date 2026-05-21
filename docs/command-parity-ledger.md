@@ -4,7 +4,7 @@ v1 command → v2 target → status. Source: v1 `lib.rs` + `time_tracking.rs`.
 
 **Status:** `implemented` | `stub` | `planned`  
 **Backend:** P0 non-AI commands **implemented** (local parity + hardening validated).  
-**UX:** UI surfaces wired per [ui-port-plan.md](ui-port-plan.md) — case hub only today.
+**UX:** Wired per [ui-port-plan.md](ui-port-plan.md) — hub + workspace + viewers + artifact panel MVP (U1–U6). Board, search, time, reports, duplicates UI pending U7–U10.
 
 | v1 command | v2 target module | v2 command (current/planned) | status | requirement_id | tests | security/perf gate |
 |------------|------------------|------------------------------|--------|----------------|-------|-------------------|

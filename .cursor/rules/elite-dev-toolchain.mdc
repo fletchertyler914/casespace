@@ -1,0 +1,56 @@
+---
+description: Canonical dev commands, UI port phases, and dependency pinning
+alwaysApply: true
+---
+
+# Elite Dev Toolchain
+
+## Canonical dev commands (repo root)
+
+| Command | Use |
+|---------|-----|
+| `pnpm dev` | **Default** — full Tauri desktop (Rust + Next on :3000) |
+| `pnpm dev:ui` | Next-only in browser; native commands unavailable |
+| `pnpm dev:web` | Marketing site (:3001) |
+| `pnpm dev:all` | Web + Tauri + `@repo/ui` watchers |
+
+Do not start a second Next server on :3000 alongside `pnpm dev`.
+
+## Validation before merge
+
+```bash
+pnpm ops:validate:local
+```
+
+Includes arch check, lint, types, `pnpm test:parity`, `pnpm test:hardening`, build.
+
+## UI port phases (active workstream)
+
+Status and file paths: `docs/ui-port-plan.md`.
+
+| Phase | Scope | Status |
+|-------|--------|--------|
+| U1–U3 | Foundation, primitives, case hub | done |
+| U4 | Workspace shell, ingest/sync UI | done |
+| U5 | In-app viewers (PDF/DOCX/XLSX + text/image/CSV) | done |
+| U6 | Notes/findings/timeline panels MVP | done |
+| U7–U11 | Board, duplicates, time, reports, search, UX gate | **next** |
+
+Backend Core Parity is **separate** and already passed locally — do not block UI work on re-litigating backend unless regressing.
+
+AINative is **blocked** until UX Parity Build Gate (see `docs/ui-port-plan.md`).
+
+## Dependency pinning (supply chain)
+
+- **Next.js** and `@next/eslint-plugin-next` are pinned in `pnpm-workspace.yaml` `catalog:` (currently 16.2.6).
+- Apps use `"next": "catalog:"` — no floating `^` on framework packages.
+- Bump Next: edit catalog version → `pnpm install` → review `pnpm-lock.yaml` → run `pnpm ops:validate:local`.
+- CI uses `pnpm install --frozen-lockfile` — lockfile must be committed.
+- Root `minimumReleaseAge` (48h) applies to new publishes — do not bypass with ignore env vars.
+- Do **not** add `postinstall` scripts that shell out to npm for `update-browserslist-db` or `baseline-browser-mapping`.
+
+## Desktop boundaries
+
+- UI calls `lib/command-client.ts` only — never `invoke()` in components.
+- `apps/desktop-backend` has no product UI — Rust/commands only.
+- Remove dead code (e.g. legacy `components/case-workspace.tsx` in U11) when replacing flows.
