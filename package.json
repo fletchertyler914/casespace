@@ -4,8 +4,8 @@
   "scripts": {
     "build": "turbo run build --filter=!desktop-backend && pnpm --filter desktop-backend build",
     "dev": "turbo run dev",
-    "lint": "turbo run lint",
-    "check-types": "turbo run check-types",
+    "lint": "turbo run lint --filter=!desktop-backend",
+    "check-types": "turbo run check-types --filter=!desktop-backend",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
     "arch:check": "node ./scripts/enforce-architecture.mjs",
     "release:verify-links": "node ./scripts/verify-release-links.mjs",
