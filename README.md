@@ -2,7 +2,7 @@
 
 CaseSpace v2 is an elite, net-new rebuild of the CaseSpace product foundation using a 3-app architecture.
 
-Current status: **implemented: phase scaffolding + local checks; validated: local lint/type/build; remaining for full sign-off: live CI/release/prod-promotion evidence**.
+Current status: **implemented + deployed web/download surface; validated: CI, release assets, and Vercel production deploy**.
 
 ## Repository purpose
 
@@ -16,6 +16,16 @@ This repository is the implementation home for:
 v1 reference source path:
 
 - `/Users/tyler/projects/malissa_projects/inventory-generator`
+
+## License
+
+CaseSpace is licensed under the **Business Source License 1.1 (BUSL-1.1)**.
+
+- Source is public for transparency and personal/non-commercial use
+- **Commercial use requires a separate license** — see [COMMERCIAL-LICENSE.md](COMMERCIAL-LICENSE.md)
+- On **2029-05-21**, this codebase converts to **Apache 2.0**
+
+Contact for commercial licensing: `fletchertyler914@yahoo.com`
 
 ## Core principles
 
@@ -68,7 +78,13 @@ pnpm ops:validate:prod
 - `ops:validate`: local gates + remote workflow status discovery
 - `ops:validate:prod`: strict production validation (CI/Release success + stable release link checks)
 
+## Live URLs
+
+- Web/marketing: `https://casespace.vercel.app`
+- Download page: `https://casespace.vercel.app/download`
+- Latest stable desktop release: `v0.1.1` (GitHub Releases)
+
 ## Notes
 
 - Implemented baseline: backend/desktop command-workflow scaffolding and release-pipeline definitions.
-- Validation boundary: full v1 parity and production sign-off require proven remote CI/release gates plus completed phase checklists.
+- Validation boundary: full v1 parity still requires remaining migration phase gates.

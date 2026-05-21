@@ -11,7 +11,7 @@
     "./styles.css": "./dist/index.css",
     "./*": "./dist/*.js"
   },
-  "license": "MIT",
+  "license": "BUSL-1.1",
   "scripts": {
     "build": "pnpm build:styles && pnpm build:components",
     "build:styles": "tailwindcss -i ./src/styles.css -o ./dist/index.css",

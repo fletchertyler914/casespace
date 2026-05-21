@@ -1,6 +1,7 @@
 {
-  "name": "with-tailwind",
+  "name": "casespace",
   "private": true,
+  "license": "BUSL-1.1",
   "scripts": {
     "build": "turbo run build --filter=!desktop-backend && pnpm --filter desktop-backend build",
     "dev": "turbo run dev",

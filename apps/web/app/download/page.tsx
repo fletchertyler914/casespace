@@ -4,7 +4,7 @@ import {
   fetchLatestStableRelease,
 } from "../../lib/releases";
 
-const DEFAULT_REPO = "tyler/casespace";
+const DEFAULT_REPO = "fletchertyler914/casespace";
 
 export default async function DownloadPage() {
   const repo = process.env.NEXT_PUBLIC_RELEASE_REPOSITORY ?? DEFAULT_REPO;

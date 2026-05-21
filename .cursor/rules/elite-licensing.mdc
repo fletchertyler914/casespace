@@ -1,0 +1,12 @@
+---
+description: Enforce CaseSpace BUSL licensing and commercial-use boundaries
+alwaysApply: true
+---
+
+# Elite Licensing Discipline
+
+- CaseSpace is licensed under BUSL-1.1 (`LICENSE`), not MIT/Apache.
+- Do not change package `license` fields to permissive OSS licenses without explicit user approval.
+- Commercial/production revenue-generating use requires a separate commercial license (`COMMERCIAL-LICENSE.md`).
+- Keep `LICENSE`, `NOTICE`, and `COMMERCIAL-LICENSE.md` synchronized when licensing terms change.
+- Public repository visibility is allowed for distribution, but license terms still prohibit unauthorized commercial use.
