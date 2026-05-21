@@ -1,57 +1,57 @@
 # CaseSpace v2 Readiness
 
-This document states what the v2 repository is ready for now and what must be completed before core migration/rebuild execution is considered production-ready.
+This document tracks implemented scope, validated scope, and remaining gates required before production sign-off.
 
 ## Executive status
 
-- Repository state: foundation scaffold
-- Migration state: planning complete, implementation not started
-- Core readiness: partial (tooling and structure exist, product behavior does not yet)
+- Implemented: phase scaffolding for pipeline/contracts/core workflows
+- Validated: local lint/type/build checks
+- Remaining for production sign-off: full command parity, production persistence model, and live remote CI/release evidence
 
-## Readiness matrix
+## Readiness matrix (implemented vs remaining)
 
 | Area | Ready now | Not ready yet |
 |---|---|---|
-| Monorepo foundation | pnpm workspace + Turbo + shared config packages | final package naming and ownership docs need cleanup |
-| Desktop backend shell | Tauri scaffold exists | domain commands, schema, and security controls not implemented |
-| Desktop UI shell | Next app scaffold exists | analyst workflows and command adapters not implemented |
-| Web surface | Next app scaffold exists | no web-specific product capabilities defined |
-| Shared packages | config packages and `@repo/ui` scaffold exist | domain contracts in `packages/types` not implemented |
-| Documentation | architecture, migration, and v1 reference now exist | docs must stay synchronized as code lands |
-| Quality system | lint/type tasks exist for some packages | full CI gates and deterministic release pipeline not implemented |
+| Monorepo foundation | pnpm workspace + Turbo + architecture guard | full phase-gate evidence wiring still ongoing |
+| Desktop backend | Tauri command scaffolding + local tests + path controls | production-grade persistence and full domain parity remain |
+| Desktop UI | Next workflow scaffolding + typed command adapters | complete v1 workflow parity and E2E depth remain |
+| Web surface | Marketing/docs/download routes + release-aware download page | final content and release-proof UX validation remain |
+| Shared packages | `@repo/types` contracts package added | full DTO/versioning expansion remains |
+| Documentation | architecture/migration/readiness/runbooks present | continuous sync required as implementation evolves |
+| Quality system | lint/type/build local validation + CI workflows defined | remote workflow pass evidence not yet completed |
 
 ## Current blockers
 
 ### Product blockers
 
-- v1 business logic has not yet been implemented in v2 code.
-- v2 command/API contracts are not yet enforced in code.
-- No workflow parity evidence exists yet for core domains.
+- full v1 domain parity is not complete
+- command/API matrix coverage is not complete across all domains
+- parity evidence across all core workflows is not complete
 
 ### Technical blockers
 
-- `apps/desktop-backend` is scaffold-level and missing real command modules.
-- `apps/desktop` is scaffold-level and missing desktop workflow modules.
-- cross-app contract layer (`packages/types`) is not implemented.
-- release pipeline and quality gates are not codified in CI.
+- backend needs production persistence/migration model beyond JSON-store scaffolding
+- desktop needs broader workflow coverage and deeper integration tests
+- security/performance/offline suites need full automation depth
+- release workflows must be proven through live GitHub runs and artifact publication
 
 ### Security blockers
 
-- command-risk controls are defined in docs but not implemented.
-- permission/capability hardening is not yet verified in code.
-- destructive operation safeguards and auditing need implementation.
+- command-risk controls are baseline-only; full coverage remains
+- permission/capability hardening requires full review evidence
+- destructive-operation safeguards and audit pathways require expansion
 
 ### Performance blockers
 
 - baseline metrics are not yet captured as enforceable CI/perf checks.
 - no regression harness is present for ingest/search/render budgets.
 
-## What can be done immediately
+## Immediate next execution
 
-- implement domain contract layer in `packages/types`
-- implement backend domain command modules in `apps/desktop-backend`
-- implement desktop command adapters + workflows in `apps/desktop`
-- wire CI checks for lint/types/tests/build before feature work scales
+- expand backend domain modules from scaffold to production-grade implementations
+- complete command/API matrix coverage and tests
+- run and document live GitHub CI/release/prod-promotion evidence
+- deepen offline/performance/security validation automation
 
 ## What should wait
 

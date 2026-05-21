@@ -2,7 +2,7 @@
 
 CaseSpace v2 is an elite, net-new rebuild of the CaseSpace product foundation using a 3-app architecture.
 
-Current status: **foundation + migration documentation complete, core implementation in progress**.
+Current status: **implemented: phase scaffolding + local checks; validated: local lint/type/build; remaining for full sign-off: live CI/release/prod-promotion evidence**.
 
 ## Repository purpose
 
@@ -10,7 +10,7 @@ This repository is the implementation home for:
 
 - `apps/desktop-backend`: Tauri/Rust native core engine
 - `apps/desktop`: Next.js desktop UX shell
-- `apps/web`: future browser surface
+- `apps/web`: marketing/sales/docs/download surface (no product workflow UI)
 - shared packages for contracts, UI, and configuration
 
 v1 reference source path:
@@ -30,6 +30,8 @@ v1 reference source path:
 - `docs/readiness.md` - current readiness and blockers
 - `docs/migrating-from-v1.md` - deterministic migration playbook and contract matrix
 - `docs/v1-reference.md` - consolidated v1 capability inventory
+- `docs/release-runbook.md` - RC/prod release process and promotion flow
+- `docs/release-validation-cli.md` - automated CLI validation policy (`release:status` and `release:validate`)
 
 ## Quickstart
 
@@ -52,7 +54,21 @@ pnpm lint
 pnpm check-types
 ```
 
+## Solo Ops Validation
+
+Use these canonical commands:
+
+```bash
+pnpm ops:validate:local
+pnpm ops:validate
+pnpm ops:validate:prod
+```
+
+- `ops:validate:local`: full local gates + unified release/web-link contract checks
+- `ops:validate`: local gates + remote workflow status discovery
+- `ops:validate:prod`: strict production validation (CI/Release success + stable release link checks)
+
 ## Notes
 
-- This repository currently contains scaffold-level app code plus execution-grade migration docs.
-- Do not assume v1 feature parity is implemented until migration phases are completed and quality gates pass.
+- Implemented baseline: backend/desktop command-workflow scaffolding and release-pipeline definitions.
+- Validation boundary: full v1 parity and production sign-off require proven remote CI/release gates plus completed phase checklists.

@@ -1,0 +1,17 @@
+---
+description: Enforce deterministic release validation and evidence collection
+alwaysApply: true
+---
+
+# Elite Release Validation Discipline
+
+- For release/production validation tasks, use:
+  - `pnpm release:status` for discovery
+  - `pnpm release:validate` for gate enforcement
+- Never claim CI/CD or prod release validation complete unless `release:validate` exits successfully.
+- If `CASESPACE_WEB_URL` is available, include website `/download` validation with `release:validate`.
+- Always provide evidence links for:
+  - latest successful `CI` run
+  - latest successful `Release` run
+  - stable/prod release URL and asset list
+- Any failed validation command is a hard stop until remediated and rerun.

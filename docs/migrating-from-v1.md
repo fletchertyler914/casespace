@@ -13,7 +13,7 @@ This guide defines the deterministic migration/rebuild strategy from:
 - v2 architecture target is 3-app:
   - `apps/desktop-backend` (Tauri/Rust core engine)
   - `apps/desktop` (Next.js desktop UX)
-  - `apps/web` (future browser surface)
+  - `apps/web` (marketing/sales/docs/download surface; no product workspace UI)
 
 ## Non-negotiable principles
 
@@ -125,7 +125,7 @@ Expected net-new artifacts:
 
 ### Acceptance checks
 
-Each manifest item is complete only when:
+Each manifest item is considered implemented and validated only when:
 
 - code compiles in the owning package(s)
 - tests for that domain pass
@@ -217,7 +217,7 @@ Required controls:
 
 ## Definition of done for migration planning
 
-This plan is implementation-ready when:
+This plan is considered implementation-ready only when:
 
 1. manifest tables are fully mapped to actual v2 files
 2. command matrix rows each have owner and tests committed

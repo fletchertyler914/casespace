@@ -8,7 +8,7 @@ CaseSpace v2 is a 3-app monorepo:
 
 - `apps/desktop-backend`: native/core engine (Tauri + Rust)
 - `apps/desktop`: desktop UX shell (Next.js)
-- `apps/web`: future browser surface
+- `apps/web`: marketing/sales/docs/download surface (no product workflow interface)
 
 Shared packages provide reusable contracts and UI primitives.
 
@@ -61,9 +61,10 @@ Owns:
 
 Owns:
 
-- web-safe subset of product features
-- workflows that do not require local native capabilities
-- future collaboration/browser use-cases
+- marketing/positioning pages
+- release-aware desktop download UX
+- docs/pricing/contact entry points
+- no case workspace or native command workflows
 
 ## v1 to v2 architectural relationship
 
@@ -71,7 +72,7 @@ v1 is a single-package desktop application. v2 intentionally separates concerns:
 
 - backend-native concerns move into `apps/desktop-backend`
 - desktop UX concerns move into `apps/desktop`
-- web-safe expansion is isolated to `apps/web`
+- marketing/download/docs experience is isolated to `apps/web`
 
 This separation improves modularity, maintainability, and long-term scalability.
 
@@ -116,10 +117,11 @@ CaseSpace v2 is closed-source-first today, but architecture is extension-ready:
 - domain contracts that support optional premium modules later
 - additive monetization paths that do not mutate core business logic
 
-## Current known gaps in this repository
+## Current implementation boundaries
 
-- `apps/desktop-backend` currently has scaffold-level behavior only
-- `apps/desktop` currently has starter-level pages
-- command contracts and shared domain packages are not implemented yet
+- Implemented today: backend commands use lightweight JSON-store scaffolding
+- Implemented today: desktop workflows are initial vertical slices
+- Remaining: full v1 parity, production persistence model, and production OCR/AI/report automation
+- Remaining for sign-off: live remote CI/release execution evidence
 
 See `docs/readiness.md` and `docs/migrating-from-v1.md` for migration sequencing and gate criteria.

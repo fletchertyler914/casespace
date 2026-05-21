@@ -2,7 +2,7 @@
 
 This app is the native/core backend engine for CaseSpace v2.
 
-Current state: scaffold-level Tauri shell; domain command implementation pending.
+Current state: implemented Tauri-native command baseline with local validation; remaining work is production persistence, full matrix coverage, and remote release proof.
 
 ## Role in v2 architecture
 

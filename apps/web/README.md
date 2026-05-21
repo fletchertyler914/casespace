@@ -1,14 +1,15 @@
 # CaseSpace Web App (`apps/web`)
 
-This app is the future browser-facing CaseSpace surface.
+This app is the CaseSpace marketing/sales/docs/download surface.
 
-Current state: scaffold-level shell.
+Current state: implemented baseline for marketing/docs/download routes; remaining work is release-proof validation and content hardening.
 
 ## Role in v2 architecture
 
-- Own web-safe workflows that do not require local Tauri-native capabilities.
-- Reuse shared contracts and UI primitives from `packages/*`.
-- Expand only after desktop core migration reaches stability gates.
+- Own product marketing and positioning pages.
+- Provide live desktop download links to published GitHub Release assets.
+- Own docs/pricing/contact routes.
+- Must not implement product workspace routes or native command workflows.
 
 ## Local development
 

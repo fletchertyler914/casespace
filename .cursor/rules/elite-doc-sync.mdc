@@ -1,0 +1,18 @@
+---
+description: Keep docs and implementation state strictly synchronized
+alwaysApply: true
+---
+
+# Elite Documentation Sync
+
+- Any architecture/runtime/pipeline change must update:
+  - `README.md`
+  - `docs/architecture.md`
+  - `docs/readiness.md`
+  - `docs/phase-gates.md`
+  - relevant app READMEs
+- Use precise status language:
+  - `implemented` only when code exists
+  - `validated` only when corresponding checks were executed
+  - `100% complete` only when all local and remote gates are proven
+- Never leave stale statements that conflict with current code.

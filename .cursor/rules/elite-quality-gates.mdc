@@ -6,6 +6,7 @@ alwaysApply: true
 # Elite Quality Gates
 
 - No change is complete without: lint, typecheck, tests, and build verification.
+- No milestone is complete without evidence links (local command outputs and, when applicable, CI/release run URLs).
 - Security-first defaults:
   - least privilege
   - path/capability validation
@@ -17,4 +18,7 @@ alwaysApply: true
   - remove dead code/config immediately
   - keep module ownership clear
   - avoid introducing hidden coupling across apps
+- Documentation discipline:
+  - architecture/readiness/phase-gates/README files must be updated in the same workstream as architecture or scope changes
+  - never claim "100% validated" without live CI/release evidence for remote gates
 - If quality gates fail, fix before proceeding; do not defer known regressions.
