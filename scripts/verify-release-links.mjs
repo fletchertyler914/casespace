@@ -31,8 +31,9 @@ if (!stableRelease) {
 }
 
 const requiredPatterns = [
-  /casespace-v\d+\.\d+\.\d+-macos-(arm64|x64)\./,
-  /casespace-v\d+\.\d+\.\d+-windows-(arm64|x64)\./,
+  /casespace-v\d+\.\d+\.\d+-macos-arm64\.(dmg|zip)$/,
+  /casespace-v\d+\.\d+\.\d+-macos-x64\.(dmg|zip)$/,
+  /casespace-v\d+\.\d+\.\d+-windows-x64\.(msi|exe|zip)$/,
 ];
 
 for (const pattern of requiredPatterns) {
@@ -44,5 +45,5 @@ for (const pattern of requiredPatterns) {
 }
 
 console.log(
-  `Release ${stableRelease.tag_name} has required macOS and Windows assets.`,
+  `Release ${stableRelease.tag_name} has required macOS (arm64+x64) and Windows assets.`,
 );

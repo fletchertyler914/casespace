@@ -15,11 +15,23 @@ permissions:
 
 jobs:
   build-and-publish:
-    name: Publish release asset (${{ matrix.os }})
+    name: Publish ${{ matrix.platform }}-${{ matrix.arch }}
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-latest, windows-latest]
+        include:
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            platform: macos
+            arch: arm64
+          - os: macos-latest
+            target: x86_64-apple-darwin
+            platform: macos
+            arch: x64
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            platform: windows
+            arch: x64
     runs-on: ${{ matrix.os }}
     environment: ${{ contains(github.ref_name, '-rc.') && 'rc' || 'prod' }}
     steps:
@@ -39,11 +51,14 @@ jobs:
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
 
       - name: Rust cache
         uses: swatinem/rust-cache@v2
         with:
           workspaces: "./apps/desktop-backend/src-tauri -> target"
+          key: ${{ matrix.target }}
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -52,7 +67,7 @@ jobs:
         run: pnpm --filter desktop build
 
       - name: Build Tauri bundles
-        run: pnpm --filter desktop-backend tauri build
+        run: pnpm --filter desktop-backend tauri build -- --target ${{ matrix.target }}
 
       - name: Package deterministic release asset
         id: package
@@ -60,15 +75,16 @@ jobs:
         run: |
           set -euo pipefail
           VERSION="${GITHUB_REF_NAME#v}"
-          MACHINE_ARCH="$(uname -m)"
-          if [[ "$MACHINE_ARCH" == "x86_64" ]]; then ARCH="x64"; elif [[ "$MACHINE_ARCH" == "arm64" || "$MACHINE_ARCH" == "aarch64" ]]; then ARCH="arm64"; else ARCH="$MACHINE_ARCH"; fi
+          TARGET="${{ matrix.target }}"
+          PLATFORM="${{ matrix.platform }}"
+          ARCH="${{ matrix.arch }}"
 
           mkdir -p release-assets
-          if [[ "${{ runner.os }}" == "macOS" ]]; then
-            SOURCE_FILE="$(ls apps/desktop-backend/src-tauri/target/release/bundle/dmg/*.dmg | head -n 1)"
+          if [[ "$PLATFORM" == "macos" ]]; then
+            SOURCE_FILE="$(ls apps/desktop-backend/src-tauri/target/${TARGET}/release/bundle/dmg/*.dmg | head -n 1)"
             TARGET_FILE="release-assets/casespace-v${VERSION}-macos-${ARCH}.dmg"
           else
-            SOURCE_FILE="$(ls apps/desktop-backend/src-tauri/target/release/bundle/msi/*.msi | head -n 1)"
+            SOURCE_FILE="$(ls apps/desktop-backend/src-tauri/target/${TARGET}/release/bundle/msi/*.msi | head -n 1)"
             TARGET_FILE="release-assets/casespace-v${VERSION}-windows-${ARCH}.msi"
           fi
 
