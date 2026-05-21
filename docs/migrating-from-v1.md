@@ -2,8 +2,12 @@
 
 This guide defines the deterministic migration/rebuild strategy from:
 
-- v1: `/Users/tyler/projects/malissa_projects/inventory-generator`
+- v1: `/Users/tyler/projects/malissa_projects/inventory-generator` (React/Vite + Tauri 2)
 - v2: `/Users/tyler/projects/malissa_projects/casespace`
+
+**Canonical specs:** [product-spec-bible.md](product-spec-bible.md) · [command-parity-ledger.md](command-parity-ledger.md) · [gap-analysis-master.md](spec/gap-analysis-master.md)
+
+**Execution order:** CoreParity (non-AI) → E2E validation → AINative (blocked until [Core Parity gate](implementation-readiness-gate.md#core-parity-build-gate))
 
 ## Strategic posture
 
@@ -56,38 +60,39 @@ This guide defines the deterministic migration/rebuild strategy from:
 - Lock ownership boundaries for desktop-backend vs desktop vs web.
 - Ensure desktop and web can evolve independently without hidden coupling.
 
-## Exhaustive implementation manifest
+## Implementation manifest (status-tagged)
 
-The following matrix is the source of truth for migration actions.
+**Status vocabulary:** `exists` | `planned` | `deferred` | `N/A`  
+Command-level detail: [command-parity-ledger.md](command-parity-ledger.md)
 
-### File-by-file mapping (high-level deterministic map)
+### File-by-file mapping
 
-| v1 source                         | v2 target                                              | Action            | Notes                                                 |
-| --------------------------------- | ------------------------------------------------------ | ----------------- | ----------------------------------------------------- |
-| `src-tauri/src/lib.rs`            | `apps/desktop-backend/src-tauri/src/lib.rs`            | port-and-refactor | Recompose command registration by domain modules      |
-| `src-tauri/src/database.rs`       | `apps/desktop-backend/src-tauri/src/database.rs`       | rewrite-net-new   | New schema allowed; preserve business intent          |
-| `src-tauri/src/time_tracking.rs`  | `apps/desktop-backend/src-tauri/src/time_tracking.rs`  | port-and-refactor | Keep billing outcomes, modernize contracts            |
-| `src-tauri/src/scanner.rs`        | `apps/desktop-backend/src-tauri/src/scanner.rs`        | port-and-refactor | Preserve ingest semantics + performance targets       |
-| `src-tauri/src/file_ingestion.rs` | `apps/desktop-backend/src-tauri/src/file_ingestion.rs` | port-and-refactor | Keep sync behavior; tighten validation                |
-| `src-tauri/src/repositories/*`    | `apps/desktop-backend/src-tauri/src/repositories/*`    | port-and-refactor | Align with new schema and module ownership            |
-| `src/components/workspace/*`      | `apps/desktop/components/workspace/*`                  | rewrite-net-new   | Next-first implementation with same workflow outcomes |
-| `src/components/viewer/*`         | `apps/desktop/components/viewer/*`                     | port-and-refactor | Preserve multi-format viewing outcomes                |
-| `src/components/notes/*`          | `apps/desktop/components/notes/*`                      | port-and-refactor | Preserve rich notes workflows                         |
-| `src/components/findings/*`       | `apps/desktop/components/findings/*`                   | port-and-refactor | Preserve findings management                          |
-| `src/components/timeline/*`       | `apps/desktop/components/timeline/*`                   | port-and-refactor | Preserve event workflow semantics                     |
-| `src/components/search/*`         | `apps/desktop/components/search/*`                     | port-and-refactor | Preserve discovery behavior and relevance intent      |
-| `src/components/duplicates/*`     | `apps/desktop/components/duplicates/*`                 | port-and-refactor | Preserve duplicate triage outcomes                    |
-| `src/components/time/*`           | `apps/desktop/components/time/*`                       | port-and-refactor | Preserve billing/time outcomes                        |
-| `src/services/*`                  | `apps/desktop/lib/services/*`                          | port-and-refactor | Command adapter layer; avoid direct UI invoke sprawl  |
-| `src/hooks/*`                     | `apps/desktop/lib/hooks/*`                             | port-and-refactor | Keep behavior, simplify where possible                |
-| `src/store/*`                     | `apps/desktop/lib/state/*`                             | port-and-refactor | Normalize state boundaries                            |
-| `src/types/*`                     | `packages/types/*`                                     | port-and-refactor | Promote shared domain contracts                       |
-| `src/components/ui/*`             | `packages/ui/src/*`                                    | port-and-refactor | Rebuild design system for v2 conventions              |
-| `public/*`                        | `apps/desktop/public/*`                                | port-as-is        | Keep only required assets                             |
-| `vite.config.ts`                  | N/A                                                    | deprecate         | Next.js-first desktop                                 |
-| `index.html`                      | N/A                                                    | deprecate         | Next.js runtime replaces Vite shell                   |
-| `.github/workflows/build.yml`     | `.github/workflows/*`                                  | rewrite-net-new   | Monorepo CI strategy                                  |
-| `scripts/*`                       | `scripts/*` or app-local scripts                       | port-and-refactor | Keep only scripts needed for v2 workflows             |
+| v1 source | v2 target | Status | Notes |
+| --------- | --------- | ------ | ----- |
+| `src-tauri/src/lib.rs` | `src-tauri/src/lib.rs` (interim) → `commands/*` | exists / planned | Monolithic today; split planned |
+| `src-tauri/src/database.rs` | `src-tauri/src/database.rs` | planned | SQLite + FTS |
+| `src-tauri/src/time_tracking.rs` | `src-tauri/src/time_tracking.rs` | planned | REQ-TIME-001 |
+| `src-tauri/src/scanner.rs` | `src-tauri/src/scanner.rs` | planned | REQ-INGEST-001 |
+| `src-tauri/src/file_ingestion.rs` | `src-tauri/src/file_ingestion.rs` | planned | REQ-INGEST-001 |
+| `src-tauri/src/repositories/*` | `src-tauri/src/repositories/*` | planned | After schema freeze |
+| `src/components/workspace/*` | `apps/desktop/components/workspace/*` | planned | P0 CoreParity |
+| `src/components/viewer/*` | `apps/desktop/components/viewer/*` | planned | MVP P0, rich P1 |
+| `src/components/notes/*` | `apps/desktop/components/artifacts/*` | planned | REQ-ARTIFACT-001 |
+| `src/components/findings/*` | `apps/desktop/components/artifacts/*` | planned | REQ-ARTIFACT-001 |
+| `src/components/timeline/*` | `apps/desktop/components/artifacts/*` | planned | REQ-ARTIFACT-001 |
+| `src/components/search/*` | `apps/desktop/components/search/*` | planned | REQ-SEARCH-001 |
+| `src/components/duplicates/*` | `apps/desktop/components/duplicates/*` | deferred | P1 |
+| `src/components/time/*` | `apps/desktop/components/billing/*` | planned | REQ-TIME-001 |
+| `src/services/*` | `apps/desktop/lib/services/*` | planned | Adapter layer |
+| `src/hooks/*` | `apps/desktop/lib/hooks/*` | planned | Port logic |
+| `src/store/*` | `apps/desktop/lib/state/*` | planned | Zustand |
+| `src/types/*` | `packages/types/*` | exists / planned | Partial contracts |
+| `src/components/ui/*` | `packages/ui/src/*` | exists / planned | Starter only today |
+| `public/*` (owl assets) | `apps/desktop/public/*` | exists | Branding ported |
+| `vite.config.ts` | N/A | N/A | Next.js desktop |
+| `index.html` | N/A | N/A | Next.js desktop |
+| `.github/workflows/build.yml` | `.github/workflows/ci.yml`, `release.yml` | exists | Node 24 |
+| `scripts/*` | `scripts/*` | exists / planned | Icon gen, release scripts exist |
 
 ### Rename ledger
 
@@ -215,11 +220,31 @@ Required controls:
   - optional hosted team features later
 - Do not entangle monetization logic into core domain rules.
 
+## Elite target architecture (backend domains)
+
+Planned module layout under `apps/desktop-backend/src-tauri/src/`:
+
+| Domain | Responsibility |
+|--------|----------------|
+| `commands/cases` | Case CRUD, sources |
+| `commands/ingest` | Scan, ingest, sync, refresh |
+| `commands/files` | Read/write/open, status |
+| `commands/search` | FTS queries |
+| `commands/artifacts` | Notes, findings, timeline |
+| `commands/duplicates` | Groups, merge (P1) |
+| `commands/billing` | Timer, segments, invoice math |
+| `commands/config` | Workspace prefs (P1) |
+| `persistence/*` | SQLite pool, migrations, repositories |
+| `domain/*` | Business rules, validation |
+
+Desktop: `lib/services` → `lib/hooks` → `components/*`. See [desktop-workflow-mapping.md](desktop-workflow-mapping.md).
+
 ## Definition of done for migration planning
 
-This plan is considered implementation-ready only when:
+Planning phase complete when:
 
-1. manifest tables are fully mapped to actual v2 files
-2. command matrix rows each have owner and tests committed
-3. quality gates are encoded in CI and release checks
-4. architecture docs and app READMEs reflect final decisions
+1. [product-spec-bible.md](product-spec-bible.md) and `docs/spec/*` pack exist ✅
+2. [command-parity-ledger.md](command-parity-ledger.md) maps v1 commands ✅
+3. [implementation-readiness-gate.md](implementation-readiness-gate.md) published ✅
+
+Implementation phase complete when Core Parity Build Gate passes (see readiness doc).

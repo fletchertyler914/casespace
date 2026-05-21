@@ -20,7 +20,8 @@ For one-person operations, use this deterministic command stack:
 2. `pnpm ops:validate`
    - run local gates plus remote workflow status discovery
 3. `pnpm ops:validate:prod`
-   - run strict prod validation (latest successful CI + Release + stable asset checks)
+   - runs `pnpm release:validate` only (remote CI + Release success + stable asset checks via `verify-release-links.mjs`)
+   - does **not** run local lint/build; use `ops:validate` for local gates + remote status
 
 Use `ops:validate` as your day-to-day default. Use `ops:validate:prod` only for release sign-off.
 

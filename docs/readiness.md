@@ -1,77 +1,80 @@
 # CaseSpace v2 Readiness
 
-This document tracks implemented scope, validated scope, and remaining gates required before production sign-off.
+Tracks implemented scope, validated scope, and gates required before production sign-off and AI enablement.
 
 ## Executive status
 
-- Implemented: phase scaffolding for pipeline/contracts/core workflows
-- Validated: local lint/type/build checks
-- Remaining for production sign-off: full command parity, production persistence model, and live remote CI/release evidence
+| Area | Status |
+|------|--------|
+| Planning / spec pack | **Complete** — see [product-spec-bible.md](product-spec-bible.md) |
+| Implementation (CoreParity) | **Not started** — porting gated on checklist below |
+| AINative phase | **Blocked** — until Core Parity Build Gate passes |
+| Remote CI evidence | Partial — latest main CI green; full release proof ongoing |
 
-## Readiness matrix (implemented vs remaining)
+## Documentation map (source of truth)
 
-| Area                | Ready now                                                    | Not ready yet                                              |
-| ------------------- | ------------------------------------------------------------ | ---------------------------------------------------------- |
-| Monorepo foundation | pnpm workspace + Turbo + architecture guard                  | full phase-gate evidence wiring still ongoing              |
-| Desktop backend     | Tauri command scaffolding + local tests + path controls      | production-grade persistence and full domain parity remain |
-| Desktop UI          | Next workflow scaffolding + typed command adapters           | complete v1 workflow parity and E2E depth remain           |
-| Web surface         | Marketing/docs/download routes + release-aware download page | final content and release-proof UX validation remain       |
-| Shared packages     | `@repo/types` contracts package added                        | full DTO/versioning expansion remains                      |
-| Documentation       | architecture/migration/readiness/runbooks present            | continuous sync required as implementation evolves         |
-| Quality system      | lint/type/build local validation + CI workflows defined      | remote workflow pass evidence not yet completed            |
+| Document | Purpose |
+|----------|---------|
+| [product-spec-bible.md](product-spec-bible.md) | Requirements and phase partitioning |
+| [implementation-readiness-gate.md](implementation-readiness-gate.md) | Planning vs porting vs AI gates |
+| [command-parity-ledger.md](command-parity-ledger.md) | v1 ↔ v2 commands |
+| [persistence-mapping.md](persistence-mapping.md) | SQLite target schema |
+| [desktop-workflow-mapping.md](desktop-workflow-mapping.md) | UI port map |
+| [spec/gap-analysis-master.md](spec/gap-analysis-master.md) | Executive gap summary |
 
-## Current blockers
+## Readiness matrix
 
-### Product blockers
+| Area | Ready now | Not ready yet |
+|------|-----------|---------------|
+| Monorepo foundation | pnpm + Turbo + arch guard | CoreParity feature port |
+| Desktop backend | Command scaffold + path checks | SQLite, ingest, FTS, full command matrix |
+| Desktop UI | Demo workspace slice | Case hub, navigator, viewer, panels |
+| Web surface | Marketing + download page | Content polish only |
+| Shared packages | `@repo/types` contracts (partial) | Full DTO parity + adapter envelopes |
+| Documentation | Spec bible + gap analysis complete | Update as implementation lands |
+| Quality system | Local lint/type/build scripts | E2E parity suite, perf harness |
+| Toolchain | Node 24 policy + local validate pass | CI on Node 24 after next push |
 
-- full v1 domain parity is not complete
-- command/API matrix coverage is not complete across all domains
-- parity evidence across all core workflows is not complete
+## Implementation Readiness Gate
 
-### Technical blockers
+Planning gate: **PASS** (see [implementation-readiness-gate.md](implementation-readiness-gate.md)).
 
-- backend needs production persistence/migration model beyond JSON-store scaffolding
-- desktop needs broader workflow coverage and deeper integration tests
-- security/performance/offline suites need full automation depth
-- release workflows must be proven through live GitHub runs and artifact publication
+## Core Parity Build Gate (blocking AI)
 
-### Security blockers
+| # | Criterion | Status |
+|---|-----------|--------|
+| C1 | P0 non-AI E2E workflows | not started |
+| C2 | P0 commands per ledger | not started |
+| C3 | SQLite replaces JSON store | not started |
+| C4 | FTS search | not started |
+| C5 | Report + billing exports | not started |
+| C6 | No critical P0 defects | not started |
 
-- command-risk controls are baseline-only; full coverage remains
-- permission/capability hardening requires full review evidence
-- destructive-operation safeguards and audit pathways require expansion
+## Execution order (locked)
 
-### Performance blockers
+1. CoreParity port on elite architecture
+2. E2E validation + bug burn-down
+3. AINative features (post-gate)
 
-- baseline metrics are not yet captured as enforceable CI/perf checks.
-- no regression harness is present for ingest/search/render budgets.
+## Validation evidence
+
+| Run | Date | Node | Command | Result |
+|-----|------|------|---------|--------|
+| Local ops validate | 2026-05-20 | v24.15.0 | `pnpm ops:validate:local` | **pass** (arch, lint, types, build, release contract) |
+| GitHub CI main | 2026-05-21 | 24 (pending push) | CI workflow | last known success on main (pre–Node 24 bump) |
+
+*Update this table after each validation run.*
 
 ## Immediate next execution
 
-- expand backend domain modules from scaffold to production-grade implementations
-- complete command/API matrix coverage and tests
-- run and document live GitHub CI/release/prod-promotion evidence
-- deepen offline/performance/security validation automation
+1. Begin SQLite persistence foundation (`database.rs` + migrations)
+2. Port P0 ingest + case load commands
+3. Build case hub + workspace UI shell
+4. Expand command-client + services for P0 commands
+5. Add integration/E2E tests per [spec/test-oracle-matrix.md](spec/test-oracle-matrix.md)
 
 ## What should wait
 
-- major `apps/web` feature expansion (until desktop core is stable)
-- monetization features (until core workflow quality gates pass)
-
-## Readiness gates before implementation complete
-
-1. Domain contract gate: typed contracts defined and adopted.
-2. Command gate: core command matrix rows implemented and tested.
-3. Security gate: command-risk checklist enforced.
-4. Performance gate: agreed p95/p99 budgets pass.
-5. Reliability gate: migration/release rollback pathways validated.
-6. Documentation gate: architecture/readiness/migration docs updated with actual implementation state.
-
-## Recommended next execution order
-
-1. Implement core domain contracts and backend command skeletons.
-2. Implement desktop command adapters and workflow shells.
-3. Port/rebuild high-value workflows first (cases, ingestion, search, notes).
-4. Add tests and CI gates in parallel with each domain.
-5. Iterate through remaining domains (findings, timeline, duplicates, time/billing).
-6. Expand web surface only after desktop core gates pass.
+- All AI-native features ([spec/ai-capability-matrix.md](spec/ai-capability-matrix.md))
+- Team collaboration features
+- Rich PDF/Office in-app viewers (P1)

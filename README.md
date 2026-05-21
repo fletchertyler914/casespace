@@ -2,7 +2,7 @@
 
 CaseSpace v2 is an elite, net-new rebuild of the CaseSpace product foundation using a 3-app architecture.
 
-Current status: **implemented + deployed web/download surface; validated: CI, release assets, and Vercel production deploy**.
+Current status: **planning complete; CoreParity port in progress**. Web/download surface deployed; desktop product parity (ingest, workspace, billing, reports) not yet implemented. See [docs/readiness.md](docs/readiness.md).
 
 ## Repository purpose
 
@@ -36,18 +36,23 @@ Contact for commercial licensing: `fletchertyler914@yahoo.com`
 
 ## Documentation map
 
-- `docs/architecture.md` - v2 architecture and ownership boundaries
-- `docs/readiness.md` - current readiness and blockers
-- `docs/migrating-from-v1.md` - deterministic migration playbook and contract matrix
-- `docs/v1-reference.md` - consolidated v1 capability inventory
-- `docs/release-runbook.md` - RC/prod release process and promotion flow
-- `docs/release-validation-cli.md` - automated CLI validation policy (`release:status` and `release:validate`)
+- `docs/product-spec-bible.md` - canonical product requirements and phase partitioning
+- `docs/implementation-readiness-gate.md` - planning / parity / AI gates
+- `docs/architecture.md` - v2 architecture (current vs target)
+- `docs/readiness.md` - readiness and blockers
+- `docs/migrating-from-v1.md` - migration playbook (status-tagged manifest)
+- `docs/command-parity-ledger.md` - v1 ↔ v2 command mapping
+- `docs/v1-reference.md` - v1 capability inventory
+- `docs/spec/` - flows, features, AI matrix, gap analysis, test oracles
+- `docs/release-runbook.md` - RC/prod release process
+- `docs/release-validation-cli.md` - CLI validation policy
 
 ## Quickstart
 
-Install dependencies:
+**Prerequisites:** Node.js **24+**, pnpm **10.19** (see `.nvmrc`)
 
 ```bash
+corepack enable
 pnpm install
 ```
 
@@ -82,7 +87,7 @@ pnpm ops:validate:prod
 
 - Web/marketing: `https://casespace.vercel.app`
 - Download page: `https://casespace.vercel.app/download`
-- Latest stable desktop release: `v0.1.2` (GitHub Releases)
+- Latest stable desktop release: see [GitHub Releases](https://github.com/fletchertyler914/casespace/releases) (branding/icon updates on main; full parity pending)
 
 ## Branding & icons
 

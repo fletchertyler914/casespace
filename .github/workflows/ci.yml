@@ -7,6 +7,10 @@ on:
       - main
       - "release/**"
 
+env:
+  NODE_VERSION: "24"
+  PNPM_VERSION: "10.19.0"
+
 jobs:
   quality:
     name: Lint, Types, Build
@@ -18,12 +22,12 @@ jobs:
       - name: Setup pnpm
         uses: pnpm/action-setup@v6
         with:
-          version: 10.19.0
+          version: ${{ env.PNPM_VERSION }}
 
       - name: Setup node
         uses: actions/setup-node@v5
         with:
-          node-version: 22
+          node-version: ${{ env.NODE_VERSION }}
           cache: pnpm
 
       - name: Install dependencies
@@ -55,12 +59,12 @@ jobs:
       - name: Setup pnpm
         uses: pnpm/action-setup@v6
         with:
-          version: 10.19.0
+          version: ${{ env.PNPM_VERSION }}
 
       - name: Setup node
         uses: actions/setup-node@v5
         with:
-          node-version: 22
+          node-version: ${{ env.NODE_VERSION }}
           cache: pnpm
 
       - name: Install Rust

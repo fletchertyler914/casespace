@@ -1,8 +1,10 @@
 # CaseSpace v1 Reference
 
-This document is the canonical reference for v1 (`/Users/tyler/projects/malissa_projects/inventory-generator`) during the v2 rebuild.
+Canonical reference for v1 (`/Users/tyler/projects/malissa_projects/inventory-generator`) during the v2 rebuild.
 
-It captures what must be preserved in product outcomes, even when implementation, schema, and architecture are redesigned.
+**Important:** v1 is a **React/Vite + Tauri 2** desktop app (not Next.js). Preserve product **outcomes** in v2; redesign implementation.
+
+**v2 port status:** see [command-parity-ledger.md](command-parity-ledger.md) and [spec/gap-analysis-master.md](spec/gap-analysis-master.md). v2 does **not** yet have v1 parity.
 
 ## Product intent to preserve
 

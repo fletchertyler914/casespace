@@ -13,6 +13,10 @@ on:
 permissions:
   contents: write
 
+env:
+  NODE_VERSION: "24"
+  PNPM_VERSION: "10.19.0"
+
 jobs:
   build-and-publish:
     name: Publish ${{ matrix.platform }}-${{ matrix.arch }}
@@ -41,12 +45,12 @@ jobs:
       - name: Setup pnpm
         uses: pnpm/action-setup@v6
         with:
-          version: 10.19.0
+          version: ${{ env.PNPM_VERSION }}
 
       - name: Setup node
         uses: actions/setup-node@v5
         with:
-          node-version: 22
+          node-version: ${{ env.NODE_VERSION }}
           cache: pnpm
 
       - name: Install Rust
@@ -110,7 +114,7 @@ jobs:
       - name: Setup node
         uses: actions/setup-node@v5
         with:
-          node-version: 22
+          node-version: ${{ env.NODE_VERSION }}
 
       - name: Verify latest stable release has required assets
         env:

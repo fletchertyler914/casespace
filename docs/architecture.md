@@ -1,6 +1,6 @@
 # CaseSpace v2 Architecture
 
-This is the architecture target for CaseSpace v2.
+Architecture target for CaseSpace v2. **Current state** and **target state** are distinguished below.
 
 ## System shape
 
@@ -8,9 +8,9 @@ CaseSpace v2 is a 3-app monorepo:
 
 - `apps/desktop-backend`: native/core engine (Tauri + Rust)
 - `apps/desktop`: desktop UX shell (Next.js)
-- `apps/web`: marketing/sales/docs/download surface (no product workflow interface)
+- `apps/web`: marketing/sales/docs/download surface (no product workflow UI)
 
-Shared packages provide reusable contracts and UI primitives.
+Shared packages: `packages/types`, `packages/ui`, shared configs.
 
 ```mermaid
 flowchart LR
@@ -23,105 +23,83 @@ flowchart LR
   subgraph packages [Packages]
     typesPkg[packages/types]
     uiPkg[packages/ui]
-    sharedCfg[shared configs]
   end
 
   desktop --> typesPkg
   desktop --> uiPkg
-  web --> typesPkg
-  web --> uiPkg
   desktop -->|command adapters| desktopBackend
-  desktopBackend -->|domain contracts| typesPkg
-  sharedCfg --> desktop
-  sharedCfg --> web
+  web --> uiPkg
 ```
+
+**Note:** `apps/web` does not use `@repo/types` today. `apps/desktop-backend` uses inline Rust structs; target is shared contract alignment via serde + `packages/types`.
+
+## Current implementation (today)
+
+| Component | Reality |
+|-----------|---------|
+| `desktop-backend` | Single `lib.rs`, ~20 commands, JSON file store |
+| `desktop` | `case-workspace.tsx` demo + partial `command-client.ts` |
+| `web` | Marketing, download, static pages |
+| Persistence | `casespace-v2-store.json` (scaffold only) |
+| Search | In-memory substring (not production) |
+
+## Target implementation (CoreParity)
+
+| Component | Target |
+|-----------|--------|
+| `desktop-backend` | `commands/*`, `domain/*`, `persistence/*` modules |
+| Persistence | SQLite + WAL + migrations + FTS5 |
+| `desktop` | `lib/services`, `lib/hooks`, `lib/state`, `components/workspace/*` |
+| Contracts | `CommandResponse<T>` envelope, camelCase IPC |
 
 ## Responsibility boundaries
 
 ### `apps/desktop-backend`
 
-Owns:
-
-- domain command layer
-- persistence and schema migrations
-- file-system interactions
-- ingestion/scanning/extraction pipelines
-- security-sensitive operations and capability policy
+- Domain commands, persistence, file I/O, ingest, search, security policy
 
 ### `apps/desktop`
 
-Owns:
-
-- analyst-facing desktop workflows
-- UI state orchestration
-- typed command adapter layer to backend
-- offline-first UX behavior
+- Analyst workflows, UI state, command adapters, offline-first UX
 
 ### `apps/web`
 
-Owns:
+- Marketing, download page, docs — no case workspace
 
-- marketing/positioning pages
-- release-aware desktop download UX
-- docs/pricing/contact entry points
-- no case workspace or native command workflows
+## v1 relationship
 
-## v1 to v2 architectural relationship
+v1 (`inventory-generator`) is React/Vite + Tauri 2 single app. v2 splits backend vs desktop vs web. **Preserve outcomes, redesign structure.**
 
-v1 is a single-package desktop application. v2 intentionally separates concerns:
+See [v1-reference.md](v1-reference.md) and [migrating-from-v1.md](migrating-from-v1.md).
 
-- backend-native concerns move into `apps/desktop-backend`
-- desktop UX concerns move into `apps/desktop`
-- marketing/download/docs experience is isolated to `apps/web`
-
-This separation improves modularity, maintainability, and long-term scalability.
-
-## Domain and contract layering
-
-Target layering:
+## Layering rules
 
 1. Domain contracts (`packages/types`)
-2. Backend command/domain implementation (`apps/desktop-backend`)
-3. Desktop adapters and workflows (`apps/desktop/lib/*`)
-4. Presentation components (`apps/desktop/components/*`)
+2. Backend implementation (`desktop-backend`)
+3. Desktop adapters (`apps/desktop/lib/*`)
+4. UI components (`apps/desktop/components/*`)
 
-Rules:
-
-- UI never bypasses command adapters.
-- Commands never depend on UI modules.
-- Shared contract types are versioned and explicit.
+- UI never bypasses command adapters
+- Commands never depend on UI
+- AI modules (post-parity) sit above stable command layer
 
 ## Security model
 
-Key controls:
-
-- strict path validation for file operations
-- constrained capability permissions
-- sanitized and bounded search queries
-- guarded destructive operations with explicit UX confirmation
+- Case-scoped path canonicalization
+- FTS query sanitization
+- Destructive op confirmation + audit (P1)
+- PII: redacted-cloud default ([spec/ai-capability-matrix.md](spec/ai-capability-matrix.md))
 
 ## Performance model
 
-Core goals:
+See [spec/perf-security-reliability-gates.md](spec/perf-security-reliability-gates.md).
 
-- preserve v1-grade ingest and search performance outcomes
-- enforce p95 budgets for interactive workflows
-- isolate heavy workloads in backend/native layers
-- keep desktop UI responsive through async orchestration
+## Phase sequencing
 
-## Extensibility model
+**CoreParity first** → validate E2E → **AINative second**. See [product-spec-bible.md](product-spec-bible.md).
 
-CaseSpace v2 is closed-source-first today, but architecture is extension-ready:
+## Related docs
 
-- feature flags at module boundaries
-- domain contracts that support optional premium modules later
-- additive monetization paths that do not mutate core business logic
-
-## Current implementation boundaries
-
-- Implemented today: backend commands use lightweight JSON-store scaffolding
-- Implemented today: desktop workflows are initial vertical slices
-- Remaining: full v1 parity, production persistence model, and production OCR/AI/report automation
-- Remaining for sign-off: live remote CI/release execution evidence
-
-See `docs/readiness.md` and `docs/migrating-from-v1.md` for migration sequencing and gate criteria.
+- [readiness.md](readiness.md)
+- [implementation-readiness-gate.md](implementation-readiness-gate.md)
+- [command-parity-ledger.md](command-parity-ledger.md)

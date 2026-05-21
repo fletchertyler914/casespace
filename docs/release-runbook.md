@@ -20,10 +20,11 @@ This runbook defines release operations for macOS + Windows desktop artifacts.
 
 ## Required checks before promotion
 
-- CI workflow green (lint/type/build + desktop matrix auto-build)
-- Security gates pass
-- Performance and offline checks pass
-- Download-link verification script passes against latest stable release
+- CI workflow green (lint/type/build + desktop matrix auto-build on Node 24)
+- `pnpm ops:validate:local` passes on release branch
+- Download-link verification script passes against latest stable release (`verify-release-links` job on stable tags)
+
+**Planned (CoreParity, not yet CI-enforced):** dedicated security suite, perf regression harness, offline E2E parity tests. Track in [spec/perf-security-reliability-gates.md](spec/perf-security-reliability-gates.md).
 
 ## CLI automation
 
