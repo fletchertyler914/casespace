@@ -2,7 +2,7 @@
 
 Next.js desktop UX shell for CaseSpace v2.
 
-**Status (2026-05-21):** U1–U6 shipped — case hub, workspace shell, in-app viewers (PDF/DOCX/XLSX/image/text/CSV), artifact panel MVP. U7/U8/U9/U10 MVP work is in place (swimlanes, duplicates, timer widget, reports panel, cmdk search). **Next:** parity polish + U11 gate. Plan: [docs/ui-port-plan.md](../../docs/ui-port-plan.md).
+**Status (2026-05-21):** U1–U6 shipped — case hub, workspace shell, in-app viewers (PDF/DOCX/XLSX/image/text/code/markdown/CSV/TSV/video/audio with v1 extension parity), artifact panel MVP. U7/U8/U9/U10 MVP work is in place (swimlanes, duplicates, timer widget, reports panel, cmdk search). **Next:** parity polish + U11 gate. Plan: [docs/ui-port-plan.md](../../docs/ui-port-plan.md).
 
 ## Role in v2 architecture
 
@@ -17,7 +17,7 @@ Next.js desktop UX shell for CaseSpace v2.
 | `app/` | Routes: `/` hub, `/case` workspace |
 | `components/case/` | Case list, cards, dialogs |
 | `components/workspace/` | Shell, navigator, header, split/board |
-| `components/viewer/` | File preview router + PDF/Office/text previews |
+| `components/viewer/` | File preview router + previews: PDF, DOCX, XLSX, image, text/code/markdown, CSV/TSV, video, audio, external fallback |
 | `components/artifacts/` | Notes, findings, timeline panels |
 | `lib/command-client.ts` | Typed Tauri command adapters |
 | `lib/file-preview.ts` | Preview kind detection |

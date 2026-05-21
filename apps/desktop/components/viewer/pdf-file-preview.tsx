@@ -1,6 +1,5 @@
 "use client";
 
-import { useMemo } from "react";
 import { SpecialZoomLevel, Viewer, Worker } from "@react-pdf-viewer/core";
 import { defaultLayoutPlugin } from "@react-pdf-viewer/default-layout";
 import "@react-pdf-viewer/core/lib/styles/index.css";
@@ -17,13 +16,14 @@ export function PdfFilePreview({ fileUrl }: PdfFilePreviewProps) {
   const { resolvedTheme } = useTheme();
   const pdfTheme = resolvedTheme === "dark" ? "dark" : "light";
 
-  const defaultLayoutPluginInstance = useMemo(
-    () =>
-      defaultLayoutPlugin({
-        renderToolbar: renderCaseSpacePdfToolbar,
-      }),
-    [],
-  );
+  // CRITICAL: defaultLayoutPlugin() registers internal hooks. It must be
+  // called inline during render — NOT inside useMemo — otherwise React
+  // sees a different hook count between renders and throws error #300
+  // ("Rendered fewer hooks than expected"). This matches v1's working
+  // PdfViewerWrapper.tsx pattern; see commit history / inventory-generator.
+  const defaultLayoutPluginInstance = defaultLayoutPlugin({
+    renderToolbar: renderCaseSpacePdfToolbar,
+  });
 
   return (
     <div
@@ -32,7 +32,6 @@ export function PdfFilePreview({ fileUrl }: PdfFilePreviewProps) {
     >
       <Worker workerUrl="/pdf.worker.min.js">
         <Viewer
-          key={`${fileUrl}-${pdfTheme}`}
           fileUrl={fileUrl}
           plugins={[defaultLayoutPluginInstance]}
           theme={pdfTheme}

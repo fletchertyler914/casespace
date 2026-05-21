@@ -12,7 +12,7 @@ Continuation plan after **Core Parity backend gate** passed locally. Backend com
 | Backend Core Parity | **PASS** — [command-parity-ledger.md](command-parity-ledger.md), `pnpm test:parity`, `pnpm test:hardening` |
 | UI foundation + case hub (U1–U3) | **implemented** |
 | Workspace + ingest/sync (U4) | **implemented** |
-| Viewers (U5) | **implemented** — in-app PDF/DOCX/XLSX; external only for unsupported types |
+| Viewers (U5) | **implemented + v1 parity** — in-app PDF/DOCX/XLSX, image, text/code (50+ exts), markdown, CSV/TSV, video, audio; external fallback only for archives/presentations/installers/fonts/HEIC |
 | Artifact panels (U6) | **MVP implemented** — notes/findings/timeline CRUD (notes pin included); rich editors deferred |
 | U7 duplicates + board | **in progress** — duplicates panel MVP + metadata merge + board swimlanes with drag/drop shipped; conflict dialogs/polish pending |
 | U8 time | **in progress** — timer widget MVP shipped |
@@ -82,20 +82,30 @@ Button, card, input, textarea, label, dialog, alert-dialog, dropdown, context-me
 | Duplicate groups (SHA-256) | rebuild on ingest; UI panel shipped (set primary), merge UX pending |
 | Orphan cleanup | soft-delete when missing from source |
 
-### Phase U5 — Viewers ✅
+### Phase U5 — Viewers ✅ (v1 extension parity)
 
-| Kind | Implementation |
-|------|----------------|
-| Router | `lib/file-preview.ts` → `components/viewer/file-viewer.tsx` |
-| PDF | `pdf-file-preview.tsx` + `pdf-toolbar.tsx` + `pdf-viewer-theme.css` (`@react-pdf-viewer/*`, worker in `public/pdf.worker.min.js`) |
-| DOCX/DOC | `docx-file-preview.tsx` (`mammoth`) |
-| XLSX/XLS | `xlsx-file-preview.tsx` (`xlsx-js-style`) |
-| Image / text / markdown / CSV | `*-file-preview.tsx` |
-| Unsupported only | `external-file-preview.tsx` — PPT, archives, media, etc.; **Open** toolbar action only for these |
+| Kind | Extensions | Implementation |
+|------|-----------|----------------|
+| Router | — | `lib/file-preview.ts` → `components/viewer/file-viewer.tsx` |
+| PDF | `pdf` | `pdf-file-preview.tsx` + `pdf-toolbar.tsx` + `pdf-viewer-theme.css` (`@react-pdf-viewer/*`, worker in `public/pdf.worker.min.js`) |
+| DOCX/DOC | `doc`, `docx` | `docx-file-preview.tsx` (`mammoth`) |
+| XLSX/XLS | `xls`, `xlsx` | `xlsx-file-preview.tsx` (`xlsx-js-style`) |
+| Image | `png`, `jpg`, `jpeg`, `gif`, `webp`, `bmp`, `svg`, `ico`, `tiff`, `tif`, `avif` | `image-file-preview.tsx` |
+| Video | `mp4`, `webm`, `ogv`, `mov`, `m4v`, `mkv`, `avi`, `wmv`, `flv`, `3gp`, `mpeg`, `mpg`, `ts`, `mts`, `m2ts` | `video-file-preview.tsx` (HTML5 `<video>` + blob URL) |
+| Audio | `mp3`, `wav`, `ogg`, `oga`, `aac`, `flac`, `m4a`, `wma`, `opus`, `amr`, `aiff`, `aif` | `audio-file-preview.tsx` (HTML5 `<audio>` + blob URL) |
+| Markdown | `md`, `markdown`, `mdx` | `text-file-preview.tsx` (markdown variant) |
+| CSV/TSV | `csv`, `tsv` | `csv-file-preview.tsx` |
+| Code | 50+ extensions: `ts`, `tsx`, `js`, `jsx`, `py`, `rs`, `go`, `java`, `c`/`cpp`/`h`, `cs`, `kt`, `swift`, `rb`, `php`, `lua`, `r`, `dart`, `sh`/`bash`/`zsh`, `bat`/`cmd`/`ps1`, `sql`, `yaml`/`yml`/`toml`, `json`, `xml`, `html`, `css`/`scss`/`sass`/`less`, `dockerfile`, `makefile`, `gradle`, `proto`, `tf`, `hcl`, `patch`/`diff`, … | `text-file-preview.tsx` (monospaced fallback; lazy syntax-highlight upgrade tracked separately) |
+| Text | `txt`, `log`, `readme`, `license`, `changelog`, `rtf` (+ bare `README`/`LICENSE`/`CHANGELOG`) | `text-file-preview.tsx` |
+| Unsupported (open externally) | `ppt`/`pptx`/`odt`/`ods`/`odp`, archives (`zip`/`tar`/`gz`/`7z`/`rar`/`bz2`/`xz`), installers (`dmg`/`iso`/`exe`/`msi`/`bin`), `heic`/`heif`, fonts (`woff`/`woff2`/`ttf`/`otf`/`eot`) | `external-file-preview.tsx` — **Open externally** is the only action |
 
 App theme drives PDF chrome (no in-viewer theme toggle). Custom toolbar: search, zoom, page nav, rotate, download, print.
 
-**Deferred:** `MetadataPanel`, `FileChangeWarning`, Tiptap read-only markdown.
+The PDF viewer is wrapped in a local `ErrorBoundary` with a fallback that offers **Open externally** — so any future PDF.js failure stays scoped to the pane and never crashes the workspace.
+
+**Note on the PDF hook contract (avoid regression):** `defaultLayoutPlugin(...)` must be called inline during render, not inside `useMemo`. The plugin registers React hooks internally; `useMemo` caches the instance and skips those hook calls on subsequent renders, causing React error #300 ("Rendered fewer hooks than expected"). This was the v0.1.5 PDF crash root cause and is enforced by an inline comment in `pdf-file-preview.tsx`. See `inventory-generator/src/components/viewer/PdfViewerWrapper.tsx` for the same warning.
+
+**Deferred:** `MetadataPanel`, `FileChangeWarning`, Tiptap read-only markdown, syntax-highlighted code (lazy-loaded `react-syntax-highlighter`).
 
 ### Phase U6 — Artifact panels ✅ (MVP)
 

@@ -2,21 +2,30 @@
 
 import dynamic from "next/dynamic";
 import { memo, useCallback, useEffect, useState } from "react";
+import { AlertTriangle } from "lucide-react";
 import type { CaseFile } from "@repo/types";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ErrorBoundary } from "@/components/providers/error-boundary";
 import { commandClient } from "@/lib/command-client";
-import { arrayBufferFromBase64, dataUrlFromBase64 } from "@/lib/binary-from-base64";
+import {
+  arrayBufferFromBase64,
+  dataUrlFromBase64,
+} from "@/lib/binary-from-base64";
 import {
   getFilePreviewKind,
   isUnsupportedPreview,
+  mediaMimeType,
   type FilePreviewKind,
 } from "@/lib/file-preview";
 import { openCaseFile } from "@/lib/open-file";
+import { AudioFilePreview } from "./audio-file-preview";
 import { CsvFilePreview } from "./csv-file-preview";
 import { DocxFilePreview } from "./docx-file-preview";
 import { ExternalFilePreview } from "./external-file-preview";
 import { ImageFilePreview } from "./image-file-preview";
 import { TextFilePreview } from "./text-file-preview";
+import { VideoFilePreview } from "./video-file-preview";
 import { XlsxFilePreview } from "./xlsx-file-preview";
 
 const PdfFilePreview = dynamic(
@@ -40,14 +49,39 @@ interface FileViewerProps {
   className?: string;
 }
 
-function imageMime(fileName: string): string {
-  const lower = fileName.toLowerCase();
-  if (lower.endsWith(".png")) return "image/png";
-  if (lower.endsWith(".gif")) return "image/gif";
-  if (lower.endsWith(".webp")) return "image/webp";
-  if (lower.endsWith(".svg")) return "image/svg+xml";
-  if (lower.endsWith(".bmp")) return "image/bmp";
-  return "image/jpeg";
+function blobUrlFromBase64(base64: string, mime: string): string {
+  const buffer = arrayBufferFromBase64(base64);
+  return URL.createObjectURL(new Blob([buffer], { type: mime }));
+}
+
+function ViewerFallback({
+  fileName,
+  onOpenExternal,
+  opening,
+  message,
+}: {
+  fileName: string;
+  onOpenExternal: () => void;
+  opening?: boolean;
+  message?: string;
+}) {
+  return (
+    <div className="flex h-full min-h-[280px] flex-col items-center justify-center gap-4 p-8 text-center">
+      <div className="flex h-14 w-14 items-center justify-center rounded-full bg-destructive/10 text-destructive">
+        <AlertTriangle className="h-6 w-6" />
+      </div>
+      <div className="space-y-1">
+        <p className="text-sm font-medium">In-app preview failed</p>
+        <p className="max-w-md break-words text-xs text-muted-foreground">
+          {message ??
+            `We couldn't render ${fileName} in the workspace. You can still open it in your default app.`}
+        </p>
+      </div>
+      <Button onClick={onOpenExternal} disabled={opening}>
+        {opening ? "Opening…" : "Open externally"}
+      </Button>
+    </div>
+  );
 }
 
 export const FileViewer = memo(function FileViewer({
@@ -64,6 +98,7 @@ export const FileViewer = memo(function FileViewer({
   const [docxHtml, setDocxHtml] = useState("");
   const [xlsxRows, setXlsxRows] = useState<SheetRow[]>([]);
   const [xlsxSheet, setXlsxSheet] = useState("");
+  const [mediaUrl, setMediaUrl] = useState("");
   const [opening, setOpening] = useState(false);
 
   const openExternal = useCallback(async () => {
@@ -77,6 +112,7 @@ export const FileViewer = memo(function FileViewer({
 
   useEffect(() => {
     let cancelled = false;
+    let createdBlobUrl: string | null = null;
 
     async function loadBinary(): Promise<ArrayBuffer | null> {
       const res = await commandClient.readFileBase64(caseId, file.filePath);
@@ -97,6 +133,7 @@ export const FileViewer = memo(function FileViewer({
       setDocxHtml("");
       setXlsxRows([]);
       setXlsxSheet("");
+      setMediaUrl("");
 
       if (isUnsupportedPreview(kind)) {
         setLoading(false);
@@ -111,7 +148,7 @@ export const FileViewer = memo(function FileViewer({
           setLoading(false);
           return;
         }
-        setImageSrc(dataUrlFromBase64(res.data, imageMime(file.fileName)));
+        setImageSrc(dataUrlFromBase64(res.data, mediaMimeType(file.fileName)));
         setLoading(false);
         return;
       }
@@ -129,6 +166,25 @@ export const FileViewer = memo(function FileViewer({
         return;
       }
 
+      if (kind === "video" || kind === "audio") {
+        const res = await commandClient.readFileBase64(caseId, file.filePath);
+        if (cancelled) return;
+        if (!res.ok || !res.data) {
+          setError(res.error?.message ?? "Media preview failed");
+          setLoading(false);
+          return;
+        }
+        // Use blob URL for media so the <video>/<audio> element can seek
+        // efficiently without re-decoding a multi-MB base64 string.
+        createdBlobUrl = blobUrlFromBase64(
+          res.data,
+          mediaMimeType(file.fileName),
+        );
+        setMediaUrl(createdBlobUrl);
+        setLoading(false);
+        return;
+      }
+
       if (kind === "docx") {
         const buffer = await loadBinary();
         if (cancelled || !buffer) {
@@ -137,7 +193,9 @@ export const FileViewer = memo(function FileViewer({
         }
         try {
           const mammoth = await import("mammoth");
-          const result = await mammoth.default.convertToHtml({ arrayBuffer: buffer });
+          const result = await mammoth.default.convertToHtml({
+            arrayBuffer: buffer,
+          });
           if (cancelled) return;
           setDocxHtml(result.value);
         } catch (err) {
@@ -175,15 +233,18 @@ export const FileViewer = memo(function FileViewer({
           setXlsxSheet(sheetName);
           setXlsxRows(data);
         } catch (err) {
-          setError(err instanceof Error ? err.message : "Spreadsheet preview failed");
+          setError(
+            err instanceof Error ? err.message : "Spreadsheet preview failed",
+          );
         }
         setLoading(false);
         return;
       }
 
+      // text, code, markdown, csv
       const res = await commandClient.readFileText(caseId, file.filePath);
       if (cancelled) return;
-      if (!res.ok || !res.data) {
+      if (!res.ok || res.data === undefined) {
         setError(res.error?.message ?? "Preview failed");
         setLoading(false);
         return;
@@ -195,6 +256,9 @@ export const FileViewer = memo(function FileViewer({
     void load();
     return () => {
       cancelled = true;
+      if (createdBlobUrl) {
+        URL.revokeObjectURL(createdBlobUrl);
+      }
     };
   }, [caseId, file.filePath, file.fileName, kind]);
 
@@ -217,11 +281,22 @@ export const FileViewer = memo(function FileViewer({
     );
   }
 
-  if (error && !text && !imageSrc && !pdfUrl && !docxHtml && xlsxRows.length === 0) {
+  if (
+    error &&
+    !text &&
+    !imageSrc &&
+    !pdfUrl &&
+    !docxHtml &&
+    !mediaUrl &&
+    xlsxRows.length === 0
+  ) {
     return (
-      <div className="flex flex-col items-center gap-4 p-8 text-center">
-        <p className="text-sm text-destructive">{error}</p>
-      </div>
+      <ViewerFallback
+        fileName={file.fileName}
+        onOpenExternal={openExternal}
+        opening={opening}
+        message={error}
+      />
     );
   }
 
@@ -232,9 +307,28 @@ export const FileViewer = memo(function FileViewer({
   if (kind === "pdf" && pdfUrl) {
     return (
       <div className={className ?? "h-full min-h-0"}>
-        <PdfFilePreview fileUrl={pdfUrl} />
+        <ErrorBoundary
+          fallback={
+            <ViewerFallback
+              fileName={file.fileName}
+              onOpenExternal={openExternal}
+              opening={opening}
+              message="PDF viewer failed to render this document."
+            />
+          }
+        >
+          <PdfFilePreview fileUrl={pdfUrl} />
+        </ErrorBoundary>
       </div>
     );
+  }
+
+  if (kind === "video" && mediaUrl) {
+    return <VideoFilePreview src={mediaUrl} fileName={file.fileName} />;
+  }
+
+  if (kind === "audio" && mediaUrl) {
+    return <AudioFilePreview src={mediaUrl} fileName={file.fileName} />;
   }
 
   if (kind === "docx" && docxHtml) {
@@ -249,11 +343,12 @@ export const FileViewer = memo(function FileViewer({
     return <CsvFilePreview content={text} fileName={file.fileName} />;
   }
 
-  if ((kind === "markdown" || kind === "text") && text) {
+  if ((kind === "markdown" || kind === "text" || kind === "code") && text) {
     return (
       <TextFilePreview
         content={text}
         variant={kind === "markdown" ? "markdown" : "plain"}
+        monospace={kind !== "markdown"}
       />
     );
   }

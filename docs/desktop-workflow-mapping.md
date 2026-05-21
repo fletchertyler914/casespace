@@ -17,8 +17,9 @@
 | `components/workspace/FileNavigator` | `components/workspace/file-navigator.tsx` | U4 | **done** |
 | `components/workspace/SplitView` | `components/workspace/split-view.tsx` | U4 | **done** |
 | `components/workspace/CaseHeader` | `components/workspace/case-header.tsx` | U4 | **done** |
-| `components/workspace/IntegratedFileViewer` | `components/viewer/file-viewer.tsx` + previews | U5 | **done** |
-| `components/viewer/PdfViewerWrapper` | `components/viewer/pdf-file-preview.tsx` | U5 | **done** |
+| `components/workspace/IntegratedFileViewer` | `components/viewer/file-viewer.tsx` + previews | U5 | **done** — v1 extension parity (image, pdf, docx, xlsx, code, text, markdown, csv/tsv, video, audio, unsupported) |
+| `components/viewer/PdfViewerWrapper` | `components/viewer/pdf-file-preview.tsx` | U5 | **done** — defaultLayoutPlugin called inline (not in useMemo) + wrapped in local ErrorBoundary |
+| v1 HTML5 `<video>` / `<audio>` | `components/viewer/video-file-preview.tsx`, `audio-file-preview.tsx` | U5 | **done** — blob URLs from base64; controls + seek |
 | `components/board/WorkflowBoard` | `components/workspace/board-view.tsx` | U7 | **MVP** — status swimlanes + drag/drop |
 | `components/notes/NotePanel` | `components/artifacts/notes-panel.tsx` | U6 | **MVP** — CRUD + pin; Tiptap P1 |
 | `components/findings/FindingsPanel` | `components/artifacts/findings-panel.tsx` | U6 | **MVP** — CRUD |
@@ -48,7 +49,7 @@ No `invoke()` in components. Expand `lib/command-client.ts` as each surface ship
 | `app/case/page.tsx` + `page-client.tsx` | `CaseWorkspaceShell` — navigator, viewer, panels |
 | `components/case-workspace.tsx` | **Removed** |
 | `lib/command-client.ts` | Typed P0 command wrappers |
-| `lib/file-preview.ts` | Preview kind router (pdf/docx/xlsx/unsupported/…) |
+| `lib/file-preview.ts` | Preview kind router — image/pdf/docx/xlsx/code/text/markdown/csv/video/audio/unsupported (~120 extensions; bare-name special cases: README/LICENSE/Dockerfile/Makefile) |
 | `lib/open-file.ts` | External open for unsupported types only |
 | `lib/tauri-dialog.ts` | Native folder/file pickers |
 

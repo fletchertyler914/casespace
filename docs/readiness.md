@@ -33,7 +33,7 @@ Tracks implemented scope, validated scope, and gates required before production 
 |------|-----------|---------------|
 | Monorepo foundation | pnpm + Turbo + arch guard; catalog-pinned Next | Remote CI green on Node 24 after next push |
 | Desktop backend | Full non-AI command matrix + SQLite/FTS + ingest v2 | AI-native commands; `commands/*` module split |
-| Desktop UI | Hub, workspace shell, file navigator, in-app viewers, artifact panel MVP, cross-entity cmdk search, workspace settings dialog, duplicates panel MVP, timer widget MVP, time panel MVP, reports panel MVP + export history | Board/dnd parity polish, time pages/dialogs polish, full report workspace UX, deeper settings parity |
+| Desktop UI | Hub, workspace shell, file navigator, in-app viewers with v1 extension parity (PDF, DOCX, XLSX, image, text, 50+ code exts, markdown, CSV/TSV, video, audio), artifact panel MVP, cross-entity cmdk search, workspace settings dialog, duplicates panel MVP, timer widget MVP, time panel MVP, reports panel MVP + export history | Board/dnd parity polish, time pages/dialogs polish, full report workspace UX, deeper settings parity, syntax-highlighted code viewer (lazy) |
 | Web surface | Marketing + download page | Content polish only |
 | Shared packages | `@repo/types` contracts (partial) | Full DTO parity + adapter envelopes |
 | Documentation | Spec pack + port plan synced to code | Feature catalog row-by-row as U7–U10 land |
