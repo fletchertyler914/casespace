@@ -34,28 +34,29 @@ Linked to [product-spec-bible.md](product-spec-bible.md), [implementation-readin
 - [x] Hardening suite (`pnpm test:hardening`)
 - [x] **Core Parity backend Build Gate** — [implementation-readiness-gate.md](implementation-readiness-gate.md)
 
-## Phase 2b: Core Parity UX port (in progress)
+## Phase 2b: Core Parity UX port (implemented — gate validation pending)
 
-Active workstream. Backend commands exist; v1-shaped UI is ported to `apps/desktop`.
+v1 parity closure landed in `apps/desktop` for v0.1.7 (2026-05-21). Automated local gates pass; **UX Parity Build Gate** requires manual E2E.
 
-### Complete
+### Complete (code)
 
-- [x] **U1** Foundation — OKLCH tokens, providers, theme, splash, utils
-- [x] **U2** shadcn primitives (22 components)
-- [x] **U3** Case hub — `CaseListView`, cards, create/delete dialogs, `/` route
-- [x] **U4** Workspace shell — layout, header, navigator, split/board, ingest/sync UI
-- [x] **U5** Viewers — PDF/DOCX/XLSX in-app; image/text/markdown/CSV; external for unsupported only
-- [x] **U6** Artifact panels MVP — notes/findings/timeline CRUD (notes pin included)
-- [x] DevX — `pnpm dev` = full Tauri; Next 16.2.6 catalog pin
+- [x] **U1–U2** Foundation + primitives
+- [x] **U3** Case hub + edit case + large-folder warning
+- [x] **U4** Workspace shell + file table + mapping/columns dialog
+- [x] **U5** Viewers — depth (metadata, rename/delete, code highlight, image zoom, XLSX tabs)
+- [x] **U6** Tiptap notes/findings + timeline controls
+- [x] **U7** Duplicates depth (management panel, merge relink, badges)
+- [x] **U8** Time segments + billing dialogs
+- [x] **U9** Reports workspace + export history
+- [x] **U10** Structured search + app settings
+- [x] DevX — `pnpm dev`, vitest, Next 16.2.6 catalog pin
 
-### Next
+### Next (post v0.1.7)
 
-- [ ] **U3 tail** — Edit case, large-folder warning, filters (optional)
-- [ ] **U7** Board / review + duplicate groups UI (**in progress**: duplicates panel MVP + set primary + merge metadata + swimlanes + drag/drop)
-- [ ] **U8** Time management UI (**in progress**: timer widget + time panel MVP)
-- [ ] **U9** Reports UI (**in progress**: reports panel MVP + export actions)
-- [ ] **U10** Search palette (cmdk) + settings (**in progress**: cmdk + workspace settings dialog wired)
-- [ ] **U11** UX gate validation + final cleanup sweep
+- [ ] **U11** UX gate — manual E2E on [spec/user-flow-map.md](spec/user-flow-map.md)
+- [ ] Board multi-select / lane filters / rich cards (optional depth)
+- [ ] Report PDF/DOCX exports (deferred)
+- [ ] Production signing + live updater keys
 
 Detail: [ui-port-plan.md](ui-port-plan.md).
 

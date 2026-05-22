@@ -1,26 +1,19 @@
 # Master Gap Analysis (v1 → v2)
 
-**Last refresh:** 2026-05-21 — full evidence-based source re-audit. Previous "Core Parity UX done" framing was overstated. See [`gap-analysis-ui-workflows.md`](gap-analysis-ui-workflows.md) for the row-by-row evidence table.
+**Last refresh:** 2026-05-21 — V1 parity closure implementation pass. See [`gap-analysis-ui-workflows.md`](gap-analysis-ui-workflows.md) for row-level status (stale rows being updated).
 
 ## Executive summary (honest)
 
-v2 has a **functional MVP** of the v1 surface — case create/list/open/delete, multi-source folder/file ingest with incremental sync + dedup, folder-tree navigation, in-app previews for ~15 file categories (PDF/DOCX/XLSX/CSV/image/text/code/markdown/video/audio + external fallback), notes/findings/timeline plain-text CRUD, status-lane board with drag/drop, MVP timer + markdown report export, workspace preferences persistence, and a marketing site with GitHub-release-driven download chooser.
+v2 now implements the **major v1 desktop workflows in code**: inventory table + column config, viewer metadata/rename/delete/file-change/keyboard/fullscreen, structured global search, Tiptap artifacts, duplicates depth + fixed merge relinking, time segments + billing UI, structured reports workspace, mapping UI + Rust extraction engine, case/app settings dialogs.
 
-It is **not** v1-complete and **should not be presented as such**. The most concrete gaps:
+**UX Parity Build Gate is still NOT EARNED (validated)** — requires manual E2E on [`user-flow-map.md`](user-flow-map.md). Remaining product gaps vs v1:
 
 | Severity | Gap |
 |----------|-----|
-| **Broken** | Global search dialog (`search_all` Rust shape mismatches UI contract — renders empty) |
-| **Broken / shallow** | `merge_duplicate_metadata` doesn't move notes/findings/timeline refs to the primary like v1 |
-| **Missing (UX)** | No inventory data grid — only folder tree; v1's full column/sort/filter/bulk-select grid is the central work surface |
-| **Missing (UX)** | No metadata panel in viewer, no rename/delete in viewer, no file-change warning, no fullscreen, no keyboard shortcuts |
-| **Missing (UX)** | No Tiptap rich notes/findings; plain textarea only |
-| **Missing (UX)** | No column / mapping config UI; backend tables orphaned; extraction engine (regex/date/number) not implemented |
-| **Missing (UX)** | No EditCaseDialog (case rename / metadata edit); backend `update_case_metadata` orphaned |
-| **Shallow** | Time tracking has no segment model — `pause` actually stops and `resume` starts a fresh entry. No billing config UI, no segment edit, no daily summary capture |
-| **Shallow** | Reports are markdown-only exports; v1 has structured sections + preview |
-| **Shallow** | Duplicates panel lists groups + sets primary; v1 has comparison UI, decision dialog, badges across navigator + viewer, ingestion notification |
-| **Missing (deploy)** | No `tauri-plugin-updater` wired; no Developer ID signing; no Windows signing; no notarization |
+| **Shallow** | Board — no multi-select, lane filters, rich cards |
+| **Deferred** | Report PDF/DOCX exports |
+| **Shallow** | PDF viewer — no annotations/bookmarks/OCR |
+| **Missing (deploy)** | Production signing + notarization; updater placeholders only |
 
 ## Reality-check scorecard
 
@@ -31,21 +24,21 @@ Categories use `✅ done` / `🟡 MVP` / `🟠 partial` / `🔴 missing`. Eviden
 | Case CRUD | ✅ | 🟡 (no rename / metadata edit) |
 | Sources | ✅ | 🟡 (no remove, no per-source UI) |
 | Ingest / sync / dedup | ✅ | 🟡 (toast only — no progress, no cancel) |
-| File table | n/a | 🔴 |
-| File viewer routing | n/a | ✅ (after v0.1.6 fix) |
-| File viewer header actions | ✅ | 🔴 (status + nav only) |
-| Metadata panel | ✅ command | 🔴 |
-| File change detection | ✅ commands | 🔴 UI |
-| Notes | ✅ | 🟡 (plain textarea) |
-| Findings | ✅ | 🟡 (title + plain body; no severity / linked files / tags UI) |
-| Timeline | ✅ | 🟡 (description only; no date picker / event type / source link) |
-| Duplicates | 🟡 (merge doesn't relink artifacts) | 🟡 (list + set primary only) |
+| File table | n/a | ✅ (local) |
+| File viewer routing | n/a | ✅ |
+| File viewer header actions | ✅ | ✅ (local) |
+| Metadata panel | ✅ | ✅ (local) |
+| File change detection | ✅ | ✅ (local) |
+| Notes | ✅ | ✅ Tiptap (local) |
+| Findings | ✅ | ✅ severity/tags/links (local) |
+| Timeline | ✅ | ✅ date/type/source (local) |
+| Duplicates | ✅ merge relinks | ✅ depth UI (local) |
 | Board | n/a | 🟡 (lanes + DnD; no multi-select / filters / rich cards) |
-| Time / billing | 🟡 (no segments) | 🟡 (timer + simple entries) |
-| Reports | 🟡 (markdown only) | 🟡 (5 export buttons + side panel) |
-| Search | 🟠 (`search_all` returns strings; UI expects structured) | 🟠 (broken) |
-| Settings | ✅ workspace prefs | 🟡 (workspace prefs only; no theme/system-filter UI) |
-| Mapping / column config | ✅ get/save commands | 🔴 (no UI; extraction engine missing) |
+| Time / billing | ✅ segments | ✅ (local) |
+| Reports | ✅ + history | ✅ workspace (local); PDF/DOCX deferred |
+| Search | ✅ structured hits | ✅ (local) |
+| Settings | ✅ | ✅ app + workspace (local) |
+| Mapping / column config | ✅ extraction | ✅ UI (local) |
 | Splash / loading | n/a | 🟠 (component exists, unwired) |
 | Toast | n/a | 🟡 (used in auto-sync only) |
 | Theme | n/a | ✅ |

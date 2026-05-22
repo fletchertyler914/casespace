@@ -2,7 +2,7 @@
 
 Tracks implemented scope, validated scope, and gates required before production sign-off and AI enablement.
 
-**Last updated:** 2026-05-21 (post evidence-based source re-audit — earlier UX "done" claims were overstated; see [spec/gap-analysis-ui-workflows.md](spec/gap-analysis-ui-workflows.md))
+**Last updated:** 2026-05-21 (V1 parity closure implementation landed; UX gate not yet manually validated — see [spec/gap-analysis-ui-workflows.md](spec/gap-analysis-ui-workflows.md))
 
 ## Executive status
 
@@ -10,10 +10,10 @@ Tracks implemented scope, validated scope, and gates required before production 
 |------|--------|
 | Planning / spec pack | **Complete** — [product-spec-bible.md](product-spec-bible.md) |
 | Core Parity **backend** | **Complete (local)** — SQLite, FTS, P0 commands, parity + hardening suites |
-| Core Parity **UX** (v1 port) | **Shallow MVP only** — estimated ~30–40% of v1 user-flow surface. Big gaps: no inventory data grid, no metadata panel, no viewer rename/delete, broken global search, plain-text notes/findings/timeline, shallow duplicates resolution, shallow time/billing, markdown-only reports, no mapping/column UI. See [spec/gap-analysis-ui-workflows.md](spec/gap-analysis-ui-workflows.md) |
+| Core Parity **UX** (v1 port) | **Implemented (local), not gate-validated** — inventory table, viewer actions, structured search, Tiptap artifacts, duplicates depth, time/billing, reports workspace, mapping UI, settings dialogs. Remaining: board multi-select/filters, PDF/DOCX reports, manual E2E. See [spec/gap-analysis-ui-workflows.md](spec/gap-analysis-ui-workflows.md) |
 | Toolchain | Next **16.2.6** catalog-pinned; `minimumReleaseAge` 48h |
 | AINative phase | **Blocked** — until UX Parity Build Gate (not yet earned) |
-| Production distribution | **Blocked** — no `tauri-plugin-updater`, no Developer ID / Windows signing, no notarization. macOS ad-hoc signing only (works for manual install w/ Gatekeeper bypass) |
+| Production distribution | **Blocked** — updater plugin wired with placeholder pubkey/endpoints; no Developer ID / Windows signing / notarization. macOS ad-hoc signing only |
 | Remote CI evidence | Partial — push for fresh CI on Node 24 |
 
 ## Documentation map (source of truth)
@@ -47,8 +47,8 @@ Tracks implemented scope, validated scope, and gates required before production 
 |------|--------|----------|
 | Implementation Readiness (planning) | **PASS** | [implementation-readiness-gate.md](implementation-readiness-gate.md) |
 | Core Parity **backend** Build Gate | **PASS (local)** | C1–C7 below |
-| UX Parity Build Gate | **NOT EARNED** — claim retracted after evidence-based re-audit. Earliest realistic pass: after the file table, viewer metadata/rename/delete, broken search fix, duplicates depth, and Tiptap notes/findings land. See [spec/gap-analysis-master.md](spec/gap-analysis-master.md) critical path |
-| Production distribution Gate | **NOT EARNED** — updater, Developer ID + Windows signing, notarization all missing |
+| UX Parity Build Gate | **NOT EARNED (validated)** — implementation landed 2026-05-21; requires manual E2E on [spec/user-flow-map.md](spec/user-flow-map.md) + board depth review before pass |
+| Production distribution Gate | **NOT EARNED** — placeholder updater only; Developer ID + Windows signing + notarization missing |
 
 ### Core Parity backend (passed)
 
@@ -75,7 +75,9 @@ Tracks implemented scope, validated scope, and gates required before production 
 |-----|------|---------|--------|
 | Parity integration | 2026-05-21 | `pnpm test:parity` | **pass** |
 | Hardening suite | 2026-05-21 | `pnpm test:hardening` | **pass** |
-| Local validate stack | 2026-05-21 | `pnpm ops:validate:local` | **pass** (when last run) |
+| Local validate stack | 2026-05-21 | `pnpm ops:validate:local` | **pass** (v0.1.7 pre-release) |
+| Parity (search + merge) | 2026-05-21 | `pnpm test:parity` (flows 8–9) | **pass** |
+| Desktop vitest | 2026-05-21 | `pnpm --filter desktop test` | **pass** (28 tests) |
 | Desktop UI lint/types/build | 2026-05-21 | `pnpm --filter desktop lint/check-types/build` | **pass** |
 
 *Update this table after each validation run.*

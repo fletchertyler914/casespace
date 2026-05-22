@@ -7,7 +7,7 @@ import { FileNavigator } from "./file-navigator";
 import { SplitView } from "./split-view";
 import { BoardView } from "./board-view";
 import { filterFilesByFolder } from "@/lib/file-tree-utils";
-import type { DuplicateGroup } from "@/components/artifacts/duplicates-panel";
+import type { DuplicateGroup } from "@/lib/duplicate-utils";
 
 function ResizeHandle() {
   return (
@@ -34,6 +34,7 @@ interface WorkspaceLayoutProps {
   findings: Finding[];
   timeline: TimelineEvent[];
   duplicateGroups: DuplicateGroup[];
+  duplicateFileIds: Set<string>;
   onFileSelect: (file: CaseFile) => void;
   onFolderSelect: (folderPath: string | null) => void;
   onToggleNavigator: () => void;
@@ -45,7 +46,10 @@ interface WorkspaceLayoutProps {
   hasNext: boolean;
   hasPrevious: boolean;
   onFileRefresh: () => void;
+  onFileRemoved?: () => void;
+  onFileRenamed?: (file: CaseFile) => void;
   onStatusChange: (fileId: string, status: string) => void;
+  onFilesChanged: () => void;
   onCloseNotes: () => void;
   onCloseFindings: () => void;
   onCloseTimeline: () => void;
@@ -73,6 +77,7 @@ export const WorkspaceLayout = memo(function WorkspaceLayout({
   findings,
   timeline,
   duplicateGroups,
+  duplicateFileIds,
   onFileSelect,
   onFolderSelect,
   onToggleNavigator,
@@ -84,7 +89,10 @@ export const WorkspaceLayout = memo(function WorkspaceLayout({
   hasNext,
   hasPrevious,
   onFileRefresh,
+  onFileRemoved,
+  onFileRenamed,
   onStatusChange,
+  onFilesChanged,
   onCloseNotes,
   onCloseFindings,
   onCloseTimeline,
@@ -107,15 +115,20 @@ export const WorkspaceLayout = memo(function WorkspaceLayout({
           <Panel
             id="navigator"
             order={0}
-            defaultSize={22}
-            minSize={15}
-            maxSize={40}
+            defaultSize={28}
+            minSize={18}
+            maxSize={45}
             className="flex min-h-0 flex-col"
           >
             <FileNavigator
+              caseId={caseId}
               files={files}
               currentFile={viewingFile}
+              duplicateGroups={duplicateGroups}
+              duplicateFileIds={duplicateFileIds}
               onFileSelect={onFileSelect}
+              onStatusChange={onStatusChange}
+              onFilesChanged={onFilesChanged}
               selectedFolderPath={selectedFolderPath}
               onFolderSelect={onFolderSelect}
               onToggleNavigator={onToggleNavigator}
@@ -144,6 +157,7 @@ export const WorkspaceLayout = memo(function WorkspaceLayout({
             findings={findings}
             timeline={timeline}
             duplicateGroups={duplicateGroups}
+            duplicateFileIds={duplicateFileIds}
             files={files}
             navigatorOpen={navigatorOpen}
             onExpandNavigator={onExpandNavigator}
@@ -153,6 +167,8 @@ export const WorkspaceLayout = memo(function WorkspaceLayout({
             hasNext={hasNext}
             hasPrevious={hasPrevious}
             onFileRefresh={onFileRefresh}
+            onFileRemoved={onFileRemoved}
+            onFileRenamed={onFileRenamed}
             onStatusChange={onStatusChange}
             onCloseNotes={onCloseNotes}
             onCloseFindings={onCloseFindings}
@@ -162,6 +178,7 @@ export const WorkspaceLayout = memo(function WorkspaceLayout({
             onCloseTime={onCloseTime}
             sourceRoots={sourceRoots}
             onArtifactsChanged={onArtifactsChanged}
+            onFileSelect={onFileSelect}
           />
         ) : (
           <BoardView

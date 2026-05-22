@@ -13,7 +13,12 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  LargeFolderWarningDialog,
+  LARGE_FOLDER_THRESHOLD,
+} from "@/components/case/large-folder-warning-dialog";
 import { selectPaths } from "@/lib/tauri-dialog";
+import { countSourceFiles } from "@/lib/file-validation";
 import { useToast } from "@/hooks/use-toast";
 
 interface CreateCaseDialogProps {
@@ -30,6 +35,8 @@ export function CreateCaseDialog({
   const [name, setName] = useState("");
   const [sources, setSources] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
+  const [largeWarningOpen, setLargeWarningOpen] = useState(false);
+  const [pendingFileCount, setPendingFileCount] = useState(0);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -67,7 +74,7 @@ export function CreateCaseDialog({
     setSources((prev) => prev.filter((_, i) => i !== index));
   }, []);
 
-  const submit = useCallback(async () => {
+  const doCreate = useCallback(async () => {
     if (!name.trim() || sources.length === 0) return;
     setLoading(true);
     try {
@@ -82,100 +89,128 @@ export function CreateCaseDialog({
       });
     } finally {
       setLoading(false);
+      setLargeWarningOpen(false);
     }
   }, [name, sources, onCreate, onOpenChange, toast]);
 
+  const submit = useCallback(async () => {
+    if (!name.trim() || sources.length === 0) return;
+    setLoading(true);
+    try {
+      const fileCount = await countSourceFiles(sources);
+      if (fileCount > LARGE_FOLDER_THRESHOLD) {
+        setPendingFileCount(fileCount);
+        setLargeWarningOpen(true);
+        setLoading(false);
+        return;
+      }
+      await doCreate();
+    } catch {
+      setLoading(false);
+    }
+  }, [name, sources, doCreate]);
+
   return (
-    <Dialog open={open} onOpenChange={loading ? undefined : onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
-        <DialogHeader>
-          <DialogTitle>Create New Case</DialogTitle>
-          <DialogDescription>
-            Create a new case workspace. Select one or more files or folders as
-            sources for ingestion.
-          </DialogDescription>
-        </DialogHeader>
-        <div className="space-y-4 py-4">
-          <div className="space-y-2">
-            <Label htmlFor="case-name">Case Name *</Label>
-            <Input
-              id="case-name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="e.g., Smith v. Jones Investigation"
-              autoFocus
-            />
-          </div>
-          <div className="space-y-2">
-            <Label>Sources *</Label>
-            <div className="flex gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={addFolders}
-                className="flex-1"
-                disabled={loading}
-              >
-                <FolderOpen className="mr-2 h-4 w-4" />
-                Add Folder(s)
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={addFiles}
-                className="flex-1"
-                disabled={loading}
-              >
-                <File className="mr-2 h-4 w-4" />
-                Add File(s)
-              </Button>
+    <>
+      <Dialog open={open} onOpenChange={loading ? undefined : onOpenChange}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Create New Case</DialogTitle>
+            <DialogDescription>
+              Create a new case workspace. Select one or more files or folders as
+              sources for ingestion.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="case-name">Case Name *</Label>
+              <Input
+                id="case-name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="e.g., Smith v. Jones Investigation"
+                autoFocus
+              />
             </div>
-            {sources.length > 0 ? (
-              <div className="max-h-40 space-y-1 overflow-y-auto rounded-md border border-border/30 p-2 dark:border-border/40">
-                {sources.map((source, index) => (
-                  <div
-                    key={`${source}-${index}`}
-                    className="flex items-center justify-between gap-2 rounded bg-muted p-2 text-sm"
-                  >
-                    <span className="flex-1 truncate" title={source}>
-                      {source.split(/[/\\]/).pop() ?? source}
-                    </span>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => removeSource(index)}
-                      className="h-6 w-6 flex-shrink-0 p-0"
-                      disabled={loading}
-                    >
-                      <X className="h-3 w-3" />
-                    </Button>
-                  </div>
-                ))}
+            <div className="space-y-2">
+              <Label>Sources *</Label>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={addFolders}
+                  className="flex-1"
+                  disabled={loading}
+                >
+                  <FolderOpen className="mr-2 h-4 w-4" />
+                  Add Folder(s)
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={addFiles}
+                  className="flex-1"
+                  disabled={loading}
+                >
+                  <File className="mr-2 h-4 w-4" />
+                  Add File(s)
+                </Button>
               </div>
-            ) : (
-              <p className="text-sm text-muted-foreground">
-                No sources selected. Add at least one file or folder.
-              </p>
-            )}
+              {sources.length > 0 ? (
+                <div className="max-h-40 space-y-1 overflow-y-auto rounded-md border border-border/30 p-2 dark:border-border/40">
+                  {sources.map((source, index) => (
+                    <div
+                      key={`${source}-${index}`}
+                      className="flex items-center justify-between gap-2 rounded bg-muted p-2 text-sm"
+                    >
+                      <span className="flex-1 truncate" title={source}>
+                        {source.split(/[/\\]/).pop() ?? source}
+                      </span>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeSource(index)}
+                        className="h-6 w-6 flex-shrink-0 p-0"
+                        disabled={loading}
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  No sources selected. Add at least one file or folder.
+                </p>
+              )}
+            </div>
           </div>
-        </div>
-        <DialogFooter>
-          <Button
-            variant="outline"
-            onClick={() => onOpenChange(false)}
-            disabled={loading}
-          >
-            Cancel
-          </Button>
-          <Button
-            onClick={submit}
-            disabled={!name.trim() || sources.length === 0 || loading}
-          >
-            {loading ? "Creating..." : "Create Case"}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              disabled={loading}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={() => void submit()}
+              disabled={!name.trim() || sources.length === 0 || loading}
+            >
+              {loading ? "Creating..." : "Create Case"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <LargeFolderWarningDialog
+        open={largeWarningOpen}
+        onOpenChange={setLargeWarningOpen}
+        fileCount={pendingFileCount}
+        loading={loading}
+        onConfirm={() => void doCreate()}
+      />
+    </>
   );
 }

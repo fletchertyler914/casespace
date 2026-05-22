@@ -5,7 +5,7 @@ Continuation plan after **Core Parity backend gate** passed locally. Backend com
 **v1 reference:** `/Users/tyler/projects/malissa_projects/inventory-generator`  
 **v2 target:** `apps/desktop` (Next.js + Tauri shell via `apps/desktop-backend`)
 
-> **2026-05-21 honesty pass:** an evidence-based source re-audit shows previous "done" labels on U5–U10 were overstated. Phase tags below have been re-categorized to **MVP (shallow)** vs **partial** vs **done**. The detailed gap is in [spec/gap-analysis-ui-workflows.md](spec/gap-analysis-ui-workflows.md); the rewritten critical path is in [spec/gap-analysis-master.md](spec/gap-analysis-master.md).
+> **2026-05-21 honesty pass:** earlier "done" labels on U5–U10 were overstated. **2026-05-21 parity closure:** P0 search/merge fixes plus U5–U10 depth work landed in code (see [spec/gap-analysis-ui-workflows.md](spec/gap-analysis-ui-workflows.md)). UX Parity Build Gate still requires manual E2E on [spec/user-flow-map.md](spec/user-flow-map.md) before claiming **validated**.
 
 ## Executive status (2026-05-21, honest)
 
@@ -14,18 +14,18 @@ Continuation plan after **Core Parity backend gate** passed locally. Backend com
 | Backend Core Parity | **PASS** — [command-parity-ledger.md](command-parity-ledger.md), `pnpm test:parity`, `pnpm test:hardening` |
 | UI foundation (U1) | **done** |
 | Primitives (U2) | **done** |
-| Case hub (U3) | **MVP** — create/list/open/delete only; no EditCaseDialog / LargeFolderWarning / CaseFilters / CaseSwitcher |
-| Workspace shell (U4) | **MVP** — layout, navigator (folder tree), header. **No inventory data grid** (single biggest UX gap) |
-| Viewers (U5) | **routing done, viewers MVP** — extension routing matches v1 after v0.1.6 PDF fix + video/audio add. Per-viewer depth is shallow: no metadata panel, no rename/delete/file-change UI in viewer, no syntax highlighting, no markdown rendering (raw `<pre>` only), no image zoom/rotate, no XLSX sheet tabs |
-| Artifact panels (U6) | **MVP** — plain-text CRUD only; no Tiptap, no severity selector, no linked files, no date picker, no event types, no source links |
-| Duplicates + board (U7) | **MVP** — duplicates panel lists groups + set primary; "merge metadata" has a known bug (doesn't relink artifacts to primary). Board has 5 lanes + DnD; no multi-select / filters / rich cards |
-| Time (U8) | **MVP** — timer widget + time panel. `pause_timer` actually stops; no segment model, no manual entry CRUD, no billing config UI, no daily summary capture, no calendar view |
-| Reports (U9) | **MVP** — side panel with 5 export buttons; markdown only; no structured sections; no preview-per-type; no persistent history |
-| Search / settings (U10) | **search broken at runtime + settings shallow** — `search_all` returns `Vec<String>` but UI expects structured `SearchHit[]` (dialog opens empty). Workspace settings dialog persists toggles only; no app-level settings (theme/system-file-filter) |
-| Mapping / column config | **🔴 missing** — backend get/save commands exist with no UI; extraction engine (regex/date/number/text-between) not implemented |
-| UX gate + legacy cleanup (U11) | **not earned** — cannot be claimed until items 1–11 of the rewritten critical path land |
+| Case hub (U3) | **implemented** — create/list/open/delete + `EditCaseDialog` + `LargeFolderWarningDialog` |
+| Workspace shell (U4) | **implemented** — layout, folder tree + **inventory table** toggle, header, ingest UX hooks |
+| Viewers (U5) | **implemented (local)** — metadata/rename/delete/file-change/keyboard/fullscreen; markdown render; syntax-highlighted code; image zoom/rotate/fullscreen; XLSX multi-sheet tabs. PDF annotations/OCR still out of scope |
+| Artifact panels (U6) | **implemented (local)** — Tiptap notes/findings; timeline date/type/source; create dialogs |
+| Duplicates + board (U7) | **implemented (local)** — management panel, badges, decision dialog, ingestion notification; merge relinks artifacts (parity test). Board still MVP (no multi-select/filters) |
+| Time (U8) | **implemented (local)** — segments, billing config, daily summary, entry CRUD, pause/resume same entry |
+| Reports (U9) | **implemented (local)** — structured workspace + export history; markdown export; PDF/DOCX deferred |
+| Search / settings (U10) | **implemented (local)** — structured `search_all` + grouped dialog; app settings (theme/system-file-filter) |
+| Mapping / column config | **implemented (local)** — `ColumnManager`, `FieldMapperStepper`, Rust `field_extraction`, columns/mapping dialog |
+| UX gate + legacy cleanup (U11) | **not earned** — code present; needs manual E2E + board depth before **validated** |
 | AINative | **blocked** — until UX Parity Build Gate |
-| Updater + production signing | **🔴 missing** — `tauri-plugin-updater` not installed; macOS ad-hoc only; no Windows signing; no notarization |
+| Updater + production signing | **placeholder wired** — `tauri-plugin-updater` + conf placeholders; Developer ID / Windows signing / notarization still **blocked** |
 | Toolchain | Next **16.2.6** pinned via pnpm catalog — see [Supply chain](#supply-chain) |
 
 ## Local development (canonical)

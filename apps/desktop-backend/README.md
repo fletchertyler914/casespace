@@ -33,6 +33,21 @@ pnpm --filter desktop-backend dev
 
 This package does not own a separate desktop UI. It wraps the Next frontend from `apps/desktop` via Tauri (`devUrl` / `frontendDist` in `tauri.conf.json`).
 
+## Code signing and updates
+
+**Local development** uses ad-hoc macOS signing (`bundle.macOS.signingIdentity: "-"` in `tauri.conf.json`). This is sufficient for `pnpm dev` and local `tauri build` smoke tests.
+
+**Production releases** require a valid **Apple Developer ID** signing identity (not ad-hoc). Configure `bundle.macOS.signingIdentity` to your Developer ID Application certificate before shipping to users.
+
+The updater plugin is wired with placeholder config in `tauri.conf.json` (`plugins.updater.pubkey` and `endpoints`). Before enabling in-app updates:
+
+1. Generate signing keys: `pnpm tauri signer generate -w ~/.tauri/casespace.key`
+2. Set `plugins.updater.pubkey` to the generated public key content (not a file path)
+3. Point `plugins.updater.endpoints` at your release JSON host
+4. Set `bundle.createUpdaterArtifacts` to `true` when building release artifacts
+
+Until those are configured, `check_for_update` returns `null` (no update available).
+
 ## Implementation notes
 
 - Command-risk and hardening requirements are defined in `docs/migrating-from-v1.md`.

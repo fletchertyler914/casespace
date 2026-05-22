@@ -104,7 +104,18 @@ export interface TimelineEvent {
   caseId: string;
   description: string;
   occurredAt: string;
+  eventType?: string;
   createdAt?: string;
+}
+
+export interface TimeSegment {
+  id: string;
+  entryId: string;
+  startedAt: string;
+  endedAt?: string;
+  rateOverride?: number;
+  discountPercent?: number;
+  notes?: string;
 }
 
 export interface TimeEntry {
@@ -113,6 +124,22 @@ export interface TimeEntry {
   startedAt: string;
   endedAt?: string;
   billableMinutes: number;
+  summary?: string;
+  segments?: TimeSegment[];
+}
+
+export interface ActiveTimer {
+  caseId: string;
+  entryId: string;
+  startedAt: string;
+}
+
+export interface CaseBillingConfig {
+  caseId: string;
+  billingType: string;
+  fixedPrice?: number;
+  payRate: number;
+  rateUnit: string;
 }
 
 export interface BillingSummary {
@@ -123,6 +150,14 @@ export interface BillingSummary {
 }
 
 export interface ReportExport {
+  reportType: string;
+  filePath: string;
+  generatedAt: string;
+}
+
+export interface ReportExportHistoryEntry {
+  id: string;
+  caseId: string;
   reportType: string;
   filePath: string;
   generatedAt: string;

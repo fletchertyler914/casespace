@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { CaseFile } from "@repo/types";
+import type { CaseFile, IngestResult } from "@repo/types";
 import { commandClient } from "@/lib/command-client";
 import {
   formatIngestSummary,
@@ -15,6 +15,7 @@ interface UseWorkspaceAutoSyncOptions {
   intervalMinutes: number;
   preferencesLoaded: boolean;
   onFilesRefreshed: (files: CaseFile[]) => void;
+  onSyncComplete?: (result: IngestResult) => void;
 }
 
 export function useWorkspaceAutoSync({
@@ -23,6 +24,7 @@ export function useWorkspaceAutoSync({
   intervalMinutes,
   preferencesLoaded,
   onFilesRefreshed,
+  onSyncComplete,
 }: UseWorkspaceAutoSyncOptions) {
   const { toast } = useToast();
   const [isSyncing, setIsSyncing] = useState(false);
@@ -52,6 +54,7 @@ export function useWorkspaceAutoSync({
         }
         await reloadFiles();
         lastSyncRef.current = Date.now();
+        onSyncComplete?.(res.data);
 
         if (!options?.quiet && ingestHadChanges(res.data)) {
           toast({
@@ -70,7 +73,7 @@ export function useWorkspaceAutoSync({
         setIsSyncing(false);
       }
     },
-    [caseId, reloadFiles, toast],
+    [caseId, onSyncComplete, reloadFiles, toast],
   );
 
   useEffect(() => {

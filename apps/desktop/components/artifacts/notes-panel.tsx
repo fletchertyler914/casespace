@@ -2,8 +2,12 @@
 
 import { useState } from "react";
 import type { Note } from "@repo/types";
+import { CreateNoteDialog } from "@/components/artifacts/create-note-dialog";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
+import {
+  TiptapEditor,
+  isEmptyEditorContent,
+} from "@/components/editor/tiptap-editor";
 import { WorkspaceSidePanel } from "@/components/workspace/workspace-side-panel";
 import { commandClient } from "@/lib/command-client";
 
@@ -14,32 +18,37 @@ interface NotesPanelProps {
   onChanged: () => void;
 }
 
+function noteContentToHtml(content: string): string {
+  if (!content.trim()) return "";
+  if (content.trimStart().startsWith("<")) return content;
+  return `<p>${content.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")}</p>`;
+}
+
 export function NotesPanel({
   caseId,
   notes,
   onClose,
   onChanged,
 }: NotesPanelProps) {
-  const [draft, setDraft] = useState("");
+  const [createOpen, setCreateOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingContent, setEditingContent] = useState("");
 
-  async function createNote() {
-    if (!draft.trim()) return;
+  async function createNote(content: string) {
     setSaving(true);
-    const res = await commandClient.createNote(caseId, draft.trim());
+    const res = await commandClient.createNote(caseId, content);
     setSaving(false);
-    if (res.ok) {
-      setDraft("");
-      onChanged();
+    if (!res.ok) {
+      throw new Error(res.error?.message ?? "Failed to create note");
     }
+    onChanged();
   }
 
   async function saveEdit(noteId: string) {
-    if (!editingContent.trim()) return;
+    if (isEmptyEditorContent(editingContent)) return;
     setSaving(true);
-    const res = await commandClient.updateNote(noteId, editingContent.trim());
+    const res = await commandClient.updateNote(noteId, editingContent);
     setSaving(false);
     if (res.ok) {
       setEditingId(null);
@@ -67,21 +76,19 @@ export function NotesPanel({
   return (
     <WorkspaceSidePanel title="Notes" onClose={onClose}>
       <div className="space-y-3 p-3">
-        <Textarea
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          placeholder="New note…"
-          rows={3}
-          className="text-xs"
-        />
         <Button
           size="sm"
           className="w-full"
-          disabled={!draft.trim() || saving}
-          onClick={() => void createNote()}
+          disabled={saving}
+          onClick={() => setCreateOpen(true)}
         >
-          {saving ? "Saving…" : "Add note"}
+          New note
         </Button>
+        <CreateNoteDialog
+          open={createOpen}
+          onOpenChange={setCreateOpen}
+          onConfirm={createNote}
+        />
         <ul className="space-y-2">
           {notes.length === 0 ? (
             <li className="text-xs text-muted-foreground">No notes yet</li>
@@ -93,17 +100,16 @@ export function NotesPanel({
               >
                 {editingId === n.id ? (
                   <div className="space-y-2">
-                    <Textarea
-                      value={editingContent}
-                      onChange={(e) => setEditingContent(e.target.value)}
-                      rows={3}
-                      className="text-xs"
+                    <TiptapEditor
+                      content={editingContent}
+                      onChange={(html) => setEditingContent(html)}
+                      placeholder="Edit note…"
                     />
                     <div className="flex gap-2">
                       <Button
                         size="sm"
                         className="h-7 px-2 text-[11px]"
-                        disabled={saving}
+                        disabled={saving || isEmptyEditorContent(editingContent)}
                         onClick={() => void saveEdit(n.id)}
                       >
                         Save
@@ -123,7 +129,11 @@ export function NotesPanel({
                   </div>
                 ) : (
                   <div className="space-y-2">
-                    <p>{n.content}</p>
+                    <TiptapEditor
+                      content={noteContentToHtml(n.content)}
+                      readOnly
+                      className="min-h-0 border-0 px-0 py-0"
+                    />
                     <div className="flex gap-1">
                       <Button
                         size="sm"
@@ -139,7 +149,7 @@ export function NotesPanel({
                         className="h-6 px-2 text-[11px]"
                         onClick={() => {
                           setEditingId(n.id);
-                          setEditingContent(n.content);
+                          setEditingContent(noteContentToHtml(n.content));
                         }}
                       >
                         Edit

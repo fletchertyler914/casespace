@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Clock3 } from "lucide-react";
-import type { TimeEntry } from "@repo/types";
+import type { ActiveTimer, TimeEntry } from "@repo/types";
 import { Button } from "@/components/ui/button";
 import { commandClient } from "@/lib/command-client";
 
@@ -18,15 +18,33 @@ function formatDuration(ms: number): string {
   return [h, m, s].map((n) => n.toString().padStart(2, "0")).join(":");
 }
 
+function entryElapsedMs(entry: TimeEntry, now: number): number {
+  if (!entry.segments?.length) {
+    return Math.max(0, now - new Date(entry.startedAt).getTime());
+  }
+  return entry.segments.reduce((sum, seg) => {
+    const start = new Date(seg.startedAt).getTime();
+    const end = seg.endedAt ? new Date(seg.endedAt).getTime() : now;
+    return sum + Math.max(0, end - start);
+  }, 0);
+}
+
 export function TimerWidget({ caseId }: TimerWidgetProps) {
   const [entries, setEntries] = useState<TimeEntry[]>([]);
+  const [activeTimer, setActiveTimer] = useState<ActiveTimer | null>(null);
   const [loading, setLoading] = useState(false);
   const [now, setNow] = useState(() => Date.now());
 
   const refresh = useCallback(async () => {
-    const res = await commandClient.getTimeEntries(caseId);
-    if (res.ok && res.data) {
-      setEntries(res.data);
+    const [entriesRes, timerRes] = await Promise.all([
+      commandClient.getTimeEntries(caseId),
+      commandClient.getActiveTimer(caseId),
+    ]);
+    if (entriesRes.ok && entriesRes.data) {
+      setEntries(entriesRes.data);
+    }
+    if (timerRes.ok) {
+      setActiveTimer(timerRes.data ?? null);
     }
   }, [caseId]);
 
@@ -35,19 +53,20 @@ export function TimerWidget({ caseId }: TimerWidgetProps) {
   }, [refresh]);
 
   useEffect(() => {
+    if (!activeTimer) return;
     const interval = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(interval);
-  }, []);
+  }, [activeTimer]);
 
-  const activeEntry = useMemo(
+  const openEntry = useMemo(
     () => entries.find((entry) => !entry.endedAt),
     [entries],
   );
 
   const elapsedMs = useMemo(() => {
-    if (!activeEntry) return 0;
-    return now - new Date(activeEntry.startedAt).getTime();
-  }, [activeEntry, now]);
+    if (!openEntry) return 0;
+    return entryElapsedMs(openEntry, now);
+  }, [openEntry, now]);
 
   async function startTimer() {
     setLoading(true);
@@ -57,9 +76,9 @@ export function TimerWidget({ caseId }: TimerWidgetProps) {
   }
 
   async function stopTimer() {
-    if (!activeEntry) return;
+    if (!openEntry) return;
     setLoading(true);
-    await commandClient.stopTimer(activeEntry.id);
+    await commandClient.stopTimer(openEntry.id);
     await refresh();
     setLoading(false);
   }
@@ -68,9 +87,9 @@ export function TimerWidget({ caseId }: TimerWidgetProps) {
     <div className="flex items-center gap-2 rounded-md border border-border/40 px-2 py-1">
       <Clock3 className="h-4 w-4 text-muted-foreground" />
       <span className="text-xs tabular-nums text-muted-foreground">
-        {activeEntry ? formatDuration(elapsedMs) : "00:00:00"}
+        {openEntry ? formatDuration(elapsedMs) : "00:00:00"}
       </span>
-      {activeEntry ? (
+      {openEntry ? (
         <Button
           size="sm"
           variant="outline"

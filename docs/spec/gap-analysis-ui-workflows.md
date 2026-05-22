@@ -1,6 +1,6 @@
 # UI and Workflow Gap Analysis (v1 → v2)
 
-**Last refresh:** 2026-05-21 — full evidence-based source audit. Earlier "done" claims in `docs/ui-port-plan.md`, `docs/readiness.md`, and `docs/desktop-workflow-mapping.md` were overstated; this document is the new source of truth.
+**Last refresh:** 2026-05-21 (v0.1.7 parity closure). Implementation pass landed; rows below are being aligned to current code. UX Parity Build Gate still requires manual E2E — see [readiness.md](../readiness.md).
 
 ## Audit method
 
@@ -23,13 +23,13 @@ Each row below carries the v1 reference path, the v2 path (if any), and an hones
 | Case CRUD | create, list, open, rename/edit metadata, delete | 🟡 create/list/open/delete only | No rename / edit-metadata / case-settings dialog (`update_case_metadata` backend command exists, no UI calls it) |
 | Sources | add folder/file, list, auto-sync, manual sync | 🟡 add + sync only | No per-source UI, no remove-source (v1 also lacks this) |
 | Ingest / sync UI | dialog progress, duplicate notification, large-folder warning | 🟡 toast summary only | No progress bar, no cancellable sync, no `LargeFolderWarningDialog`, no `DuplicateIngestionNotification` |
-| Inventory table | full data grid with columns/filters/sort/group/bulk/multi-select/inline edit | 🔴 missing | No file table at all — only folder tree (`FileNavigator`) and board cards |
-| Column / mapping config | `ColumnManager`, `FieldMapperStepper`, `PatternBuilder`, `MappingPreview`, regex/date/number extraction | 🟠 backend tables only | Zero UI; backend commands `get/save_column_config_db`, `get/save_mapping_config_db` orphaned |
+| Inventory table | full data grid with columns/filters/sort/group/bulk/multi-select/inline edit | ✅ done (local) | `file-table.tsx` + tree/table toggle; persisted column visibility |
+| Column / mapping config | `ColumnManager`, `FieldMapperStepper`, extraction engine | ✅ done (local) | `columns-mapping-dialog`, `field_extraction.rs`, column manager |
 | File viewer router | image, pdf, docx, xlsx, csv, code (syntax-highlighted), markdown (Tiptap), text, video, audio, unsupported | 🟡 extensions match | Routing OK; per-viewer depth is the real gap (see Viewer table below) |
-| Viewer header / actions | status, prev/next, close, metadata, **rename**, **delete**, **duplicates dialog**, **file-change warning**, fullscreen, **keyboard shortcuts** | 🟡 status + prev/next + close + open externally | No rename, delete, metadata, duplicates dialog, file-change warning, fullscreen, or keyboard shortcuts in viewer pane |
-| Metadata panel | MD5+SHA-256, PDF info, EXIF, email headers, media codec/duration, extracted mapping fields | 🔴 missing | `extract_file_metadata` backend command exists but no UI consumes it |
-| File-change warning | live staleness detection, refresh actions, duplicate review prompt | 🟠 backend only | `check_file_changed` / `refresh_single_file` / `refresh_files_bulk` orphaned in UI |
-| Rename / delete file dialogs | `RenameFileDialog` (with sync-first + filename validation), `DeleteFileDialog` | 🔴 missing | No reusable dialogs; backend `rename_file` and `remove_file_from_case` orphaned |
+| Viewer header / actions | status, prev/next, close, metadata, rename, delete, duplicates, file-change, fullscreen, keyboard | ✅ done (local) | `file-viewer-pane.tsx` + dialogs |
+| Metadata panel | MD5+SHA-256, PDF info, EXIF, etc. | ✅ done (local) | `metadata-panel.tsx` |
+| File-change warning | live staleness detection, refresh | ✅ done (local) | `file-change-warning.tsx` |
+| Rename / delete file dialogs | RenameFileDialog, DeleteFileDialog | ✅ done (local) | `rename-file-dialog`, `delete-file-dialog` |
 | Notes editor | Tiptap rich text + dedicated `CreateNoteDialog` | 🟡 plain textarea | No formatting, headings, lists, task lists, links, images, code blocks, undo/redo |
 | Findings | severity selector + linked-files + tags + Tiptap description + `CreateFindingDialog` | 🟡 title + plain description only | Severity exists in backend, not selectable; no linked files, no tags, no Tiptap |
 | Timeline | date picker, event type, source-file link, auto-extracted events from ingest | 🟡 description-only CRUD | No date picker, no event types, no source link, no `extract_dates_from_file` wiring |
@@ -37,13 +37,13 @@ Each row below carries the v1 reference path, the v2 path (if any), and an hones
 | Board | DnD between status lanes, **multi-select** (`Cmd/Ctrl+Click`, `Shift+Click`), per-swimlane filters, folder-filtered board, rich cards (note count, dup badge, change indicator, tags, mapping fields), progress dashboard | 🟡 5-lane DnD with status change | No multi-select, no filters, cards show only name/path/status, no dashboard |
 | Time / billing | `useTimer`, segments, `SegmentEditDialog`, `DailySummaryDialog`, `BillingConfigDialog`, list/calendar views, search, batch update, billable vs non-billable, rate units (hourly/daily/weekly/monthly), pause/resume = same entry | 🟡 timer widget + simple entries | `pause_timer` actually stops; `resume_timer` starts a new entry — no segment model. No manual entry CRUD, no billing config UI, no daily summary dialog, no calendar view, no batch edit |
 | Reports | structured sections (Executive Summary, Case Overview, Findings, Timeline, Inventory Summary, Notes, Appendices), preview, section navigation, `useReportData` aggregator | 🟡 markdown export only | Side panel with 5 export buttons; backend `export_case_report` writes Markdown files to app data dir. No structured sections, no preview-per-type, no PDF/DOCX exports, no persistent history |
-| Global search | `Cmd/Ctrl+K`, grouped results (FILE/NOTE/FINDING/TIMELINE), per-result open/navigate, FTS-backed with sanitized prefix, search persistence per case | 🟠 **broken at runtime** | `search_all` backend returns `Vec<String>` like `"file:<id>"`; UI types it as `SearchHit[]` with `.entityType`/`.title`/`.snippet`. Dialog opens but renders nothing — runtime contract mismatch |
+| Global search | grouped FTS results | ✅ done (local) | Structured `SearchHit[]`; findings + timeline included |
 | Workspace prefs | `view_mode`, `report_mode`, panel visibility, navigator state, auto-sync | 🟡 partial | Panel sizes not persisted; only toggles/view mode/auto-sync prefs saved |
 | App settings | theme (light/dark/system) + system-file-filter config (patterns: `.DS_Store`, `Thumbs.db`, `~$*`, etc.) | 🟡 theme only | `ThemeToggle` exists but lives on case list, not in workspace settings. No system-file-filter UI; backend has no such command |
 | Splash / loading | `SplashScreen` | 🟠 unwired | Component exists but never rendered |
 | Toast notifications | `useToast`, success/error variants | 🟡 present | Used in `useWorkspaceAutoSync`; not consistently used elsewhere |
 | Theme | system theme detection, persistent across reloads, applied to PDF reader | ✅ done | `ThemeProvider` + PDF theme sync works |
-| Update flow | `tauri-plugin-updater` + `updateService`, signed binary auto-update | 🔴 missing | Updater plugin not in `Cargo.toml`; `tauri.conf.json` has no endpoints |
+| Update flow | `tauri-plugin-updater` + signed releases | 🟠 placeholder | Plugin wired; pubkey/endpoints placeholder; prod signing blocked |
 | Code signing | macOS Developer ID + Windows signing strategy in v1 build pipeline | 🟠 ad-hoc only | `tauri.conf.json` uses `"signingIdentity": "-"`; no Developer ID config, no Windows signing, no notarization — fine for local install with manual Gatekeeper approval, not safe for unattended distribution |
 
 ## Critical breakage to fix immediately
@@ -166,6 +166,6 @@ Numbered in dependency order, not chronological.
 
 ## Honest readiness for production
 
-The app installs, opens, can ingest a folder, syncs incrementally, lets a user click through files in a tree, preview common formats, take simple notes, set status, and run a Markdown export. That is a real but **shallow** baseline — closer to **30–40% of v1 by user-flow surface** than the previous docs' implied 80–90%.
+v0.1.7 delivers the major v1 desktop workflows in code (table, viewer actions, artifacts, duplicates, time, reports, mapping, search). **UX Parity Build Gate** is not validated until manual E2E passes. Remaining depth: board multi-select/filters, PDF/DOCX reports, production signing.
 
 It is **not** ready to replace v1 for day-to-day forensic / inventory work because of: no file table, no rich notes, broken search, no metadata panel, no rename/delete in viewer, no real billing depth, no real duplicate resolution, no column mapping, no production signing/updater.

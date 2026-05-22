@@ -1,5 +1,7 @@
 "use client";
 
+import { marked } from "marked";
+import { useMemo } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface TextFilePreviewProps {
@@ -14,14 +16,18 @@ export function TextFilePreview({
   variant = "plain",
   monospace = true,
 }: TextFilePreviewProps) {
+  const markdownHtml = useMemo(() => {
+    if (variant !== "markdown") return "";
+    return marked.parse(content, { async: false }) as string;
+  }, [content, variant]);
+
   if (variant === "markdown") {
     return (
       <ScrollArea className="h-full max-h-[calc(100vh-12rem)]">
-        <article className="prose prose-sm dark:prose-invert max-w-none p-6">
-          <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed">
-            {content}
-          </pre>
-        </article>
+        <article
+          className="prose prose-sm dark:prose-invert max-w-none p-6"
+          dangerouslySetInnerHTML={{ __html: markdownHtml }}
+        />
       </ScrollArea>
     );
   }

@@ -2,7 +2,7 @@
 
 Next.js desktop UX shell for CaseSpace v2.
 
-**Status (2026-05-21 — post evidence-based source re-audit):** **Shallow MVP** of v1 surface (~30–40% by user-flow). Functional baseline: case CRUD, multi-source ingest/sync with dedup, folder-tree navigator, viewer routing for 15 file categories (extensions match v1 after v0.1.6 PDF fix), plain-text notes/findings/timeline CRUD, status-lane board with DnD, timer widget, markdown report exports, workspace prefs persistence. **Known gaps and bugs:** global search dialog broken at runtime (Rust↔UI shape mismatch); `merge_duplicate_metadata` doesn't relink artifacts; no inventory data grid; no viewer metadata panel / rename / delete / file-change UI; no Tiptap rich-text editors; no column/mapping config UI; no production code-signing or updater. Full evidence table: [`docs/spec/gap-analysis-ui-workflows.md`](../../docs/spec/gap-analysis-ui-workflows.md). Re-prioritized phase plan: [`docs/ui-port-plan.md`](../../docs/ui-port-plan.md).
+**Status (2026-05-21, v0.1.7):** V1 parity closure **implemented (local)** — inventory table, viewer actions (metadata/rename/delete/file-change), structured search, Tiptap artifacts, duplicates depth, time segments + billing UI, reports workspace, column/mapping UI, settings dialogs. **UX Parity Build Gate:** not yet manually validated. **Next:** board multi-select/filters, manual E2E, AINative (blocked). Evidence: [`docs/ui-port-plan.md`](../../docs/ui-port-plan.md), [`docs/readiness.md`](../../docs/readiness.md).
 
 ## Role in v2 architecture
 
@@ -15,10 +15,12 @@ Next.js desktop UX shell for CaseSpace v2.
 | Path | Purpose |
 |------|---------|
 | `app/` | Routes: `/` hub, `/case` workspace |
-| `components/case/` | Case list, cards, dialogs |
-| `components/workspace/` | Shell, navigator, header, split/board |
-| `components/viewer/` | File preview router + previews: PDF, DOCX, XLSX, image, text/code/markdown, CSV/TSV, video, audio, external fallback |
-| `components/artifacts/` | Notes, findings, timeline panels |
+| `components/case/` | Case list, cards, create/edit/delete dialogs |
+| `components/workspace/` | Shell, navigator, file table, header, split/board |
+| `components/viewer/` | File preview router + PDF/DOCX/XLSX/code/image/video/audio |
+| `components/artifacts/` | Notes, findings, timeline, duplicates, reports |
+| `components/mapping/` | Field mapper stepper |
+| `components/billing/` | Timer, time panel, billing dialogs |
 | `lib/command-client.ts` | Typed Tauri command adapters |
 | `lib/file-preview.ts` | Preview kind detection |
 | `public/pdf.worker.min.js` | PDF.js worker for in-app PDF viewer |
@@ -31,27 +33,17 @@ Next.js desktop UX shell for CaseSpace v2.
 pnpm dev
 ```
 
-**UI-only** (browser at `http://localhost:3000`, no Tauri APIs):
+**UI only (no native APIs):**
 
 ```bash
 pnpm dev:ui
 ```
 
-## Quality checks
+## Validation
 
 ```bash
 pnpm --filter desktop lint
 pnpm --filter desktop check-types
-pnpm --filter desktop build
+pnpm --filter desktop test
+pnpm ops:validate:local   # from repo root
 ```
-
-## Framework version
-
-Next.js version comes from the workspace catalog (`pnpm-workspace.yaml` → currently **16.2.6**). Apps declare `"next": "catalog:"` — do not add floating `^` ranges.
-
-## References
-
-- [docs/ui-port-plan.md](../../docs/ui-port-plan.md)
-- [docs/desktop-workflow-mapping.md](../../docs/desktop-workflow-mapping.md)
-- [docs/architecture.md](../../docs/architecture.md)
-- [docs/readiness.md](../../docs/readiness.md)

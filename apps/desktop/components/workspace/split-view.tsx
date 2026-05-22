@@ -12,9 +12,9 @@ import { TimelinePanel } from "@/components/artifacts/timeline-panel";
 import { ReportsPanel } from "@/components/artifacts/reports-panel";
 import { TimePanel } from "@/components/billing/time-panel";
 import {
-  DuplicatesPanel,
-  type DuplicateGroup,
-} from "@/components/artifacts/duplicates-panel";
+  DuplicateManagementPanel,
+} from "@/components/artifacts/duplicate-management-panel";
+import type { DuplicateGroup } from "@/lib/duplicate-utils";
 import { FileViewerPane } from "./file-viewer-pane";
 
 function ResizeHandle() {
@@ -38,6 +38,7 @@ interface SplitViewProps {
   findings: Finding[];
   timeline: TimelineEvent[];
   duplicateGroups: DuplicateGroup[];
+  duplicateFileIds: Set<string>;
   files: CaseFile[];
   navigatorOpen: boolean;
   onExpandNavigator: () => void;
@@ -47,6 +48,8 @@ interface SplitViewProps {
   hasNext: boolean;
   hasPrevious: boolean;
   onFileRefresh: () => void;
+  onFileRemoved?: () => void;
+  onFileRenamed?: (file: CaseFile) => void;
   onStatusChange: (fileId: string, status: string) => void;
   onCloseNotes: () => void;
   onCloseFindings: () => void;
@@ -55,6 +58,7 @@ interface SplitViewProps {
   onCloseReports: () => void;
   onCloseTime: () => void;
   onArtifactsChanged: () => void;
+  onFileSelect?: (file: CaseFile) => void;
   sourceRoots: string[];
 }
 
@@ -71,6 +75,7 @@ export const SplitView = memo(function SplitView({
   findings,
   timeline,
   duplicateGroups,
+  duplicateFileIds,
   files,
   navigatorOpen,
   onExpandNavigator,
@@ -80,6 +85,8 @@ export const SplitView = memo(function SplitView({
   hasNext,
   hasPrevious,
   onFileRefresh,
+  onFileRemoved,
+  onFileRenamed,
   onStatusChange,
   onCloseNotes,
   onCloseFindings,
@@ -88,6 +95,7 @@ export const SplitView = memo(function SplitView({
   onCloseReports,
   onCloseTime,
   onArtifactsChanged,
+  onFileSelect,
   sourceRoots,
 }: SplitViewProps) {
   const panelSizes = useWorkspacePanels({
@@ -109,13 +117,16 @@ export const SplitView = memo(function SplitView({
         id="file-viewer"
         order={0}
         defaultSize={panelSizes.fileViewerSize}
-        minSize={35}
+        minSize={30}
       >
         <div className="flex h-full min-h-0 flex-col overflow-hidden">
           {viewingFile ? (
             <FileViewerPane
               file={viewingFile}
               caseId={caseId}
+              files={files}
+              duplicateGroups={duplicateGroups}
+              duplicateFileIds={duplicateFileIds}
               navigatorOpen={navigatorOpen}
               onExpandNavigator={onExpandNavigator}
               onClose={onFileClose}
@@ -125,6 +136,9 @@ export const SplitView = memo(function SplitView({
               hasPrevious={hasPrevious}
               onStatusChange={onStatusChange}
               onRefresh={onFileRefresh}
+              onFileRemoved={onFileRemoved}
+              onFileRenamed={onFileRenamed}
+              onNavigateToFile={onFileSelect}
               sourceRoots={sourceRoots}
             />
           ) : (
@@ -149,9 +163,9 @@ export const SplitView = memo(function SplitView({
           <Panel
             id="notes"
             order={1}
-            defaultSize={panelSizes.sidePanelSize}
-            minSize={15}
-            maxSize={40}
+            defaultSize={panelSizes.notesPanelSize}
+            minSize={20}
+            maxSize={45}
           >
             <NotesPanel
               caseId={caseId}
@@ -189,9 +203,9 @@ export const SplitView = memo(function SplitView({
           <Panel
             id="timeline"
             order={3}
-            defaultSize={panelSizes.sidePanelSize}
-            minSize={15}
-            maxSize={40}
+            defaultSize={panelSizes.timelinePanelSize}
+            minSize={20}
+            maxSize={50}
           >
             <TimelinePanel
               caseId={caseId}
@@ -209,16 +223,17 @@ export const SplitView = memo(function SplitView({
           <Panel
             id="duplicates"
             order={4}
-            defaultSize={panelSizes.sidePanelSize}
-            minSize={15}
-            maxSize={40}
+            defaultSize={panelSizes.duplicatesPanelSize}
+            minSize={20}
+            maxSize={50}
           >
-            <DuplicatesPanel
+            <DuplicateManagementPanel
               caseId={caseId}
               groups={duplicateGroups}
               files={files}
               onClose={onCloseDuplicates}
               onChanged={onArtifactsChanged}
+              onFileSelect={onFileSelect}
             />
           </Panel>
         </>
@@ -230,9 +245,9 @@ export const SplitView = memo(function SplitView({
           <Panel
             id="reports"
             order={5}
-            defaultSize={panelSizes.sidePanelSize}
-            minSize={18}
-            maxSize={45}
+            defaultSize={panelSizes.reportsPanelSize}
+            minSize={20}
+            maxSize={50}
           >
             <ReportsPanel caseId={caseId} onClose={onCloseReports} />
           </Panel>
@@ -245,9 +260,9 @@ export const SplitView = memo(function SplitView({
           <Panel
             id="time"
             order={6}
-            defaultSize={panelSizes.sidePanelSize}
-            minSize={18}
-            maxSize={45}
+            defaultSize={panelSizes.timePanelSize}
+            minSize={20}
+            maxSize={50}
           >
             <TimePanel caseId={caseId} onClose={onCloseTime} />
           </Panel>

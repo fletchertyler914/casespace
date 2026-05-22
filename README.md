@@ -2,7 +2,7 @@
 
 CaseSpace v2 is an elite, net-new rebuild of the CaseSpace product foundation using a 3-app architecture.
 
-Current status (2026-05-21, post evidence-based source re-audit): **Core Parity backend complete (local)**. **UX port is a shallow MVP** (~30–40% of v1 user-flow surface) — case CRUD, ingest/sync, folder-tree navigator, viewer routing for 15 file categories, plain-text artifact CRUD, status-lane board, MVP timer + markdown report exports. **Known shipped-but-broken / shipped-but-shallow areas:** global search dialog (runtime contract mismatch), `merge_duplicate_metadata` (doesn't relink artifacts), no inventory data grid, no viewer metadata/rename/delete UI, no Tiptap rich-text editors, no column/mapping config UI, no production code-signing or updater. Full evidence and re-prioritized critical path: [`docs/spec/gap-analysis-ui-workflows.md`](docs/spec/gap-analysis-ui-workflows.md), [`docs/spec/gap-analysis-master.md`](docs/spec/gap-analysis-master.md), [`docs/readiness.md`](docs/readiness.md), [`docs/ui-port-plan.md`](docs/ui-port-plan.md). AINative + production distribution remain blocked.
+Current status (2026-05-21, **v0.1.7-rc.1**): **Core Parity backend complete (local)**. **V1 parity closure implemented (local)** — inventory table, viewer actions, structured search, Tiptap artifacts, duplicates depth, time/billing, reports workspace, mapping UI, settings dialogs. **UX Parity Build Gate:** manual E2E pending. **Production distribution:** updater placeholders; signing/notarization blocked. **Next:** UX gate E2E → board depth → AINative. Docs: [`docs/readiness.md`](docs/readiness.md), [`docs/ui-port-plan.md`](docs/ui-port-plan.md).
 
 ## Repository purpose
 

@@ -1,37 +1,37 @@
 # Desktop Workflow Mapping (v1 UI → v2)
 
-**Status:** Backend P0 commands **implemented**. UI port **U1–U6 done/MVP**; U7/U8/U9/U10 in progress; U11 gate/cleanup active. Plan: [ui-port-plan.md](ui-port-plan.md).
+**Status (2026-05-21, v0.1.7):** V1 parity closure landed in `apps/desktop` + backend. UX gate validation pending manual E2E. Plan: [ui-port-plan.md](ui-port-plan.md).
 
 ## v1 → v2 component map
 
 | v1 path | v2 target | Phase | Status |
 |---------|-----------|-------|--------|
-| `src/App.tsx` | `app/layout.tsx` + routes | P0 | **done** — providers, theme, splash |
+| `src/App.tsx` | `app/layout.tsx` + routes | P0 | **done** |
 | `components/case/CaseListView` | `components/case/case-list-view.tsx` | U3 | **done** |
 | `components/case/CaseListCard` | `components/case/case-list-card.tsx` | U3 | **done** |
 | `components/case/CreateCaseDialog` | `components/case/create-case-dialog.tsx` | U3 | **done** |
+| `components/case/EditCaseDialog` | `components/case/edit-case-dialog.tsx` | U3 | **done** |
 | `components/case/DeleteCaseConfirmationDialog` | `components/case/delete-case-confirmation-dialog.tsx` | U3 | **done** |
-| `components/case/EditCaseDialog` | `components/case/edit-case-dialog.tsx` | U3 tail | planned |
+| `components/case/LargeFolderWarningDialog` | `components/case/large-folder-warning-dialog.tsx` | U3 | **done** |
 | `components/workspace/CaseWorkspace` | `components/workspace/case-workspace-shell.tsx` | U4 | **done** |
 | `components/workspace/WorkspaceLayout` | `components/workspace/workspace-layout.tsx` | U4 | **done** |
-| `components/workspace/FileNavigator` | `components/workspace/file-navigator.tsx` | U4 | **done** |
+| `components/workspace/FileNavigator` | `components/workspace/file-navigator.tsx` | U4 | **done** — tree + table toggle |
+| `components/workspace/FileTable` | `components/workspace/file-table.tsx` | U4 | **done** |
 | `components/workspace/SplitView` | `components/workspace/split-view.tsx` | U4 | **done** |
 | `components/workspace/CaseHeader` | `components/workspace/case-header.tsx` | U4 | **done** |
-| `components/workspace/IntegratedFileViewer` | `components/viewer/file-viewer.tsx` + previews | U5 | **done** — v1 extension parity (image, pdf, docx, xlsx, code, text, markdown, csv/tsv, video, audio, unsupported) |
-| `components/viewer/PdfViewerWrapper` | `components/viewer/pdf-file-preview.tsx` | U5 | **done** — defaultLayoutPlugin called inline (not in useMemo) + wrapped in local ErrorBoundary |
-| v1 HTML5 `<video>` / `<audio>` | `components/viewer/video-file-preview.tsx`, `audio-file-preview.tsx` | U5 | **done** — blob URLs from base64; controls + seek |
-| `components/board/WorkflowBoard` | `components/workspace/board-view.tsx` | U7 | **MVP** — status swimlanes + drag/drop |
-| `components/notes/NotePanel` | `components/artifacts/notes-panel.tsx` | U6 | **MVP** — CRUD + pin; Tiptap P1 |
-| `components/findings/FindingsPanel` | `components/artifacts/findings-panel.tsx` | U6 | **MVP** — CRUD |
-| `components/timeline/TimelineView` | `components/artifacts/timeline-panel.tsx` | U6 | **MVP** — CRUD |
-| `components/duplicates/*` | `components/artifacts/duplicates-panel.tsx` | U7 | **MVP** — list groups + set primary + metadata merge |
-| `components/search/SearchDialog` | `components/search/search-dialog.tsx` | U10 | **MVP** — cmdk search wired |
-| `components/time/TimerWidget` | `components/billing/timer-widget.tsx` | U8 | **MVP** — start/stop + elapsed |
-| `components/time/TimeManagementPage` | `components/billing/time-panel.tsx` | U8 | **MVP** — entries + billing summary + controls |
-| `components/reports/ReportView` | `components/artifacts/reports-panel.tsx` | U9 | **MVP** — export + preview; full report view pending |
-| `src/services/*` | `lib/command-client.ts` (+ future `lib/services/*`) | P0 | **partial** |
-| `src/hooks/*` | `hooks/*`, `hooks/use-workspace-panels.ts`, etc. | P0 | **partial** |
-| `components/mapping/*` | — | P1 | defer |
+| `components/workspace/IntegratedFileViewer` | `components/viewer/*` + `file-viewer-pane.tsx` | U5 | **done** |
+| `components/viewer/*` previews | `pdf`, `docx`, `xlsx`, `code` (syntax), `image` (zoom), `markdown`, etc. | U5 | **done** |
+| `components/mapping/*` | `components/mapping/field-mapper-stepper.tsx`, `components/table/column-manager.tsx`, `columns-mapping-dialog.tsx` | U4/P1 | **done** |
+| `components/board/WorkflowBoard` | `components/workspace/board-view.tsx` | U7 | **MVP** — lanes + DnD; multi-select/filters deferred |
+| `components/notes/NotePanel` | `components/artifacts/notes-panel.tsx` + Tiptap | U6 | **done** |
+| `components/findings/FindingsPanel` | `components/artifacts/findings-panel.tsx` | U6 | **done** |
+| `components/timeline/TimelineView` | `components/artifacts/timeline-panel.tsx` | U6 | **done** |
+| `components/duplicates/*` | `duplicate-management-panel`, badges, decision dialog, ingestion notification | U7 | **done** |
+| `components/search/SearchDialog` | `components/search/search-dialog.tsx` | U10 | **done** — structured FTS hits |
+| `components/time/*` | `timer-widget`, `time-panel`, segment/billing dialogs | U8 | **done** |
+| `components/reports/ReportView` | `reports-panel.tsx` + `reports-workspace.tsx` | U9 | **done** — markdown + history; PDF/DOCX deferred |
+| `components/settings/*` | `components/settings/app-settings-dialog.tsx` | U10 | **done** |
+| `src/services/*` | `lib/command-client.ts` | P0 | **done** (P0 surface) |
 
 ## Adapter boundary
 
@@ -39,31 +39,21 @@
 UI Component → hooks → command-client → Tauri invoke
 ```
 
-No `invoke()` in components. Expand `lib/command-client.ts` as each surface ships.
+No `invoke()` in components.
 
 ## Current v2 routes
 
 | Route / file | Behavior |
 |--------------|----------|
-| `app/page.tsx` | Case hub — `CaseListView` |
-| `app/case/page.tsx` + `page-client.tsx` | `CaseWorkspaceShell` — navigator, viewer, panels |
-| `components/case-workspace.tsx` | **Removed** |
-| `lib/command-client.ts` | Typed P0 command wrappers |
-| `lib/file-preview.ts` | Preview kind router — image/pdf/docx/xlsx/code/text/markdown/csv/video/audio/unsupported (~120 extensions; bare-name special cases: README/LICENSE/Dockerfile/Makefile) |
-| `lib/open-file.ts` | External open for unsupported types only |
-| `lib/tauri-dialog.ts` | Native folder/file pickers |
+| `app/page.tsx` | Case hub |
+| `app/case/page.tsx` + `page-client.tsx` | `CaseWorkspaceShell` |
+| `lib/command-client.ts` | Typed command wrappers |
+| `lib/file-preview.ts` | Preview kind router |
 
-## P0 screen flow
+## Next phases (post v0.1.7)
 
-1. `/` — Case list (hub) ✅
-2. `/case?id=` — Workspace (navigator \| viewer \| notes/findings/timeline) ✅
-3. Modals: create ✅, delete ✅; edit/large-folder — U3 tail
-4. Command palette: global search ✅ (U10 MVP)
-5. Board + duplicates — U7 (duplicates panel MVP + board drag/drop shipped; parity polish pending)
+1. **UX gate** — manual E2E on [spec/user-flow-map.md](spec/user-flow-map.md); board depth
+2. **Production distribution** — Developer ID, Windows signing, notarization, live updater keys
+3. **AINative** — blocked until UX gate passes
 
-## Drop at UX gate (U11)
-
-- Enterprise case filters (unless U3 tail)
-- Full v1 kanban parity if simplified board/table suffices
-
-See [spec/user-flow-map.md](spec/user-flow-map.md) and [spec/gap-analysis-ui-workflows.md](spec/gap-analysis-ui-workflows.md).
+See [spec/gap-analysis-ui-workflows.md](spec/gap-analysis-ui-workflows.md).

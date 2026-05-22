@@ -23,10 +23,11 @@ import { AudioFilePreview } from "./audio-file-preview";
 import { CsvFilePreview } from "./csv-file-preview";
 import { DocxFilePreview } from "./docx-file-preview";
 import { ExternalFilePreview } from "./external-file-preview";
+import { CodeFilePreview } from "./code-file-preview";
 import { ImageFilePreview } from "./image-file-preview";
 import { TextFilePreview } from "./text-file-preview";
 import { VideoFilePreview } from "./video-file-preview";
-import { XlsxFilePreview } from "./xlsx-file-preview";
+import { XlsxFilePreview, type XlsxSheetData } from "./xlsx-file-preview";
 
 const PdfFilePreview = dynamic(
   () =>
@@ -96,8 +97,8 @@ export const FileViewer = memo(function FileViewer({
   const [imageSrc, setImageSrc] = useState("");
   const [pdfUrl, setPdfUrl] = useState("");
   const [docxHtml, setDocxHtml] = useState("");
-  const [xlsxRows, setXlsxRows] = useState<SheetRow[]>([]);
-  const [xlsxSheet, setXlsxSheet] = useState("");
+  const [xlsxSheets, setXlsxSheets] = useState<XlsxSheetData>({});
+  const [xlsxInitialSheet, setXlsxInitialSheet] = useState("");
   const [mediaUrl, setMediaUrl] = useState("");
   const [opening, setOpening] = useState(false);
 
@@ -131,8 +132,8 @@ export const FileViewer = memo(function FileViewer({
       setImageSrc("");
       setPdfUrl("");
       setDocxHtml("");
-      setXlsxRows([]);
-      setXlsxSheet("");
+      setXlsxSheets({});
+      setXlsxInitialSheet("");
       setMediaUrl("");
 
       if (isUnsupportedPreview(kind)) {
@@ -214,24 +215,23 @@ export const FileViewer = memo(function FileViewer({
         try {
           const XLSX = await import("xlsx-js-style");
           const workbook = XLSX.read(buffer, { type: "array" });
-          const sheetName = workbook.SheetNames[0];
-          if (!sheetName) {
+          if (workbook.SheetNames.length === 0) {
             setError("No sheets found in spreadsheet");
             setLoading(false);
             return;
           }
-          const worksheet = workbook.Sheets[sheetName];
-          if (!worksheet) {
-            setError("Worksheet not found");
-            setLoading(false);
-            return;
+          const allSheets: XlsxSheetData = {};
+          for (const sheetName of workbook.SheetNames) {
+            const worksheet = workbook.Sheets[sheetName];
+            if (!worksheet) continue;
+            allSheets[sheetName] = XLSX.utils.sheet_to_json(worksheet, {
+              header: 1,
+            }) as SheetRow[];
           }
-          const data = XLSX.utils.sheet_to_json(worksheet, {
-            header: 1,
-          }) as SheetRow[];
           if (cancelled) return;
-          setXlsxSheet(sheetName);
-          setXlsxRows(data);
+          const first = workbook.SheetNames[0] ?? "";
+          setXlsxInitialSheet(first);
+          setXlsxSheets(allSheets);
         } catch (err) {
           setError(
             err instanceof Error ? err.message : "Spreadsheet preview failed",
@@ -288,7 +288,7 @@ export const FileViewer = memo(function FileViewer({
     !pdfUrl &&
     !docxHtml &&
     !mediaUrl &&
-    xlsxRows.length === 0
+    Object.keys(xlsxSheets).length === 0
   ) {
     return (
       <ViewerFallback
@@ -336,14 +336,20 @@ export const FileViewer = memo(function FileViewer({
   }
 
   if (kind === "xlsx" && !error) {
-    return <XlsxFilePreview rows={xlsxRows} sheetName={xlsxSheet} />;
+    return (
+      <XlsxFilePreview sheets={xlsxSheets} initialSheet={xlsxInitialSheet} />
+    );
+  }
+
+  if (kind === "code" && text) {
+    return <CodeFilePreview content={text} fileName={file.fileName} />;
   }
 
   if (kind === "csv" && text) {
     return <CsvFilePreview content={text} fileName={file.fileName} />;
   }
 
-  if ((kind === "markdown" || kind === "text" || kind === "code") && text) {
+  if ((kind === "markdown" || kind === "text") && text) {
     return (
       <TextFilePreview
         content={text}

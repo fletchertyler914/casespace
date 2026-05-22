@@ -14,6 +14,7 @@ import {
   RefreshCw,
   SplitSquareHorizontal,
   StickyNote,
+  TableProperties,
   X,
 } from "lucide-react";
 import type { CaseSummary } from "@repo/types";
@@ -57,6 +58,8 @@ interface CaseHeaderProps {
   onAddSources: () => void;
   onOpenSearch: () => void;
   onOpenSettings: () => void;
+  onOpenAppSettings: () => void;
+  onOpenColumnsMapping: () => void;
   onClose: () => void;
 }
 
@@ -88,6 +91,8 @@ export const CaseHeader = memo(function CaseHeader({
   onAddSources,
   onOpenSearch,
   onOpenSettings,
+  onOpenAppSettings,
+  onOpenColumnsMapping,
   onClose,
 }: CaseHeaderProps) {
   return (
@@ -217,8 +222,15 @@ export const CaseHeader = memo(function CaseHeader({
               </span>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={onOpenColumnsMapping}>
+              <TableProperties className="mr-2 h-4 w-4" />
+              Columns &amp; mapping
+            </DropdownMenuItem>
             <DropdownMenuItem onClick={onOpenSettings}>
               Workspace settings
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={onOpenAppSettings}>
+              App settings
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={onOpenSearch}>

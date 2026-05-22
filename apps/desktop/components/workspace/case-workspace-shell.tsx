@@ -1,11 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type {
   CaseFile,
   CaseSummary,
   Finding,
+  IngestResult,
   Note,
   TimelineEvent,
   WorkspacePreferences,
@@ -15,7 +16,13 @@ import { useWorkspaceAutoSync } from "@/hooks/use-workspace-auto-sync";
 import { useToast } from "@/hooks/use-toast";
 import { commandClient } from "@/lib/command-client";
 import { relativizeCaseFiles } from "@/lib/case-path-utils";
-import { formatIngestSummary } from "@/lib/ingest-utils";
+import { formatIngestSummary, ingestHadChanges } from "@/lib/ingest-utils";
+import {
+  buildDuplicateFileIdSet,
+  duplicateStats,
+  type DuplicateGroup,
+} from "@/lib/duplicate-utils";
+import { DuplicateIngestionNotification } from "@/components/ingestion/duplicate-ingestion-notification";
 import { getFlattenedFileList } from "@/lib/file-tree-utils";
 import {
   loadWorkspacePreferences,
@@ -24,9 +31,10 @@ import {
 import { AddSourcesDialog } from "./add-sources-dialog";
 import { CaseHeader } from "./case-header";
 import { SettingsDialog } from "./settings-dialog";
+import { ColumnsMappingDialog } from "./columns-mapping-dialog";
+import { AppSettingsDialog } from "@/components/settings/app-settings-dialog";
 import { WorkspaceLayout } from "./workspace-layout";
 import { SearchDialog } from "@/components/search/search-dialog";
-import type { DuplicateGroup } from "@/components/artifacts/duplicates-panel";
 
 interface CaseWorkspaceShellProps {
   caseId: string;
@@ -61,7 +69,14 @@ export function CaseWorkspaceShell({ caseId }: CaseWorkspaceShellProps) {
   const [sourceRoots, setSourceRoots] = useState<string[]>([]);
   const [searchOpen, setSearchOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [appSettingsOpen, setAppSettingsOpen] = useState(false);
+  const [columnsMappingOpen, setColumnsMappingOpen] = useState(false);
   const [duplicateGroups, setDuplicateGroups] = useState<DuplicateGroup[]>([]);
+  const [duplicateIngestNotice, setDuplicateIngestNotice] = useState<{
+    groupCount: number;
+    fileCount: number;
+  } | null>(null);
+  const prevDuplicateGroupCountRef = useRef(0);
   const autoSyncIntervals = [1, 5, 15] as const;
 
   const applyFiles = useCallback((raw: CaseFile[], roots: string[]) => {
@@ -83,8 +98,28 @@ export function CaseWorkspaceShell({ caseId }: CaseWorkspaceShellProps) {
     const res = await commandClient.findDuplicateFiles(id);
     if (res.ok && res.data) {
       setDuplicateGroups(res.data);
+      prevDuplicateGroupCountRef.current = res.data.length;
     }
   }, []);
+
+  const handleSyncComplete = useCallback(
+    async (result: IngestResult) => {
+      if (!ingestHadChanges(result)) return;
+      const prevCount = prevDuplicateGroupCountRef.current;
+      const res = await commandClient.findDuplicateFiles(caseId);
+      if (!res.ok || !res.data) return;
+      const stats = duplicateStats(res.data);
+      setDuplicateGroups(res.data);
+      prevDuplicateGroupCountRef.current = stats.groupCount;
+      if (
+        stats.groupCount > 0 &&
+        (result.filesInserted > 0 || stats.groupCount > prevCount)
+      ) {
+        setDuplicateIngestNotice(stats);
+      }
+    },
+    [caseId],
+  );
 
   const onFilesRefreshed = useCallback(
     (raw: CaseFile[]) => {
@@ -118,7 +153,13 @@ export function CaseWorkspaceShell({ caseId }: CaseWorkspaceShellProps) {
     intervalMinutes: prefs.autoSyncIntervalMinutes ?? 5,
     preferencesLoaded: prefsLoaded,
     onFilesRefreshed,
+    onSyncComplete: (result) => void handleSyncComplete(result),
   });
+
+  const duplicateFileIds = useMemo(
+    () => buildDuplicateFileIdSet(duplicateGroups),
+    [duplicateGroups],
+  );
 
   const persistPrefs = useCallback(
     async (next: WorkspacePreferences) => {
@@ -363,8 +404,21 @@ export function CaseWorkspaceShell({ caseId }: CaseWorkspaceShellProps) {
         onAddSources={() => setAddSourcesOpen(true)}
         onOpenSearch={() => setSearchOpen(true)}
         onOpenSettings={() => setSettingsOpen(true)}
+        onOpenAppSettings={() => setAppSettingsOpen(true)}
+        onOpenColumnsMapping={() => setColumnsMappingOpen(true)}
         onClose={() => router.push("/")}
       />
+      {duplicateIngestNotice && (
+        <DuplicateIngestionNotification
+          groupCount={duplicateIngestNotice.groupCount}
+          fileCount={duplicateIngestNotice.fileCount}
+          onReview={() => {
+            setDuplicatesVisible(true);
+            setDuplicateIngestNotice(null);
+          }}
+          onDismiss={() => setDuplicateIngestNotice(null)}
+        />
+      )}
       <WorkspaceLayout
         viewMode={viewMode}
         navigatorOpen={navigatorOpen}
@@ -382,6 +436,7 @@ export function CaseWorkspaceShell({ caseId }: CaseWorkspaceShellProps) {
         findings={findings}
         timeline={timeline}
         duplicateGroups={duplicateGroups}
+        duplicateFileIds={duplicateFileIds}
         onFileSelect={handleFileSelect}
         onFolderSelect={setSelectedFolderPath}
         onToggleNavigator={() => setNavigatorOpen(false)}
@@ -397,8 +452,17 @@ export function CaseWorkspaceShell({ caseId }: CaseWorkspaceShellProps) {
         hasNext={hasNext}
         hasPrevious={hasPrevious}
         onFileRefresh={() => void handleRefreshFile()}
+        onFileRemoved={() => {
+          setViewingFile(null);
+          void refreshFiles(caseId, sourceRoots);
+        }}
+        onFileRenamed={(updated) => {
+          setViewingFile(updated);
+          void refreshFiles(caseId, sourceRoots);
+        }}
         sourceRoots={sourceRoots}
         onStatusChange={(id, status) => void handleStatusChange(id, status)}
+        onFilesChanged={() => void refreshFiles(caseId, sourceRoots)}
         onCloseNotes={() => setNotesVisible(false)}
         onCloseFindings={() => setFindingsVisible(false)}
         onCloseTimeline={() => setTimelineVisible(false)}
@@ -420,6 +484,8 @@ export function CaseWorkspaceShell({ caseId }: CaseWorkspaceShellProps) {
         onOpenChange={setSearchOpen}
         caseId={caseId}
         files={files}
+        findings={findings}
+        timeline={timeline}
         onFileOpen={handleFileSelect}
         onOpenEntityPanel={(entityType) => {
           const normalized = entityType.toLowerCase();
@@ -448,6 +514,16 @@ export function CaseWorkspaceShell({ caseId }: CaseWorkspaceShellProps) {
         onSave={(next) => {
           void applyPrefs(next);
         }}
+      />
+      <AppSettingsDialog
+        open={appSettingsOpen}
+        onOpenChange={setAppSettingsOpen}
+      />
+      <ColumnsMappingDialog
+        open={columnsMappingOpen}
+        onOpenChange={setColumnsMappingOpen}
+        caseId={caseId}
+        onSaved={() => void refreshFiles(caseId, sourceRoots)}
       />
     </div>
   );

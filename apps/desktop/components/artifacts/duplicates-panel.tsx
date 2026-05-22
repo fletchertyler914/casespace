@@ -6,11 +6,9 @@ import { Button } from "@/components/ui/button";
 import { WorkspaceSidePanel } from "@/components/workspace/workspace-side-panel";
 import { commandClient } from "@/lib/command-client";
 
-export interface DuplicateGroup {
-  groupId: string;
-  fileIds: string[];
-  primaryFileId?: string;
-}
+import type { DuplicateGroup } from "@/lib/duplicate-utils";
+
+export type { DuplicateGroup };
 
 interface DuplicatesPanelProps {
   caseId: string;

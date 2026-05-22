@@ -1,4 +1,5 @@
 pub mod database;
+pub mod field_extraction;
 pub mod ingest;
 pub mod path;
 mod search;
@@ -84,7 +85,20 @@ struct TimelineEvent {
     case_id: String,
     description: String,
     occurred_at: String,
+    event_type: String,
     created_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct TimeSegment {
+    id: String,
+    entry_id: String,
+    started_at: String,
+    ended_at: Option<String>,
+    rate_override: Option<f64>,
+    discount_percent: i64,
+    notes: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -95,20 +109,57 @@ struct TimeEntry {
     started_at: String,
     ended_at: Option<String>,
     billable_minutes: i64,
+    summary: Option<String>,
+    segments: Vec<TimeSegment>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-struct SearchHit {
-    id: String,
-    entity_type: String,
-    title: String,
-    snippet: String,
+struct ActiveTimer {
+    case_id: String,
+    entry_id: String,
+    started_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct CaseBillingConfig {
+    case_id: String,
+    billing_type: String,
+    fixed_price: Option<f64>,
+    pay_rate: f64,
+    rate_unit: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SearchHit {
+    pub id: String,
+    pub entity_type: String,
+    pub title: String,
+    pub snippet: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct UpdateCheckResult {
+    version: String,
+    current_version: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct ReportExport {
+    report_type: String,
+    file_path: String,
+    generated_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct ReportExportHistoryEntry {
+    id: String,
+    case_id: String,
     report_type: String,
     file_path: String,
     generated_at: String,
@@ -862,6 +913,79 @@ fn mark_duplicate_primary(
     })
 }
 
+pub fn merge_duplicate_metadata_conn(
+    conn: &rusqlite::Connection,
+    case_id: &str,
+    group_id: &str,
+    target_file_id: &str,
+) -> Result<(), String> {
+    let mut stmt = conn
+        .prepare(
+            "SELECT id FROM files WHERE case_id = ?1 AND file_hash = ?2 AND deleted_at IS NULL",
+        )
+        .map_err(|e| e.to_string())?;
+    let source_ids: Vec<String> = stmt
+        .query_map(params![case_id, group_id], |row| row.get(0))
+        .map_err(|e| e.to_string())?
+        .filter_map(Result::ok)
+        .filter(|id| id != target_file_id)
+        .collect();
+
+    for source_id in &source_ids {
+        conn.execute(
+            "UPDATE notes SET file_id = ?1, updated_at = ?2 WHERE file_id = ?3 AND case_id = ?4",
+            params![target_file_id, now_iso(), source_id, case_id],
+        )
+        .map_err(|e| e.to_string())?;
+
+        let mut finding_stmt = conn
+            .prepare(
+                "SELECT id, linked_files FROM findings WHERE case_id = ?1 AND linked_files IS NOT NULL",
+            )
+            .map_err(|e| e.to_string())?;
+        let finding_rows: Vec<(String, String)> = finding_stmt
+            .query_map(params![case_id], |row| Ok((row.get(0)?, row.get(1)?)))
+            .map_err(|e| e.to_string())?
+            .filter_map(Result::ok)
+            .collect();
+
+        for (finding_id, linked_json) in finding_rows {
+            if let Ok(mut linked) = serde_json::from_str::<Vec<String>>(&linked_json) {
+                if linked.contains(source_id) {
+                    linked.retain(|id| id != source_id);
+                    if !linked.contains(&target_file_id.to_string()) {
+                        linked.push(target_file_id.to_string());
+                    }
+                    let updated = serde_json::to_string(&linked).map_err(|e| e.to_string())?;
+                    conn.execute(
+                        "UPDATE findings SET linked_files = ?1, updated_at = ?2 WHERE id = ?3",
+                        params![updated, now_iso(), finding_id],
+                    )
+                    .map_err(|e| e.to_string())?;
+                }
+            }
+        }
+
+        conn.execute(
+            "UPDATE timeline_events SET source_file_id = ?1 WHERE source_file_id = ?2 AND case_id = ?3",
+            params![target_file_id, source_id, case_id],
+        )
+        .map_err(|e| e.to_string())?;
+    }
+
+    conn.execute(
+        "UPDATE files SET status = 'reviewed' WHERE id = ?1 AND case_id = ?2",
+        params![target_file_id, case_id],
+    )
+    .map_err(|e| e.to_string())?;
+    conn.execute(
+        "UPDATE files SET deleted_at = ?1 WHERE case_id = ?2 AND file_hash = ?3 AND id != ?4 AND deleted_at IS NULL",
+        params![now_iso(), case_id, group_id, target_file_id],
+    )
+    .map_err(|e| e.to_string())?;
+    Ok(())
+}
+
 #[tauri::command]
 fn merge_duplicate_metadata(
     case_id: String,
@@ -870,17 +994,7 @@ fn merge_duplicate_metadata(
     state: State<AppState>,
 ) -> Result<(), String> {
     with_conn(&state, |conn| {
-        conn.execute(
-            "UPDATE files SET status = 'reviewed' WHERE id = ?1 AND case_id = ?2",
-            params![target_file_id, case_id],
-        )
-        .map_err(|e| e.to_string())?;
-        conn.execute(
-            "UPDATE files SET deleted_at = ?1 WHERE case_id = ?2 AND file_hash = ?3 AND id != ?4 AND deleted_at IS NULL",
-            params![now_iso(), case_id, group_id, target_file_id],
-        )
-        .map_err(|e| e.to_string())?;
-        Ok(())
+        merge_duplicate_metadata_conn(conn, &case_id, &group_id, &target_file_id)
     })
 }
 
@@ -1028,17 +1142,19 @@ fn create_finding(
     case_id: String,
     title: String,
     description: String,
+    severity: Option<String>,
     state: State<AppState>,
 ) -> Result<Finding, String> {
     let id = Uuid::new_v4().to_string();
     let now = now_iso();
+    let severity = severity.unwrap_or_else(|| "medium".to_string());
     with_conn(&state, |conn| {
         if !case_exists(conn, &case_id)? {
             return Err("case not found".into());
         }
         conn.execute(
-            "INSERT INTO findings (id, case_id, title, description, severity, created_at, updated_at) VALUES (?1, ?2, ?3, ?4, 'medium', ?5, ?5)",
-            params![id, case_id, title, description, now],
+            "INSERT INTO findings (id, case_id, title, description, severity, created_at, updated_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?6)",
+            params![id, case_id, title, description, severity, now],
         )
         .map_err(|e| e.to_string())?;
         Ok(Finding {
@@ -1046,7 +1162,7 @@ fn create_finding(
             case_id,
             title,
             description,
-            severity: "medium".to_string(),
+            severity,
             created_at: now.clone(),
             updated_at: now,
         })
@@ -1083,6 +1199,7 @@ fn update_finding(
     finding_id: String,
     title: Option<String>,
     description: Option<String>,
+    severity: Option<String>,
     state: State<AppState>,
 ) -> Result<Finding, String> {
     let now = now_iso();
@@ -1098,6 +1215,13 @@ fn update_finding(
             conn.execute(
                 "UPDATE findings SET description = ?1, updated_at = ?2 WHERE id = ?3",
                 params![d, now, finding_id],
+            )
+            .map_err(|e| e.to_string())?;
+        }
+        if let Some(s) = severity {
+            conn.execute(
+                "UPDATE findings SET severity = ?1, updated_at = ?2 WHERE id = ?3",
+                params![s, now, finding_id],
             )
             .map_err(|e| e.to_string())?;
         }
@@ -1147,18 +1271,20 @@ fn create_timeline_event(
     case_id: String,
     description: String,
     occurred_at: Option<String>,
+    event_type: Option<String>,
     state: State<AppState>,
 ) -> Result<TimelineEvent, String> {
     let id = Uuid::new_v4().to_string();
     let occurred = occurred_at.unwrap_or_else(now_iso);
     let created = now_iso();
+    let event_type = event_type.unwrap_or_else(|| "manual".to_string());
     with_conn(&state, |conn| {
         if !case_exists(conn, &case_id)? {
             return Err("case not found".into());
         }
         conn.execute(
-            "INSERT INTO timeline_events (id, case_id, description, occurred_at, source_file_id, event_type, created_at) VALUES (?1, ?2, ?3, ?4, NULL, 'manual', ?5)",
-            params![id, case_id, description, occurred, created],
+            "INSERT INTO timeline_events (id, case_id, description, occurred_at, source_file_id, event_type, created_at) VALUES (?1, ?2, ?3, ?4, NULL, ?5, ?6)",
+            params![id, case_id, description, occurred, event_type, created],
         )
         .map_err(|e| e.to_string())?;
         Ok(TimelineEvent {
@@ -1166,6 +1292,7 @@ fn create_timeline_event(
             case_id,
             description,
             occurred_at: occurred,
+            event_type,
             created_at: created,
         })
     })
@@ -1179,7 +1306,7 @@ fn list_timeline_events(
     with_conn(&state, |conn| {
         let mut stmt = conn
             .prepare(
-                "SELECT id, case_id, description, occurred_at, created_at FROM timeline_events WHERE case_id = ?1 ORDER BY occurred_at ASC",
+                "SELECT id, case_id, description, occurred_at, event_type, created_at FROM timeline_events WHERE case_id = ?1 ORDER BY occurred_at ASC",
             )
             .map_err(|e| e.to_string())?;
         let rows = stmt
@@ -1189,7 +1316,8 @@ fn list_timeline_events(
                     case_id: row.get(1)?,
                     description: row.get(2)?,
                     occurred_at: row.get(3)?,
-                    created_at: row.get(4)?,
+                    event_type: row.get(4)?,
+                    created_at: row.get(5)?,
                 })
             })
             .map_err(|e| e.to_string())?;
@@ -1202,6 +1330,7 @@ fn update_timeline_event(
     event_id: String,
     description: Option<String>,
     occurred_at: Option<String>,
+    event_type: Option<String>,
     state: State<AppState>,
 ) -> Result<TimelineEvent, String> {
     with_conn(&state, |conn| {
@@ -1219,9 +1348,16 @@ fn update_timeline_event(
             )
             .map_err(|e| e.to_string())?;
         }
-        let row: (String, String, String, String, String) = conn
+        if let Some(t) = event_type {
+            conn.execute(
+                "UPDATE timeline_events SET event_type = ?1 WHERE id = ?2",
+                params![t, event_id],
+            )
+            .map_err(|e| e.to_string())?;
+        }
+        let row: (String, String, String, String, String, String) = conn
             .query_row(
-                "SELECT id, case_id, description, occurred_at, created_at FROM timeline_events WHERE id = ?1",
+                "SELECT id, case_id, description, occurred_at, event_type, created_at FROM timeline_events WHERE id = ?1",
                 params![event_id],
                 |row| {
                     Ok((
@@ -1230,6 +1366,7 @@ fn update_timeline_event(
                         row.get(2)?,
                         row.get(3)?,
                         row.get(4)?,
+                        row.get(5)?,
                     ))
                 },
             )
@@ -1239,7 +1376,8 @@ fn update_timeline_event(
             case_id: row.1,
             description: row.2,
             occurred_at: row.3,
-            created_at: row.4,
+            event_type: row.4,
+            created_at: row.5,
         })
     })
 }
@@ -1253,19 +1391,131 @@ fn delete_timeline_event(event_id: String, state: State<AppState>) -> Result<(),
     })
 }
 
+fn parse_iso(ts: &str) -> Result<chrono::DateTime<chrono::FixedOffset>, String> {
+    chrono::DateTime::parse_from_rfc3339(ts).map_err(|e| e.to_string())
+}
+
+fn segment_minutes(started_at: &str, ended_at: Option<&str>) -> Result<i64, String> {
+    let start = parse_iso(started_at)?;
+    let end_ts = match ended_at {
+        Some(ts) => parse_iso(ts)?.timestamp(),
+        None => Utc::now().timestamp(),
+    };
+    Ok((end_ts - start.timestamp()).max(0) / 60)
+}
+
+fn load_segments(conn: &rusqlite::Connection, entry_id: &str) -> Result<Vec<TimeSegment>, String> {
+    let mut stmt = conn
+        .prepare(
+            "SELECT id, entry_id, started_at, ended_at, rate_override, discount_percent, notes
+             FROM time_segments WHERE entry_id = ?1 ORDER BY started_at ASC",
+        )
+        .map_err(|e| e.to_string())?;
+    let rows = stmt
+        .query_map(params![entry_id], |row| {
+            Ok(TimeSegment {
+                id: row.get(0)?,
+                entry_id: row.get(1)?,
+                started_at: row.get(2)?,
+                ended_at: row.get(3)?,
+                rate_override: row.get(4)?,
+                discount_percent: row.get(5)?,
+                notes: row.get(6)?,
+            })
+        })
+        .map_err(|e| e.to_string())?;
+    Ok(rows.filter_map(Result::ok).collect())
+}
+
+fn recalc_entry_billable_minutes(conn: &rusqlite::Connection, entry_id: &str) -> Result<i64, String> {
+    let segments = load_segments(conn, entry_id)?;
+    let total: i64 = segments
+        .iter()
+        .map(|seg| {
+            let raw = segment_minutes(&seg.started_at, seg.ended_at.as_deref()).unwrap_or(0);
+            let discount = seg.discount_percent.clamp(0, 100);
+            raw * (100 - discount) / 100
+        })
+        .sum();
+    conn.execute(
+        "UPDATE time_entries SET billable_minutes = ?1 WHERE id = ?2",
+        params![total, entry_id],
+    )
+    .map_err(|e| e.to_string())?;
+    Ok(total)
+}
+
+fn close_open_segment(conn: &rusqlite::Connection, entry_id: &str, ended_at: &str) -> Result<(), String> {
+    conn.execute(
+        "UPDATE time_segments SET ended_at = ?1
+         WHERE entry_id = ?2 AND ended_at IS NULL",
+        params![ended_at, entry_id],
+    )
+    .map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+fn load_time_entry(conn: &rusqlite::Connection, entry_id: &str) -> Result<TimeEntry, String> {
+    let row: (String, String, String, Option<String>, i64, Option<String>) = conn
+        .query_row(
+            "SELECT id, case_id, started_at, ended_at, billable_minutes, summary
+             FROM time_entries WHERE id = ?1",
+            params![entry_id],
+            |row| {
+                Ok((
+                    row.get(0)?,
+                    row.get(1)?,
+                    row.get(2)?,
+                    row.get(3)?,
+                    row.get(4)?,
+                    row.get(5)?,
+                ))
+            },
+        )
+        .map_err(|_| "time entry not found".to_string())?;
+    let segments = load_segments(conn, entry_id)?;
+    Ok(TimeEntry {
+        id: row.0,
+        case_id: row.1,
+        started_at: row.2,
+        ended_at: row.3,
+        billable_minutes: row.4,
+        summary: row.5,
+        segments,
+    })
+}
+
 #[tauri::command]
 fn start_timer(case_id: String, state: State<AppState>) -> Result<TimeEntry, String> {
     let id = Uuid::new_v4().to_string();
+    let segment_id = Uuid::new_v4().to_string();
     let started = now_iso();
     with_conn(&state, |conn| {
         if !case_exists(conn, &case_id)? {
             return Err("case not found".into());
         }
+        let open: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM time_entries WHERE case_id = ?1 AND ended_at IS NULL",
+                params![case_id],
+                |row| row.get(0),
+            )
+            .map_err(|e| e.to_string())?;
+        if open > 0 {
+            return Err("case already has an open time entry; resume or stop it first".into());
+        }
         conn.execute("DELETE FROM active_timers WHERE case_id = ?1", params![case_id])
             .ok();
         conn.execute(
-            "INSERT INTO time_entries (id, case_id, started_at, ended_at, billable_minutes) VALUES (?1, ?2, ?3, NULL, 0)",
+            "INSERT INTO time_entries (id, case_id, started_at, ended_at, billable_minutes, summary)
+             VALUES (?1, ?2, ?3, NULL, 0, NULL)",
             params![id, case_id, started],
+        )
+        .map_err(|e| e.to_string())?;
+        conn.execute(
+            "INSERT INTO time_segments (id, entry_id, started_at, ended_at, rate_override, discount_percent, notes)
+             VALUES (?1, ?2, ?3, NULL, NULL, 0, NULL)",
+            params![segment_id, id, started],
         )
         .map_err(|e| e.to_string())?;
         conn.execute(
@@ -1273,48 +1523,39 @@ fn start_timer(case_id: String, state: State<AppState>) -> Result<TimeEntry, Str
             params![case_id, id, started],
         )
         .map_err(|e| e.to_string())?;
-        Ok(TimeEntry {
-            id,
-            case_id,
-            started_at: started,
-            ended_at: None,
-            billable_minutes: 0,
-        })
+        load_time_entry(conn, &id)
     })
 }
 
 #[tauri::command]
-fn stop_timer(entry_id: String, state: State<AppState>) -> Result<TimeEntry, String> {
+fn stop_timer(
+    entry_id: String,
+    summary: Option<String>,
+    state: State<AppState>,
+) -> Result<TimeEntry, String> {
     let ended = now_iso();
     with_conn(&state, |conn| {
-        let row: (String, String, String) = conn
+        let row: (String,) = conn
             .query_row(
-                "SELECT id, case_id, started_at FROM time_entries WHERE id = ?1",
+                "SELECT case_id FROM time_entries WHERE id = ?1",
                 params![entry_id],
-                |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+                |row| Ok((row.get(0)?,)),
             )
             .map_err(|_| "timer entry not found".to_string())?;
-        let started = chrono::DateTime::parse_from_rfc3339(&row.2)
-            .map_err(|e| e.to_string())?;
-        let end = chrono::DateTime::parse_from_rfc3339(&ended).map_err(|e| e.to_string())?;
-        let minutes = (end.timestamp() - started.timestamp()).max(0) / 60;
+        close_open_segment(conn, &entry_id, &ended)?;
+        let minutes = recalc_entry_billable_minutes(conn, &entry_id)?;
         conn.execute(
-            "UPDATE time_entries SET ended_at = ?1, billable_minutes = ?2 WHERE id = ?3",
-            params![ended, minutes, entry_id],
+            "UPDATE time_entries SET ended_at = ?1, billable_minutes = ?2, summary = COALESCE(?3, summary)
+             WHERE id = ?4",
+            params![ended, minutes, summary, entry_id],
         )
         .map_err(|e| e.to_string())?;
         conn.execute(
             "DELETE FROM active_timers WHERE case_id = ?1",
-            params![row.1],
+            params![row.0],
         )
         .map_err(|e| e.to_string())?;
-        Ok(TimeEntry {
-            id: row.0,
-            case_id: row.1,
-            started_at: row.2,
-            ended_at: Some(ended),
-            billable_minutes: minutes,
-        })
+        load_time_entry(conn, &entry_id)
     })
 }
 
@@ -1323,40 +1564,341 @@ fn get_time_entries(case_id: String, state: State<AppState>) -> Result<Vec<TimeE
     with_conn(&state, |conn| {
         let mut stmt = conn
             .prepare(
-                "SELECT id, case_id, started_at, ended_at, billable_minutes FROM time_entries WHERE case_id = ?1 ORDER BY started_at DESC",
+                "SELECT id FROM time_entries WHERE case_id = ?1 ORDER BY started_at DESC",
             )
             .map_err(|e| e.to_string())?;
-        let rows = stmt
-            .query_map(params![case_id], |row| {
-                Ok(TimeEntry {
-                    id: row.get(0)?,
-                    case_id: row.get(1)?,
+        let ids: Vec<String> = stmt
+            .query_map(params![case_id], |row| row.get(0))
+            .map_err(|e| e.to_string())?
+            .filter_map(Result::ok)
+            .collect();
+        ids.iter()
+            .map(|id| load_time_entry(conn, id))
+            .collect()
+    })
+}
+
+#[tauri::command]
+fn get_active_timer(case_id: String, state: State<AppState>) -> Result<Option<ActiveTimer>, String> {
+    with_conn(&state, |conn| {
+        let row = conn.query_row(
+            "SELECT case_id, entry_id, started_at FROM active_timers WHERE case_id = ?1",
+            params![case_id],
+            |row| {
+                Ok(ActiveTimer {
+                    case_id: row.get(0)?,
+                    entry_id: row.get(1)?,
                     started_at: row.get(2)?,
-                    ended_at: row.get(3)?,
-                    billable_minutes: row.get(4)?,
                 })
-            })
-            .map_err(|e| e.to_string())?;
-        Ok(rows.filter_map(Result::ok).collect())
+            },
+        );
+        match row {
+            Ok(timer) => Ok(Some(timer)),
+            Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
+            Err(e) => Err(e.to_string()),
+        }
     })
 }
 
 #[tauri::command]
 fn pause_timer(case_id: String, state: State<AppState>) -> Result<TimeEntry, String> {
-    let entry_id = with_conn(&state, |conn| {
-        conn.query_row(
-            "SELECT entry_id FROM active_timers WHERE case_id = ?1",
+    let ended = now_iso();
+    with_conn(&state, |conn| {
+        let entry_id: String = conn
+            .query_row(
+                "SELECT entry_id FROM active_timers WHERE case_id = ?1",
+                params![case_id],
+                |row| row.get(0),
+            )
+            .map_err(|_| "no active timer for case".to_string())?;
+        close_open_segment(conn, &entry_id, &ended)?;
+        recalc_entry_billable_minutes(conn, &entry_id)?;
+        conn.execute(
+            "DELETE FROM active_timers WHERE case_id = ?1",
             params![case_id],
-            |row| row.get::<_, String>(0),
         )
-        .map_err(|_| "no active timer for case".to_string())
-    })?;
-    stop_timer(entry_id, state)
+        .map_err(|e| e.to_string())?;
+        load_time_entry(conn, &entry_id)
+    })
 }
 
 #[tauri::command]
 fn resume_timer(case_id: String, state: State<AppState>) -> Result<TimeEntry, String> {
-    start_timer(case_id, state)
+    let segment_id = Uuid::new_v4().to_string();
+    let started = now_iso();
+    with_conn(&state, |conn| {
+        let active: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM active_timers WHERE case_id = ?1",
+                params![case_id],
+                |row| row.get(0),
+            )
+            .map_err(|e| e.to_string())?;
+        if active > 0 {
+            return Err("timer is already running".into());
+        }
+        let entry_id: String = conn
+            .query_row(
+                "SELECT id FROM time_entries WHERE case_id = ?1 AND ended_at IS NULL
+                 ORDER BY started_at DESC LIMIT 1",
+                params![case_id],
+                |row| row.get(0),
+            )
+            .map_err(|_| "no paused time entry for case".to_string())?;
+        conn.execute(
+            "INSERT INTO time_segments (id, entry_id, started_at, ended_at, rate_override, discount_percent, notes)
+             VALUES (?1, ?2, ?3, NULL, NULL, 0, NULL)",
+            params![segment_id, entry_id, started],
+        )
+        .map_err(|e| e.to_string())?;
+        conn.execute(
+            "INSERT INTO active_timers (case_id, entry_id, started_at) VALUES (?1, ?2, ?3)
+             ON CONFLICT(case_id) DO UPDATE SET entry_id = excluded.entry_id, started_at = excluded.started_at",
+            params![case_id, entry_id, started],
+        )
+        .map_err(|e| e.to_string())?;
+        load_time_entry(conn, &entry_id)
+    })
+}
+
+#[tauri::command]
+fn update_time_entry(
+    entry_id: String,
+    started_at: Option<String>,
+    ended_at: Option<String>,
+    summary: Option<String>,
+    state: State<AppState>,
+) -> Result<TimeEntry, String> {
+    with_conn(&state, |conn| {
+        if started_at.is_none() && ended_at.is_none() && summary.is_none() {
+            return load_time_entry(conn, &entry_id);
+        }
+        if let Some(ref started) = started_at {
+            conn.execute(
+                "UPDATE time_entries SET started_at = ?1 WHERE id = ?2",
+                params![started, entry_id],
+            )
+            .map_err(|e| e.to_string())?;
+        }
+        if let Some(ref ended) = ended_at {
+            conn.execute(
+                "UPDATE time_entries SET ended_at = ?1 WHERE id = ?2",
+                params![ended, entry_id],
+            )
+            .map_err(|e| e.to_string())?;
+        }
+        if let Some(ref text) = summary {
+            conn.execute(
+                "UPDATE time_entries SET summary = ?1 WHERE id = ?2",
+                params![text, entry_id],
+            )
+            .map_err(|e| e.to_string())?;
+        }
+        recalc_entry_billable_minutes(conn, &entry_id)?;
+        load_time_entry(conn, &entry_id)
+    })
+}
+
+#[tauri::command]
+fn create_time_segment(
+    entry_id: String,
+    started_at: String,
+    ended_at: Option<String>,
+    rate_override: Option<f64>,
+    discount_percent: Option<i64>,
+    notes: Option<String>,
+    state: State<AppState>,
+) -> Result<TimeSegment, String> {
+    let id = Uuid::new_v4().to_string();
+    let discount = discount_percent.unwrap_or(0);
+    with_conn(&state, |conn| {
+        conn.query_row(
+            "SELECT id FROM time_entries WHERE id = ?1",
+            params![entry_id],
+            |_| Ok(()),
+        )
+        .map_err(|_| "time entry not found".to_string())?;
+        conn.execute(
+            "INSERT INTO time_segments (id, entry_id, started_at, ended_at, rate_override, discount_percent, notes)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+            params![id, entry_id, started_at, ended_at, rate_override, discount, notes],
+        )
+        .map_err(|e| e.to_string())?;
+        recalc_entry_billable_minutes(conn, &entry_id)?;
+        let segments = load_segments(conn, &entry_id)?;
+        segments
+            .into_iter()
+            .find(|s| s.id == id)
+            .ok_or_else(|| "segment not found after insert".to_string())
+    })
+}
+
+#[tauri::command]
+fn update_time_segment(
+    segment_id: String,
+    started_at: Option<String>,
+    ended_at: Option<String>,
+    rate_override: Option<f64>,
+    discount_percent: Option<i64>,
+    notes: Option<String>,
+    state: State<AppState>,
+) -> Result<TimeSegment, String> {
+    with_conn(&state, |conn| {
+        let entry_id: String = conn
+            .query_row(
+                "SELECT entry_id FROM time_segments WHERE id = ?1",
+                params![segment_id],
+                |row| row.get(0),
+            )
+            .map_err(|_| "time segment not found".to_string())?;
+        if let Some(ref started) = started_at {
+            conn.execute(
+                "UPDATE time_segments SET started_at = ?1 WHERE id = ?2",
+                params![started, segment_id],
+            )
+            .map_err(|e| e.to_string())?;
+        }
+        if ended_at.is_some() {
+            conn.execute(
+                "UPDATE time_segments SET ended_at = ?1 WHERE id = ?2",
+                params![ended_at, segment_id],
+            )
+            .map_err(|e| e.to_string())?;
+        }
+        if rate_override.is_some() {
+            conn.execute(
+                "UPDATE time_segments SET rate_override = ?1 WHERE id = ?2",
+                params![rate_override, segment_id],
+            )
+            .map_err(|e| e.to_string())?;
+        }
+        if let Some(discount) = discount_percent {
+            conn.execute(
+                "UPDATE time_segments SET discount_percent = ?1 WHERE id = ?2",
+                params![discount, segment_id],
+            )
+            .map_err(|e| e.to_string())?;
+        }
+        if notes.is_some() {
+            conn.execute(
+                "UPDATE time_segments SET notes = ?1 WHERE id = ?2",
+                params![notes, segment_id],
+            )
+            .map_err(|e| e.to_string())?;
+        }
+        recalc_entry_billable_minutes(conn, &entry_id)?;
+        let segments = load_segments(conn, &entry_id)?;
+        segments
+            .into_iter()
+            .find(|s| s.id == segment_id)
+            .ok_or_else(|| "segment not found after update".to_string())
+    })
+}
+
+#[tauri::command]
+fn delete_time_segment(segment_id: String, state: State<AppState>) -> Result<(), String> {
+    with_conn(&state, |conn| {
+        let entry_id: String = conn
+            .query_row(
+                "SELECT entry_id FROM time_segments WHERE id = ?1",
+                params![segment_id],
+                |row| row.get(0),
+            )
+            .map_err(|_| "time segment not found".to_string())?;
+        conn.execute("DELETE FROM time_segments WHERE id = ?1", params![segment_id])
+            .map_err(|e| e.to_string())?;
+        recalc_entry_billable_minutes(conn, &entry_id)?;
+        Ok(())
+    })
+}
+
+#[tauri::command]
+fn delete_time_entry(entry_id: String, state: State<AppState>) -> Result<(), String> {
+    with_conn(&state, |conn| {
+        let case_id: String = conn
+            .query_row(
+                "SELECT case_id FROM time_entries WHERE id = ?1",
+                params![entry_id],
+                |row| row.get(0),
+            )
+            .map_err(|_| "time entry not found".to_string())?;
+        conn.execute("DELETE FROM active_timers WHERE case_id = ?1", params![case_id])
+            .ok();
+        conn.execute("DELETE FROM time_segments WHERE entry_id = ?1", params![entry_id])
+            .map_err(|e| e.to_string())?;
+        conn.execute("DELETE FROM time_entries WHERE id = ?1", params![entry_id])
+            .map_err(|e| e.to_string())?;
+        Ok(())
+    })
+}
+
+#[tauri::command]
+fn get_case_billing_config(case_id: String, state: State<AppState>) -> Result<CaseBillingConfig, String> {
+    with_conn(&state, |conn| {
+        let row = conn.query_row(
+            "SELECT case_id, billing_type, fixed_price, pay_rate, rate_unit
+             FROM case_billing_config WHERE case_id = ?1",
+            params![case_id],
+            |row| {
+                Ok(CaseBillingConfig {
+                    case_id: row.get(0)?,
+                    billing_type: row.get(1)?,
+                    fixed_price: row.get(2)?,
+                    pay_rate: row.get(3)?,
+                    rate_unit: row.get(4)?,
+                })
+            },
+        );
+        match row {
+            Ok(config) => Ok(config),
+            Err(rusqlite::Error::QueryReturnedNoRows) => Ok(CaseBillingConfig {
+                case_id,
+                billing_type: "pay_rate".to_string(),
+                fixed_price: None,
+                pay_rate: 150.0,
+                rate_unit: "hourly".to_string(),
+            }),
+            Err(e) => Err(e.to_string()),
+        }
+    })
+}
+
+#[tauri::command]
+fn set_case_billing_config(
+    case_id: String,
+    billing_type: String,
+    fixed_price: Option<f64>,
+    pay_rate: Option<f64>,
+    rate_unit: Option<String>,
+    state: State<AppState>,
+) -> Result<CaseBillingConfig, String> {
+    let now = now_iso();
+    let rate = pay_rate.unwrap_or(150.0);
+    let unit = rate_unit.unwrap_or_else(|| "hourly".to_string());
+    with_conn(&state, |conn| {
+        if !case_exists(conn, &case_id)? {
+            return Err("case not found".into());
+        }
+        conn.execute(
+            "INSERT INTO case_billing_config (case_id, billing_type, fixed_price, pay_rate, rate_unit, created_at, updated_at)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?6)
+             ON CONFLICT(case_id) DO UPDATE SET
+               billing_type = excluded.billing_type,
+               fixed_price = excluded.fixed_price,
+               pay_rate = excluded.pay_rate,
+               rate_unit = excluded.rate_unit,
+               updated_at = excluded.updated_at",
+            params![case_id, billing_type, fixed_price, rate, unit, now],
+        )
+        .map_err(|e| e.to_string())?;
+        Ok(CaseBillingConfig {
+            case_id: case_id.clone(),
+            billing_type,
+            fixed_price,
+            pay_rate: rate,
+            rate_unit: unit,
+        })
+    })
 }
 
 #[tauri::command]
@@ -1444,6 +1986,146 @@ fn save_mapping_config_db(case_id: String, config_data: String, state: State<App
     })
 }
 
+fn reapply_mappings_inner(
+    conn: &rusqlite::Connection,
+    case_id: &str,
+) -> Result<u32, String> {
+    use field_extraction::{apply_mapping_rule, folder_name_from_path, parse_mapping_rule, RegexCache};
+    use std::collections::HashMap;
+
+    let mapping_config_json: Option<String> = conn
+        .query_row(
+            "SELECT config_data FROM mapping_configs WHERE case_id = ?1",
+            params![case_id],
+            |row| row.get(0),
+        )
+        .ok();
+
+    let Some(mapping_config_json) = mapping_config_json else {
+        return Ok(0);
+    };
+
+    let mapping_config: serde_json::Value = serde_json::from_str(&mapping_config_json)
+        .map_err(|e| format!("Failed to parse mapping config: {e}"))?;
+
+    let mappings = mapping_config
+        .get("mappings")
+        .and_then(|m| m.as_array())
+        .cloned()
+        .unwrap_or_default();
+
+    if mappings.is_empty() {
+        return Ok(0);
+    }
+
+    let rules: Vec<_> = mappings
+        .iter()
+        .filter_map(parse_mapping_rule)
+        .collect();
+
+    if rules.is_empty() {
+        return Ok(0);
+    }
+
+    let mut stmt = conn
+        .prepare(
+            "SELECT f.id, f.file_name, f.folder_path, fm.metadata_json
+             FROM files f
+             LEFT JOIN file_metadata fm ON f.id = fm.file_id
+             WHERE f.case_id = ?1 AND f.deleted_at IS NULL",
+        )
+        .map_err(|e| e.to_string())?;
+
+    let rows = stmt
+        .query_map(params![case_id], |row| {
+            Ok((
+                row.get::<_, String>(0)?,
+                row.get::<_, String>(1)?,
+                row.get::<_, Option<String>>(2)?,
+                row.get::<_, Option<String>>(3)?,
+            ))
+        })
+        .map_err(|e| e.to_string())?
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|e| e.to_string())?;
+
+    let mut regex_cache = RegexCache::new();
+    let mut updated_count = 0u32;
+
+    for (file_id, file_name, folder_path_opt, existing_metadata) in rows {
+        let folder_path = folder_path_opt.unwrap_or_default();
+        let folder_name = folder_name_from_path(&folder_path);
+
+        let mut metadata_obj: serde_json::Value = existing_metadata
+            .as_ref()
+            .and_then(|s| serde_json::from_str(s).ok())
+            .unwrap_or_else(|| serde_json::json!({}));
+
+        let mut metadata_map = HashMap::new();
+        metadata_map.insert("file_name".to_string(), file_name.clone());
+        metadata_map.insert("folder_name".to_string(), folder_name.clone());
+        metadata_map.insert("folder_path".to_string(), folder_path.clone());
+
+        if let Some(obj) = metadata_obj.as_object() {
+            for (key, value) in obj {
+                if let Some(s) = value.as_str() {
+                    metadata_map.insert(key.clone(), s.to_string());
+                }
+            }
+        }
+
+        let mut inventory = metadata_obj
+            .get("inventory")
+            .and_then(|v| v.as_object())
+            .cloned()
+            .unwrap_or_default();
+
+        for rule in &rules {
+            if let Ok(Some(extracted)) = apply_mapping_rule(
+                rule,
+                &file_name,
+                &folder_name,
+                &folder_path,
+                &metadata_map,
+                &mut regex_cache,
+            ) {
+                inventory.insert(
+                    rule.target_field.clone(),
+                    serde_json::Value::String(extracted),
+                );
+            }
+        }
+
+        if let Some(obj) = metadata_obj.as_object_mut() {
+            obj.insert(
+                "inventory".to_string(),
+                serde_json::Value::Object(inventory),
+            );
+        } else {
+            metadata_obj = serde_json::json!({ "inventory": inventory });
+        }
+
+        let metadata_json = serde_json::to_string(&metadata_obj)
+            .map_err(|e| format!("Failed to serialize metadata: {e}"))?;
+
+        conn.execute(
+            "INSERT INTO file_metadata (file_id, metadata_json, extracted_at) VALUES (?1, ?2, ?3)
+             ON CONFLICT(file_id) DO UPDATE SET metadata_json = excluded.metadata_json, extracted_at = excluded.extracted_at",
+            params![file_id, metadata_json, now_iso()],
+        )
+        .map_err(|e| e.to_string())?;
+
+        updated_count += 1;
+    }
+
+    Ok(updated_count)
+}
+
+#[tauri::command]
+fn reapply_mappings_to_case(case_id: String, state: State<AppState>) -> Result<u32, String> {
+    with_conn(&state, |conn| reapply_mappings_inner(conn, &case_id))
+}
+
 #[tauri::command]
 fn get_workspace_preferences_db(
     case_id: String,
@@ -1516,7 +2198,7 @@ fn extract_file_metadata(
     })
 }
 
-fn fts_search(
+pub fn fts_search(
     conn: &rusqlite::Connection,
     case_id: &str,
     query: &str,
@@ -1576,6 +2258,52 @@ fn fts_search(
         .map_err(|e| e.to_string())?;
     hits.extend(note_rows.filter_map(Result::ok));
 
+    let mut finding_stmt = conn
+        .prepare(
+            r#"
+            SELECT f.id, f.title, substr(f.description, 1, 80)
+            FROM findings_fts fts
+            JOIN findings f ON f.rowid = fts.rowid
+            WHERE findings_fts MATCH ?1 AND f.case_id = ?2
+            LIMIT ?3
+            "#,
+        )
+        .map_err(|e| e.to_string())?;
+    let finding_rows = finding_stmt
+        .query_map(params![term, case_id, lim], |row| {
+            Ok(SearchHit {
+                id: row.get(0)?,
+                entity_type: "finding".to_string(),
+                title: row.get(1)?,
+                snippet: row.get(2)?,
+            })
+        })
+        .map_err(|e| e.to_string())?;
+    hits.extend(finding_rows.filter_map(Result::ok));
+
+    let mut timeline_stmt = conn
+        .prepare(
+            r#"
+            SELECT t.id, substr(t.description, 1, 60), substr(t.description, 1, 120)
+            FROM timeline_events_fts fts
+            JOIN timeline_events t ON t.rowid = fts.rowid
+            WHERE timeline_events_fts MATCH ?1 AND t.case_id = ?2
+            LIMIT ?3
+            "#,
+        )
+        .map_err(|e| e.to_string())?;
+    let timeline_rows = timeline_stmt
+        .query_map(params![term, case_id, lim], |row| {
+            Ok(SearchHit {
+                id: row.get(0)?,
+                entity_type: "timeline".to_string(),
+                title: row.get(1)?,
+                snippet: row.get(2)?,
+            })
+        })
+        .map_err(|e| e.to_string())?;
+    hits.extend(timeline_rows.filter_map(Result::ok));
+
     Ok(hits)
 }
 
@@ -1633,15 +2361,34 @@ fn search_all(
     query: String,
     limit: Option<u32>,
     state: State<AppState>,
-) -> Result<Vec<String>, String> {
-    let hits = search_files(case_id.clone(), query.clone(), limit, state.clone())?;
-    let mut ids: Vec<String> = hits
-        .into_iter()
-        .map(|h| format!("{}:{}", h.entity_type, h.id))
-        .collect();
-    let note_hits = search_notes(case_id, query, limit, state)?;
-    ids.extend(note_hits.into_iter().map(|h| format!("{}:{}", h.entity_type, h.id)));
-    Ok(ids)
+) -> Result<Vec<SearchHit>, String> {
+    with_conn(&state, |conn| fts_search(conn, &case_id, &query, limit.unwrap_or(50)))
+}
+
+#[tauri::command]
+async fn check_for_update(app: AppHandle) -> Result<Option<UpdateCheckResult>, String> {
+    #[cfg(desktop)]
+    {
+        use tauri_plugin_updater::UpdaterExt;
+
+        let updater = match app.updater() {
+            Ok(updater) => updater,
+            Err(_) => return Ok(None),
+        };
+
+        match updater.check().await {
+            Ok(Some(update)) => Ok(Some(UpdateCheckResult {
+                version: update.version,
+                current_version: update.current_version,
+            })),
+            Ok(None) | Err(_) => Ok(None),
+        }
+    }
+    #[cfg(not(desktop))]
+    {
+        let _ = app;
+        Ok(None)
+    }
 }
 
 #[tauri::command]
@@ -1817,10 +2564,57 @@ fn export_case_report(
     let file_name = format!("{}-{}-{}.md", case_id, report_type, unix_now());
     let file_path = dir.join(&file_name);
     fs::write(&file_path, body).map_err(|e| e.to_string())?;
-    Ok(ReportExport {
-        report_type,
+    let generated_at = now_iso();
+    let export = ReportExport {
+        report_type: report_type.clone(),
         file_path: file_path.to_string_lossy().to_string(),
-        generated_at: now_iso(),
+        generated_at: generated_at.clone(),
+    };
+    with_conn(&state, |conn| {
+        if !case_exists(conn, &case_id)? {
+            return Err("case not found".into());
+        }
+        let id = Uuid::new_v4().to_string();
+        conn.execute(
+            "INSERT INTO report_export_history (id, case_id, report_type, file_path, generated_at) VALUES (?1, ?2, ?3, ?4, ?5)",
+            params![id, case_id, report_type, export.file_path, generated_at],
+        )
+        .map_err(|e| e.to_string())?;
+        Ok(())
+    })?;
+    Ok(export)
+}
+
+#[tauri::command]
+fn list_report_exports(
+    case_id: String,
+    state: State<AppState>,
+) -> Result<Vec<ReportExportHistoryEntry>, String> {
+    with_conn(&state, |conn| {
+        if !case_exists(conn, &case_id)? {
+            return Err("case not found".into());
+        }
+        let mut stmt = conn
+            .prepare(
+                "SELECT id, case_id, report_type, file_path, generated_at
+                 FROM report_export_history
+                 WHERE case_id = ?1
+                 ORDER BY generated_at DESC
+                 LIMIT 100",
+            )
+            .map_err(|e| e.to_string())?;
+        let rows = stmt
+            .query_map(params![case_id], |row| {
+                Ok(ReportExportHistoryEntry {
+                    id: row.get(0)?,
+                    case_id: row.get(1)?,
+                    report_type: row.get(2)?,
+                    file_path: row.get(3)?,
+                    generated_at: row.get(4)?,
+                })
+            })
+            .map_err(|e| e.to_string())?;
+        Ok(rows.filter_map(Result::ok).collect())
     })
 }
 
@@ -1831,9 +2625,18 @@ fn generate_case_report(case_id: String, state: State<AppState>) -> Result<Strin
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    tauri::Builder::default()
+    let mut builder = tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
-        .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_dialog::init());
+
+    #[cfg(desktop)]
+    {
+        builder = builder
+            .plugin(tauri_plugin_updater::Builder::new().build())
+            .plugin(tauri_plugin_process::init());
+    }
+
+    builder
         .setup(|app| {
             let data_dir = app
                 .path()
@@ -1887,11 +2690,20 @@ pub fn run() {
             pause_timer,
             resume_timer,
             get_time_entries,
+            get_active_timer,
+            update_time_entry,
+            create_time_segment,
+            update_time_segment,
+            delete_time_segment,
+            delete_time_entry,
+            get_case_billing_config,
+            set_case_billing_config,
             calculate_billing_amount,
             get_column_config_db,
             save_column_config_db,
             get_mapping_config_db,
             save_mapping_config_db,
+            reapply_mappings_to_case,
             get_workspace_preferences_db,
             save_workspace_preferences_db,
             search_files,
@@ -1904,7 +2716,9 @@ pub fn run() {
             extract_file_metadata,
             run_ocr_preview,
             export_case_report,
+            list_report_exports,
             generate_case_report,
+            check_for_update,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

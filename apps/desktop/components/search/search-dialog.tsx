@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { FileText, Search, StickyNote, AlertTriangle, Clock3 } from "lucide-react";
-import type { CaseFile, SearchHit } from "@repo/types";
+import type { CaseFile, Finding, SearchHit, TimelineEvent } from "@repo/types";
 import {
   CommandDialog,
   CommandEmpty,
@@ -18,6 +18,8 @@ interface SearchDialogProps {
   onOpenChange: (open: boolean) => void;
   caseId: string;
   files: CaseFile[];
+  findings?: Finding[];
+  timeline?: TimelineEvent[];
   onFileOpen: (file: CaseFile) => void;
   onOpenEntityPanel: (entityType: string) => void;
 }
@@ -36,6 +38,8 @@ export function SearchDialog({
   onOpenChange,
   caseId,
   files,
+  findings = [],
+  timeline = [],
   onFileOpen,
   onOpenEntityPanel,
 }: SearchDialogProps) {
@@ -103,9 +107,23 @@ export function SearchDialog({
             {entityHits.map((hit) => {
               const Icon = getEntityIcon(hit.entityType);
               const value = `${hit.entityType}:${hit.id}:${hit.title}`;
+              const entity = hit.entityType.toLowerCase();
               const matchingFile =
-                fileIndex.get(hit.id) ??
-                files.find((f) => f.fileName.toLowerCase() === hit.title.toLowerCase());
+                entity.includes("file")
+                  ? fileIndex.get(hit.id) ??
+                    files.find(
+                      (f) =>
+                        f.fileName.toLowerCase() === hit.title.toLowerCase(),
+                    )
+                  : undefined;
+              const matchingFinding =
+                entity.includes("finding")
+                  ? findings.find((f) => f.id === hit.id)
+                  : undefined;
+              const matchingTimeline =
+                entity.includes("timeline")
+                  ? timeline.find((t) => t.id === hit.id)
+                  : undefined;
 
               return (
                 <CommandItem
@@ -114,6 +132,8 @@ export function SearchDialog({
                   onSelect={() => {
                     if (matchingFile) {
                       onFileOpen(matchingFile);
+                    } else if (matchingFinding || matchingTimeline) {
+                      onOpenEntityPanel(hit.entityType);
                     } else {
                       onOpenEntityPanel(hit.entityType);
                     }

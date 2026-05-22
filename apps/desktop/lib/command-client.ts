@@ -2,7 +2,9 @@
 
 import { invoke } from "@tauri-apps/api/core";
 import type {
+  ActiveTimer,
   BillingSummary,
+  CaseBillingConfig,
   CaseFile,
   CaseSummary,
   CommandResponse,
@@ -11,9 +13,11 @@ import type {
   Finding,
   Note,
   ReportExport,
+  ReportExportHistoryEntry,
   SearchHit,
   TimelineEvent,
   TimeEntry,
+  TimeSegment,
 } from "@repo/types";
 
 function toResponse<T>(data: T): CommandResponse<T> {
@@ -58,6 +62,16 @@ export const commandClient = {
   getCase(caseId: string) {
     return safeInvoke<CaseSummary>("get_case", { caseId });
   },
+  updateCaseMetadata(
+    caseId: string,
+    updates: { name?: string; status?: string },
+  ) {
+    return safeInvoke<CaseSummary>("update_case_metadata", {
+      caseId,
+      name: updates.name,
+      status: updates.status,
+    });
+  },
   deleteCase(caseId: string) {
     return safeInvoke<void>("delete_case", { caseId });
   },
@@ -66,6 +80,9 @@ export const commandClient = {
   },
   listCaseSources(caseId: string) {
     return safeInvoke<string[]>("list_case_sources", { caseId });
+  },
+  countDirectoryFiles(path: string) {
+    return safeInvoke<number>("count_directory_files", { path });
   },
   ingestFilesToCase(
     caseId: string,
@@ -154,21 +171,33 @@ export const commandClient = {
   deleteNote(noteId: string) {
     return safeInvoke<void>("delete_note", { noteId });
   },
-  createFinding(caseId: string, title: string, description: string) {
+  createFinding(
+    caseId: string,
+    title: string,
+    description: string,
+    severity = "medium",
+  ) {
     return safeInvoke<Finding>("create_finding", {
       caseId,
       title,
       description,
+      severity,
     });
   },
   listFindings(caseId: string) {
     return safeInvoke<Finding[]>("list_findings", { caseId });
   },
-  updateFinding(findingId: string, title: string, description: string) {
+  updateFinding(
+    findingId: string,
+    title: string,
+    description: string,
+    severity?: string,
+  ) {
     return safeInvoke<Finding>("update_finding", {
       findingId,
       title,
       description,
+      severity,
     });
   },
   deleteFinding(findingId: string) {
@@ -178,21 +207,29 @@ export const commandClient = {
     caseId: string,
     description: string,
     occurredAt?: string,
+    eventType = "manual",
   ) {
     return safeInvoke<TimelineEvent>("create_timeline_event", {
       caseId,
       description,
       occurredAt,
+      eventType,
     });
   },
   listTimelineEvents(caseId: string) {
     return safeInvoke<TimelineEvent[]>("list_timeline_events", { caseId });
   },
-  updateTimelineEvent(eventId: string, description: string, occurredAt?: string) {
+  updateTimelineEvent(
+    eventId: string,
+    description: string,
+    occurredAt?: string,
+    eventType?: string,
+  ) {
     return safeInvoke<TimelineEvent>("update_timeline_event", {
       eventId,
       description,
       occurredAt,
+      eventType,
     });
   },
   deleteTimelineEvent(eventId: string) {
@@ -207,8 +244,8 @@ export const commandClient = {
   startTimer(caseId: string) {
     return safeInvoke<TimeEntry>("start_timer", { caseId });
   },
-  stopTimer(entryId: string) {
-    return safeInvoke<TimeEntry>("stop_timer", { entryId });
+  stopTimer(entryId: string, summary?: string) {
+    return safeInvoke<TimeEntry>("stop_timer", { entryId, summary });
   },
   pauseTimer(caseId: string) {
     return safeInvoke<TimeEntry>("pause_timer", { caseId });
@@ -218,6 +255,88 @@ export const commandClient = {
   },
   getTimeEntries(caseId: string) {
     return safeInvoke<TimeEntry[]>("get_time_entries", { caseId });
+  },
+  getActiveTimer(caseId: string) {
+    return safeInvoke<ActiveTimer | null>("get_active_timer", { caseId });
+  },
+  updateTimeEntry(
+    entryId: string,
+    updates: {
+      startedAt?: string;
+      endedAt?: string;
+      summary?: string;
+    },
+  ) {
+    return safeInvoke<TimeEntry>("update_time_entry", {
+      entryId,
+      startedAt: updates.startedAt,
+      endedAt: updates.endedAt,
+      summary: updates.summary,
+    });
+  },
+  createTimeSegment(
+    entryId: string,
+    payload: {
+      startedAt: string;
+      endedAt?: string;
+      rateOverride?: number;
+      discountPercent?: number;
+      notes?: string;
+    },
+  ) {
+    return safeInvoke<TimeSegment>("create_time_segment", {
+      entryId,
+      startedAt: payload.startedAt,
+      endedAt: payload.endedAt,
+      rateOverride: payload.rateOverride,
+      discountPercent: payload.discountPercent,
+      notes: payload.notes,
+    });
+  },
+  updateTimeSegment(
+    segmentId: string,
+    payload: {
+      startedAt?: string;
+      endedAt?: string;
+      rateOverride?: number;
+      discountPercent?: number;
+      notes?: string;
+    },
+  ) {
+    return safeInvoke<TimeSegment>("update_time_segment", {
+      segmentId,
+      startedAt: payload.startedAt,
+      endedAt: payload.endedAt,
+      rateOverride: payload.rateOverride,
+      discountPercent: payload.discountPercent,
+      notes: payload.notes,
+    });
+  },
+  deleteTimeSegment(segmentId: string) {
+    return safeInvoke<void>("delete_time_segment", { segmentId });
+  },
+  deleteTimeEntry(entryId: string) {
+    return safeInvoke<void>("delete_time_entry", { entryId });
+  },
+  getCaseBillingConfig(caseId: string) {
+    return safeInvoke<CaseBillingConfig>("get_case_billing_config", { caseId });
+  },
+  setCaseBillingConfig(
+    caseId: string,
+    payload: {
+      billingType: string;
+      fixedPrice?: number;
+      payRate?: number;
+      rateUnit?: string;
+    },
+  ) {
+    return safeInvoke<CaseBillingConfig>("set_case_billing_config", {
+      caseId,
+      billingType: payload.billingType,
+      fixedPrice: payload.fixedPrice,
+      payRate: payload.payRate,
+      rateUnit: payload.rateUnit,
+    });
   },
   calculateBillingAmount(caseId: string) {
     return safeInvoke<BillingSummary>("calculate_billing_amount", { caseId });
@@ -246,6 +365,9 @@ export const commandClient = {
   saveMappingConfigDb(caseId: string, configData: string) {
     return safeInvoke<void>("save_mapping_config_db", { caseId, configData });
   },
+  reapplyMappingsToCase(caseId: string) {
+    return safeInvoke<number>("reapply_mappings_to_case", { caseId });
+  },
   getWorkspacePreferencesDb(caseId: string) {
     return safeInvoke<string | null>("get_workspace_preferences_db", { caseId });
   },
@@ -256,6 +378,11 @@ export const commandClient = {
     return safeInvoke<ReportExport>("export_case_report", {
       caseId,
       reportType,
+    });
+  },
+  listReportExports(caseId: string) {
+    return safeInvoke<ReportExportHistoryEntry[]>("list_report_exports", {
+      caseId,
     });
   },
   generateCaseReport(caseId: string) {

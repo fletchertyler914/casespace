@@ -3,11 +3,45 @@ use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 
-const SCHEMA_VERSION: i32 = 2;
+const SCHEMA_VERSION: i32 = 5;
 
 const MIGRATION_V2: &str = r#"
 ALTER TABLE files ADD COLUMN source_path TEXT;
 CREATE INDEX IF NOT EXISTS idx_files_source_path ON files(case_id, source_path);
+"#;
+
+const MIGRATION_V3: &str = r#"
+ALTER TABLE findings ADD COLUMN linked_files TEXT;
+"#;
+
+const MIGRATION_V4: &str = r#"
+ALTER TABLE time_entries ADD COLUMN summary TEXT;
+
+CREATE TABLE IF NOT EXISTS time_segments (
+    id TEXT PRIMARY KEY,
+    entry_id TEXT NOT NULL,
+    started_at TEXT NOT NULL,
+    ended_at TEXT,
+    rate_override REAL,
+    discount_percent INTEGER DEFAULT 0,
+    notes TEXT,
+    FOREIGN KEY (entry_id) REFERENCES time_entries(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_time_segments_entry_id ON time_segments(entry_id);
+"#;
+
+const MIGRATION_V5: &str = r#"
+CREATE TABLE IF NOT EXISTS report_export_history (
+    id TEXT PRIMARY KEY,
+    case_id TEXT NOT NULL,
+    report_type TEXT NOT NULL,
+    file_path TEXT NOT NULL,
+    generated_at TEXT NOT NULL,
+    FOREIGN KEY (case_id) REFERENCES cases(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_report_export_history_case_id ON report_export_history(case_id);
 "#;
 
 const MIGRATION_V1: &str = r#"
@@ -268,6 +302,39 @@ impl Database {
         if version == 2 {
             conn.execute_batch(MIGRATION_V2)
                 .map_err(|e| format!("migration v2 failed: {e}"))?;
+        }
+        if version == 3 {
+            let _ = conn.execute_batch(MIGRATION_V3);
+        }
+        if version == 4 {
+            conn.execute_batch(MIGRATION_V4)
+                .map_err(|e| format!("migration v4 failed: {e}"))?;
+            let mut stmt = conn
+                .prepare(
+                    "SELECT id, started_at, ended_at FROM time_entries
+                     WHERE id NOT IN (SELECT DISTINCT entry_id FROM time_segments)",
+                )
+                .map_err(|e| format!("migration v4 backfill prepare: {e}"))?;
+            let rows: Vec<(String, String, Option<String>)> = stmt
+                .query_map([], |row| {
+                    Ok((row.get(0)?, row.get(1)?, row.get(2)?))
+                })
+                .map_err(|e| format!("migration v4 backfill query: {e}"))?
+                .filter_map(Result::ok)
+                .collect();
+            for (entry_id, started_at, ended_at) in rows {
+                let segment_id = uuid::Uuid::new_v4().to_string();
+                conn.execute(
+                    "INSERT INTO time_segments (id, entry_id, started_at, ended_at, rate_override, discount_percent, notes)
+                     VALUES (?1, ?2, ?3, ?4, NULL, 0, NULL)",
+                    params![segment_id, entry_id, started_at, ended_at],
+                )
+                .map_err(|e| format!("migration v4 backfill insert: {e}"))?;
+            }
+        }
+        if version == 5 {
+            conn.execute_batch(MIGRATION_V5)
+                .map_err(|e| format!("migration v5 failed: {e}"))?;
         }
         let now = chrono::Utc::now().to_rfc3339();
         conn.execute(

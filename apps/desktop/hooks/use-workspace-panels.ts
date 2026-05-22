@@ -1,5 +1,24 @@
 import { useMemo } from "react";
 
+/** Panel size percentages — aligned with v1 `useWorkspacePanels` defaults. */
+function visibleCount(flags: boolean[]): number {
+  return flags.filter(Boolean).length;
+}
+
+function fileViewerSizeFor(count: number): number {
+  if (count >= 3) return 35;
+  if (count === 2) return 50;
+  if (count === 1) return 60;
+  return 100;
+}
+
+function sidePanelSizeFor(count: number, whenMany: number, whenTwo: number, whenOne: number): number {
+  if (count >= 3) return whenMany;
+  if (count === 2) return whenTwo;
+  if (count === 1) return whenOne;
+  return 35;
+}
+
 export function useWorkspacePanels(options: {
   notesVisible: boolean;
   findingsVisible: boolean;
@@ -18,18 +37,28 @@ export function useWorkspacePanels(options: {
   } = options;
 
   return useMemo(() => {
-    const sideCount = [
+    const flags = [
       notesVisible,
       findingsVisible,
       timelineVisible,
       duplicatesVisible,
       reportsVisible,
       timeVisible,
-    ].filter(Boolean).length;
-    const sideTotal = sideCount > 0 ? Math.min(60, sideCount * 18) : 0;
+    ];
+    const count = visibleCount(flags);
+    const fileViewerSize = fileViewerSizeFor(count);
+
     return {
-      fileViewerSize: 100 - sideTotal,
-      sidePanelSize: sideCount > 0 ? sideTotal / sideCount : 20,
+      fileViewerSize,
+      notesPanelSize: sidePanelSizeFor(count, 15, 20, 25),
+      findingsPanelSize: sidePanelSizeFor(count, 18, 22, 25),
+      timelinePanelSize: sidePanelSizeFor(count, 20, 30, 35),
+      duplicatesPanelSize: sidePanelSizeFor(count, 20, 30, 35),
+      reportsPanelSize: sidePanelSizeFor(count, 20, 28, 35),
+      timePanelSize: sidePanelSizeFor(count, 20, 28, 35),
+      /** @deprecated Use panel-specific sizes above */
+      sidePanelSize: sidePanelSizeFor(count, 18, 22, 35),
+      visiblePanelCount: count,
     };
   }, [
     notesVisible,

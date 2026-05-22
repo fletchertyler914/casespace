@@ -7,6 +7,7 @@ import {
   FolderOpen,
   Plus,
   Search,
+  Settings,
   X,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -23,9 +24,11 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { AppSettingsDialog } from "@/components/settings/app-settings-dialog";
 import { CaseListCard, type CaseWithCounts } from "./case-list-card";
 import { CaseListViewMode } from "./case-list-view-mode";
 import { CreateCaseDialog } from "./create-case-dialog";
+import { EditCaseDialog } from "./edit-case-dialog";
 import { DeleteCaseConfirmationDialog } from "./delete-case-confirmation-dialog";
 import { useDebounce } from "@/hooks/use-debounce";
 import { useToast } from "@/hooks/use-toast";
@@ -47,6 +50,8 @@ export function CaseListView() {
     new Set(),
   );
   const [createOpen, setCreateOpen] = useState(false);
+  const [editTarget, setEditTarget] = useState<CaseSummary | null>(null);
+  const [appSettingsOpen, setAppSettingsOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<CaseSummary | null>(null);
   const [deleting, setDeleting] = useState(false);
 
@@ -206,6 +211,14 @@ export function CaseListView() {
     [refresh, router, toast],
   );
 
+  const handleEditRequest = useCallback(
+    (case_: CaseSummary, e: React.MouseEvent) => {
+      e.stopPropagation();
+      setEditTarget(case_);
+    },
+    [],
+  );
+
   const handleDeleteRequest = useCallback(
     (case_: CaseSummary, e: React.MouseEvent) => {
       e.stopPropagation();
@@ -303,7 +316,18 @@ export function CaseListView() {
                 </p>
               </div>
             </div>
-            <ThemeToggle />
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-9 w-9"
+                title="App settings"
+                onClick={() => setAppSettingsOpen(true)}
+              >
+                <Settings className="h-4 w-4" />
+              </Button>
+              <ThemeToggle />
+            </div>
           </div>
 
           <div className="flex items-center gap-3">
@@ -396,6 +420,7 @@ export function CaseListView() {
                     isRecent
                     fileCountsLoading={fileCountsLoading}
                     onSelect={handleSelect}
+                    onEdit={handleEditRequest}
                     onDelete={handleDeleteRequest}
                   />
                 </section>
@@ -414,6 +439,7 @@ export function CaseListView() {
                     viewMode={viewMode}
                     fileCountsLoading={fileCountsLoading}
                     onSelect={handleSelect}
+                    onEdit={handleEditRequest}
                     onDelete={handleDeleteRequest}
                   />
                 </section>
@@ -427,6 +453,20 @@ export function CaseListView() {
         open={createOpen}
         onOpenChange={setCreateOpen}
         onCreate={handleCreate}
+      />
+
+      <EditCaseDialog
+        open={!!editTarget}
+        onOpenChange={(open) => {
+          if (!open) setEditTarget(null);
+        }}
+        case_={editTarget}
+        onSaved={() => void refresh()}
+      />
+
+      <AppSettingsDialog
+        open={appSettingsOpen}
+        onOpenChange={setAppSettingsOpen}
       />
 
       <DeleteCaseConfirmationDialog
@@ -448,6 +488,7 @@ function CaseGrid({
   isRecent = false,
   fileCountsLoading,
   onSelect,
+  onEdit,
   onDelete,
 }: {
   cases: CaseWithCounts[];
@@ -455,6 +496,7 @@ function CaseGrid({
   isRecent?: boolean;
   fileCountsLoading: Set<string>;
   onSelect: (c: CaseSummary) => void;
+  onEdit?: (c: CaseSummary, e: React.MouseEvent) => void;
   onDelete: (c: CaseSummary, e: React.MouseEvent) => void;
 }) {
   if (viewMode === "grid") {
@@ -468,6 +510,7 @@ function CaseGrid({
             isRecent={isRecent}
             loadingFileCount={fileCountsLoading.has(case_.id)}
             onSelect={onSelect}
+            onEdit={onEdit}
             onDelete={onDelete}
           />
         ))}
@@ -484,6 +527,7 @@ function CaseGrid({
           isRecent={isRecent}
           loadingFileCount={fileCountsLoading.has(case_.id)}
           onSelect={onSelect}
+          onEdit={onEdit}
           onDelete={onDelete}
         />
       ))}

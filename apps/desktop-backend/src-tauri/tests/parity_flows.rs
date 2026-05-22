@@ -294,3 +294,103 @@ fn flow_duplicate_and_metadata_tables_round_trip() {
         Ok(())
     });
 }
+
+#[test]
+fn flow_search_all_returns_structured_hits() {
+    let (_dir, db) = temp_db();
+    let _ = with_db(&db, |conn| {
+        use desktop_backend_lib::{fts_search, SearchHit};
+
+        let case_id = uuid::Uuid::new_v4().to_string();
+        let file_id = uuid::Uuid::new_v4().to_string();
+        let note_id = uuid::Uuid::new_v4().to_string();
+        let now = chrono::Utc::now().to_rfc3339();
+        conn.execute(
+            "INSERT INTO cases (id, name, status, created_at, updated_at) VALUES (?1, 'Search', 'active', ?2, ?2)",
+            params![case_id, now],
+        )
+        .unwrap();
+        conn.execute(
+            "INSERT INTO files (id, case_id, file_name, folder_path, absolute_path, file_hash, file_size, modified_at, status)
+             VALUES (?1, ?2, 'quasar-invoice.pdf', 'docs', '/tmp/quasar-invoice.pdf', 'hash-q', 1, ?3, 'unreviewed')",
+            params![file_id, case_id, now],
+        )
+        .unwrap();
+        conn.execute(
+            "INSERT INTO notes (id, case_id, file_id, content, pinned, created_at, updated_at) VALUES (?1, ?2, NULL, 'quasar meeting notes', 0, ?3, ?3)",
+            params![note_id, case_id, now],
+        )
+        .unwrap();
+
+        let hits: Vec<SearchHit> = fts_search(conn, &case_id, "quasar", 10).unwrap();
+        assert!(!hits.is_empty(), "expected at least one hit");
+
+        let file_hit = hits.iter().find(|h| h.entity_type == "file").expect("file hit");
+        assert_eq!(file_hit.id, file_id);
+        assert_eq!(file_hit.title, "quasar-invoice.pdf");
+        assert_eq!(file_hit.snippet, "docs");
+
+        let note_hit = hits.iter().find(|h| h.entity_type == "note").expect("note hit");
+        assert_eq!(note_hit.id, note_id);
+        assert_eq!(note_hit.title, "Note");
+        assert!(note_hit.snippet.contains("quasar"));
+
+        Ok(())
+    });
+}
+
+#[test]
+fn flow_merge_duplicate_metadata_moves_notes() {
+    let (_dir, db) = temp_db();
+    let _ = with_db(&db, |conn| {
+        use desktop_backend_lib::merge_duplicate_metadata_conn;
+
+        let case_id = uuid::Uuid::new_v4().to_string();
+        let primary_id = uuid::Uuid::new_v4().to_string();
+        let secondary_id = uuid::Uuid::new_v4().to_string();
+        let note_id = uuid::Uuid::new_v4().to_string();
+        let hash = "dup-hash-abc";
+        let now = chrono::Utc::now().to_rfc3339();
+
+        conn.execute(
+            "INSERT INTO cases (id, name, status, created_at, updated_at) VALUES (?1, 'Merge', 'active', ?2, ?2)",
+            params![case_id, now],
+        )
+        .unwrap();
+        for (fid, path) in [(primary_id.clone(), "/tmp/a.txt"), (secondary_id.clone(), "/tmp/b.txt")] {
+            conn.execute(
+                "INSERT INTO files (id, case_id, file_name, folder_path, absolute_path, file_hash, file_size, modified_at, status)
+                 VALUES (?1, ?2, 'dup.txt', '', ?3, ?4, 1, ?5, 'unreviewed')",
+                params![fid, case_id, path, hash, now],
+            )
+            .unwrap();
+        }
+        conn.execute(
+            "INSERT INTO notes (id, case_id, file_id, content, pinned, created_at, updated_at) VALUES (?1, ?2, ?3, 'linked note', 0, ?4, ?4)",
+            params![note_id, case_id, secondary_id, now],
+        )
+        .unwrap();
+
+        merge_duplicate_metadata_conn(conn, &case_id, hash, &primary_id).unwrap();
+
+        let linked_file: Option<String> = conn
+            .query_row(
+                "SELECT file_id FROM notes WHERE id = ?1",
+                params![note_id],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(linked_file.as_deref(), Some(primary_id.as_str()));
+
+        let secondary_deleted: Option<String> = conn
+            .query_row(
+                "SELECT deleted_at FROM files WHERE id = ?1",
+                params![secondary_id],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert!(secondary_deleted.is_some());
+
+        Ok(())
+    });
+}
