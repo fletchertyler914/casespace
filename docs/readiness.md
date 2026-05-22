@@ -2,7 +2,7 @@
 
 Tracks implemented scope, validated scope, and gates required before production sign-off and AI enablement.
 
-**Last updated:** 2026-05-21
+**Last updated:** 2026-05-21 (post evidence-based source re-audit — earlier UX "done" claims were overstated; see [spec/gap-analysis-ui-workflows.md](spec/gap-analysis-ui-workflows.md))
 
 ## Executive status
 
@@ -10,9 +10,10 @@ Tracks implemented scope, validated scope, and gates required before production 
 |------|--------|
 | Planning / spec pack | **Complete** — [product-spec-bible.md](product-spec-bible.md) |
 | Core Parity **backend** | **Complete (local)** — SQLite, FTS, P0 commands, parity + hardening suites |
-| Core Parity **UX** (v1 port) | **In progress** — U1–U6 done/MVP; U7/U8/U9/U10 started; U11 next — [ui-port-plan.md](ui-port-plan.md) |
+| Core Parity **UX** (v1 port) | **Shallow MVP only** — estimated ~30–40% of v1 user-flow surface. Big gaps: no inventory data grid, no metadata panel, no viewer rename/delete, broken global search, plain-text notes/findings/timeline, shallow duplicates resolution, shallow time/billing, markdown-only reports, no mapping/column UI. See [spec/gap-analysis-ui-workflows.md](spec/gap-analysis-ui-workflows.md) |
 | Toolchain | Next **16.2.6** catalog-pinned; `minimumReleaseAge` 48h |
-| AINative phase | **Blocked** — until UX Parity Build Gate |
+| AINative phase | **Blocked** — until UX Parity Build Gate (not yet earned) |
+| Production distribution | **Blocked** — no `tauri-plugin-updater`, no Developer ID / Windows signing, no notarization. macOS ad-hoc signing only (works for manual install w/ Gatekeeper bypass) |
 | Remote CI evidence | Partial — push for fresh CI on Node 24 |
 
 ## Documentation map (source of truth)
@@ -33,7 +34,7 @@ Tracks implemented scope, validated scope, and gates required before production 
 |------|-----------|---------------|
 | Monorepo foundation | pnpm + Turbo + arch guard; catalog-pinned Next | Remote CI green on Node 24 after next push |
 | Desktop backend | Full non-AI command matrix + SQLite/FTS + ingest v2 | AI-native commands; `commands/*` module split |
-| Desktop UI | Hub, workspace shell, file navigator, in-app viewers with v1 extension parity (PDF, DOCX, XLSX, image, text, 50+ code exts, markdown, CSV/TSV, video, audio), artifact panel MVP, cross-entity cmdk search, workspace settings dialog, duplicates panel MVP, timer widget MVP, time panel MVP, reports panel MVP + export history | Board/dnd parity polish, time pages/dialogs polish, full report workspace UX, deeper settings parity, syntax-highlighted code viewer (lazy) |
+| Desktop UI | Case CRUD (create/list/open/delete), workspace shell, file navigator (folder tree), in-app viewer **routing** for 15 file categories with v1 extension parity, plain-text notes/findings/timeline CRUD, board with status DnD, workspace prefs dialog, MVP timer widget + time panel, MVP duplicates panel (list + set primary), MVP reports panel (markdown exports) | Inventory data grid; viewer metadata panel + rename/delete/file-change UI + fullscreen + keyboard nav; Tiptap rich-text artifact editors; deep duplicates resolution (comparison UI, decision dialog, badges, ingestion notification, fix merge-doesn't-relink-artifacts bug); time segment model + billing config UI; structured reports + PDF/DOCX; column/mapping config UI + Rust extraction engine; EditCaseDialog; ingest progress + cancellation; theme + system-file-filter settings UI; syntax-highlighted code viewer; image zoom/rotate/fullscreen; XLSX sheet tabs + header detection; markdown rendered (not raw); **search dialog runtime fix** (broken now: `search_all` shape mismatch) |
 | Web surface | Marketing + download page | Content polish only |
 | Shared packages | `@repo/types` contracts (partial) | Full DTO parity + adapter envelopes |
 | Documentation | Spec pack + port plan synced to code | Feature catalog row-by-row as U7–U10 land |
@@ -46,7 +47,8 @@ Tracks implemented scope, validated scope, and gates required before production 
 |------|--------|----------|
 | Implementation Readiness (planning) | **PASS** | [implementation-readiness-gate.md](implementation-readiness-gate.md) |
 | Core Parity **backend** Build Gate | **PASS (local)** | C1–C7 below |
-| UX Parity Build Gate | **In progress** | G1–G4 done; G5/G6/G7/G8 partial; G11 pending — [ui-port-plan.md](ui-port-plan.md) |
+| UX Parity Build Gate | **NOT EARNED** — claim retracted after evidence-based re-audit. Earliest realistic pass: after the file table, viewer metadata/rename/delete, broken search fix, duplicates depth, and Tiptap notes/findings land. See [spec/gap-analysis-master.md](spec/gap-analysis-master.md) critical path |
+| Production distribution Gate | **NOT EARNED** — updater, Developer ID + Windows signing, notarization all missing |
 
 ### Core Parity backend (passed)
 
@@ -78,16 +80,26 @@ Tracks implemented scope, validated scope, and gates required before production 
 
 *Update this table after each validation run.*
 
-## Immediate next execution
+## Immediate next execution (re-prioritized from honest audit)
 
-1. **Phase U7 continuation** — board/dnd + duplicate merge decisions — [ui-port-plan.md](ui-port-plan.md)
-2. **Phase U8 continuation** — time page + segment/billing dialogs
-3. **Phase U9** — reports UI
-4. **Phase U10 continuation** — settings + richer result actions
-5. **Phase U11** — remove `components/case-workspace.tsx`; UX gate smoke + `ops:validate:local`
-5. Optional **U3 tail** — edit case, large-folder warning, filters
-6. Keep `pnpm test:parity` + `pnpm test:hardening` on every merge
-7. Bump Next via `pnpm-workspace.yaml` catalog only (review lockfile diff)
+Listed in dependency order. See [spec/gap-analysis-master.md](spec/gap-analysis-master.md) "Launch critical path (rewritten)" for full detail and rough sizings.
+
+1. **Fix broken global search** — `search_all` Rust shape vs UI contract (half-day)
+2. **Fix `merge_duplicate_metadata`** — actually relink notes/findings/timeline to primary (half-day)
+3. **Viewer header parity** — RenameFileDialog, DeleteFileDialog, MetadataPanel, FileChangeWarning (wire to existing backend commands) (1–2 days)
+4. **Inventory data grid** — the single biggest UX gap; full columns/sort/filter/bulk/multi-select/inline edit (4–6 days)
+5. **Tiptap rich notes / findings / timeline** — replace plain textareas; add CreateNoteDialog/CreateFindingDialog/CreateTimelineEventDialog with date picker + event types + severity + linked files (3–4 days)
+6. **Duplicates depth** — DuplicateManagementPanel, DuplicateDecisionDialog, badges across navigator+viewer (3 days)
+7. **Time / billing depth** — segment model in Rust + SegmentEditDialog/DailySummaryDialog/BillingConfigDialog/DeleteTimeEntryDialog + list/calendar views + batch update (5–7 days)
+8. **Reports depth** — structured section model + preview + PDF/DOCX exports + persistent history (3–4 days)
+9. **Column / mapping config** — port ColumnManager + FieldMapperStepper + implement Rust extraction engine (5–8 days)
+10. **EditCaseDialog** + rename in case list (half-day)
+11. **App SettingsDialog** — theme + system-file-filter (1 day; add the missing Rust commands too)
+12. **Ingest UX** — progress bar, cancellation, LargeFolderWarningDialog, DuplicateIngestionNotification (2–3 days)
+13. **Frontend unit tests** — vitest setup; start with command-client + file-preview + viewer routing (ongoing)
+14. **Updater + production signing** — distinct workstream once paid Apple/Windows certs are in place
+
+Keep `pnpm test:parity` + `pnpm test:hardening` on every merge. Bump Next via `pnpm-workspace.yaml` catalog only (review lockfile diff).
 
 ## What should wait
 

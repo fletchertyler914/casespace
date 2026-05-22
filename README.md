@@ -2,7 +2,7 @@
 
 CaseSpace v2 is an elite, net-new rebuild of the CaseSpace product foundation using a 3-app architecture.
 
-Current status: **Core Parity backend complete (local)**; **UX port in progress** — workspace, in-app viewers (PDF/Office/CSV), and artifact panels shipped; **board, search, time, reports, UX gate next**. AINative blocked until UX gate. See [docs/readiness.md](docs/readiness.md) and [docs/ui-port-plan.md](docs/ui-port-plan.md).
+Current status (2026-05-21, post evidence-based source re-audit): **Core Parity backend complete (local)**. **UX port is a shallow MVP** (~30–40% of v1 user-flow surface) — case CRUD, ingest/sync, folder-tree navigator, viewer routing for 15 file categories, plain-text artifact CRUD, status-lane board, MVP timer + markdown report exports. **Known shipped-but-broken / shipped-but-shallow areas:** global search dialog (runtime contract mismatch), `merge_duplicate_metadata` (doesn't relink artifacts), no inventory data grid, no viewer metadata/rename/delete UI, no Tiptap rich-text editors, no column/mapping config UI, no production code-signing or updater. Full evidence and re-prioritized critical path: [`docs/spec/gap-analysis-ui-workflows.md`](docs/spec/gap-analysis-ui-workflows.md), [`docs/spec/gap-analysis-master.md`](docs/spec/gap-analysis-master.md), [`docs/readiness.md`](docs/readiness.md), [`docs/ui-port-plan.md`](docs/ui-port-plan.md). AINative + production distribution remain blocked.
 
 ## Repository purpose
 
@@ -121,5 +121,6 @@ The script bakes the rounded squircle into every layer (including each `.icns` s
 ## Notes
 
 - **Backend:** P0 commands, SQLite/FTS, ingest v2, parity + hardening — validated locally.
-- **Desktop UX:** Hub (U1–U3), workspace + viewers + panel MVP (U4–U6); U7–U11 — [docs/ui-port-plan.md](docs/ui-port-plan.md).
-- **AINative:** blocked until UX Parity Build Gate passes.
+- **Desktop UX:** Hub (U1–U3 MVP), workspace shell + viewer routing + panel MVP (U4–U6); U7–U11 still need real depth — see [docs/spec/gap-analysis-master.md](docs/spec/gap-analysis-master.md) rewritten critical path and [docs/ui-port-plan.md](docs/ui-port-plan.md).
+- **AINative:** blocked until UX Parity Build Gate passes (not yet earned).
+- **Production distribution:** blocked until `tauri-plugin-updater` + Developer ID + Windows signing + notarization land.

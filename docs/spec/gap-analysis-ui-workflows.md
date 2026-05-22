@@ -1,74 +1,171 @@
-# UI and Workflow Gap Analysis (v1 -> v2)
+# UI and Workflow Gap Analysis (v1 → v2)
 
-## Scope and source refs
+**Last refresh:** 2026-05-21 — full evidence-based source audit. Earlier "done" claims in `docs/ui-port-plan.md`, `docs/readiness.md`, and `docs/desktop-workflow-mapping.md` were overstated; this document is the new source of truth.
 
-- **v1:** `inventory-generator/src/` — `App.tsx`, `components/workspace/*`, `services/*`, `hooks/*`, `store/*`
-- **v2:** `casespace/apps/desktop/` — case hub in `components/case/*`; legacy `case-workspace.tsx` on `/case`; active plan [ui-port-plan.md](../ui-port-plan.md)
+## Audit method
 
-## UX invariants to preserve exactly
+Both audits were code-only — no docs trusted, no tests trusted. Tools: grep + read + symbol walks.
 
-See [user-flows-and-ux-invariants.md](user-flows-and-ux-invariants.md) UX-001 through UX-010.
+- **v1 reference inventory:** every `#[tauri::command]`, every dialog/component/hook/service in `inventory-generator/src/` and `inventory-generator/src-tauri/src/`. ~22 categories.
+- **v2 actual implementation:** every route, component, command, table, and dialog actually present in `casespace/apps/{desktop,desktop-backend,web}` and `casespace/packages/*`.
 
-## Flow inventory table
+Each row below carries the v1 reference path, the v2 path (if any), and an honest status:
 
-| flow_id | flow_name | v1 components/hooks | v2 status | classification | launch tier | recommendation | requirement_id | test |
-|---------|-----------|---------------------|-----------|----------------|-------------|----------------|----------------|------|
-| UI-001 | Case hub | `CaseListView`, `App.tsx` | **partial** (U3) | portable-with-redesign | P0 | rewrite | REQ-CASE-001 | e2e |
-| UI-002 | Create case | `CreateCaseDialog` | **partial** (U3) | portable-with-redesign | P0 | rewrite | REQ-CASE-001 | e2e |
-| UI-003 | Open case / ingest | `App.tsx`, `fileService` | partial (legacy workspace) | portable-with-redesign | P0 | rewrite | REQ-INGEST-001 | e2e |
-| UI-004 | Workspace shell | `CaseWorkspace`, `WorkspaceLayout` | missing (U4) | portable-with-redesign | P0 | rewrite | REQ-VIEW-001 | e2e |
-| UI-005 | File navigator | `FileNavigator` | missing | portable-with-redesign | P0 | rewrite | REQ-REVIEW-001 | e2e |
-| UI-006 | Viewer | `IntegratedFileViewer` | missing | not-portable-replace | P0 | rewrite | REQ-VIEW-001 | e2e |
-| UI-007 | Review status | `WorkflowBoard` / table | missing | portable-with-redesign | P0 | rewrite | REQ-REVIEW-001 | e2e |
-| UI-008 | Notes panel | `NotePanel` | missing | portable-with-redesign | P0 | rewrite | REQ-ARTIFACT-001 | integration |
-| UI-009 | Findings panel | `FindingsPanel` | missing | portable-with-redesign | P0 | rewrite | REQ-ARTIFACT-001 | integration |
-| UI-010 | Timeline | `TimelineView` | missing | portable-with-redesign | P0 | rewrite | REQ-ARTIFACT-001 | integration |
-| UI-011 | Search palette | `SearchDialog`, `useSearch` | missing | portable-with-redesign | P0 | rewrite | REQ-SEARCH-001 | e2e |
-| UI-012 | Timer widget | `TimerWidget` | missing | portable-with-redesign | P0 | rewrite | REQ-TIME-001 | e2e |
-| UI-013 | Reports | `ReportView` | missing | portable-with-redesign | P0 | rewrite | REQ-REPORT-001 | e2e |
-| UI-014 | Duplicates UI | `duplicates/*` | missing | missing-in-v2 | P1 | rewrite | REQ-INGEST-001 | e2e |
-| UI-015 | Settings | `SettingsDialog` | missing | missing-in-v2 | P1 | defer | REQ-CASE-001 | — |
-| UI-016 | Scaffold demo | `case-workspace.tsx` | exists | not-portable-replace | — | drop | — | — |
+- `✅ done` — v2 matches v1 outcome end-to-end (UI → command → persistence → UI feedback)
+- `🟡 MVP` — works, but materially shallower than v1 (specific gap called out)
+- `🟠 partial` — exists only at one layer (e.g. backend command but no UI, or UI but with a runtime bug)
+- `🔴 missing` — nothing exists in v2
 
-## Portable-as-is
+## Executive scorecard
 
-- `useWorkflowSelection` logic (index-based multi-select)
-- `useFileNavigation` tree order navigation
-- `baseService` retry/cache pattern (adapt to command-client)
-- Pure utils: `file-tree-utils`, billing utils
+| Domain | v1 surface | v2 status | Headline gap |
+|--------|-----------|-----------|--------------|
+| Case CRUD | create, list, open, rename/edit metadata, delete | 🟡 create/list/open/delete only | No rename / edit-metadata / case-settings dialog (`update_case_metadata` backend command exists, no UI calls it) |
+| Sources | add folder/file, list, auto-sync, manual sync | 🟡 add + sync only | No per-source UI, no remove-source (v1 also lacks this) |
+| Ingest / sync UI | dialog progress, duplicate notification, large-folder warning | 🟡 toast summary only | No progress bar, no cancellable sync, no `LargeFolderWarningDialog`, no `DuplicateIngestionNotification` |
+| Inventory table | full data grid with columns/filters/sort/group/bulk/multi-select/inline edit | 🔴 missing | No file table at all — only folder tree (`FileNavigator`) and board cards |
+| Column / mapping config | `ColumnManager`, `FieldMapperStepper`, `PatternBuilder`, `MappingPreview`, regex/date/number extraction | 🟠 backend tables only | Zero UI; backend commands `get/save_column_config_db`, `get/save_mapping_config_db` orphaned |
+| File viewer router | image, pdf, docx, xlsx, csv, code (syntax-highlighted), markdown (Tiptap), text, video, audio, unsupported | 🟡 extensions match | Routing OK; per-viewer depth is the real gap (see Viewer table below) |
+| Viewer header / actions | status, prev/next, close, metadata, **rename**, **delete**, **duplicates dialog**, **file-change warning**, fullscreen, **keyboard shortcuts** | 🟡 status + prev/next + close + open externally | No rename, delete, metadata, duplicates dialog, file-change warning, fullscreen, or keyboard shortcuts in viewer pane |
+| Metadata panel | MD5+SHA-256, PDF info, EXIF, email headers, media codec/duration, extracted mapping fields | 🔴 missing | `extract_file_metadata` backend command exists but no UI consumes it |
+| File-change warning | live staleness detection, refresh actions, duplicate review prompt | 🟠 backend only | `check_file_changed` / `refresh_single_file` / `refresh_files_bulk` orphaned in UI |
+| Rename / delete file dialogs | `RenameFileDialog` (with sync-first + filename validation), `DeleteFileDialog` | 🔴 missing | No reusable dialogs; backend `rename_file` and `remove_file_from_case` orphaned |
+| Notes editor | Tiptap rich text + dedicated `CreateNoteDialog` | 🟡 plain textarea | No formatting, headings, lists, task lists, links, images, code blocks, undo/redo |
+| Findings | severity selector + linked-files + tags + Tiptap description + `CreateFindingDialog` | 🟡 title + plain description only | Severity exists in backend, not selectable; no linked files, no tags, no Tiptap |
+| Timeline | date picker, event type, source-file link, auto-extracted events from ingest | 🟡 description-only CRUD | No date picker, no event types, no source link, no `extract_dates_from_file` wiring |
+| Duplicates panel | `DuplicateManagementPanel`, group view, primary/recommended ordering, keep/delete cards, decision dialog, ingestion notification, badges across navigator + viewer | 🟡 list + set primary + "merge metadata" | "Merge" only marks primary reviewed + soft-deletes others; does **not** move notes/finding/timeline refs like v1. No comparison UI, no ignore/delete actions, no badges, no decision dialog |
+| Board | DnD between status lanes, **multi-select** (`Cmd/Ctrl+Click`, `Shift+Click`), per-swimlane filters, folder-filtered board, rich cards (note count, dup badge, change indicator, tags, mapping fields), progress dashboard | 🟡 5-lane DnD with status change | No multi-select, no filters, cards show only name/path/status, no dashboard |
+| Time / billing | `useTimer`, segments, `SegmentEditDialog`, `DailySummaryDialog`, `BillingConfigDialog`, list/calendar views, search, batch update, billable vs non-billable, rate units (hourly/daily/weekly/monthly), pause/resume = same entry | 🟡 timer widget + simple entries | `pause_timer` actually stops; `resume_timer` starts a new entry — no segment model. No manual entry CRUD, no billing config UI, no daily summary dialog, no calendar view, no batch edit |
+| Reports | structured sections (Executive Summary, Case Overview, Findings, Timeline, Inventory Summary, Notes, Appendices), preview, section navigation, `useReportData` aggregator | 🟡 markdown export only | Side panel with 5 export buttons; backend `export_case_report` writes Markdown files to app data dir. No structured sections, no preview-per-type, no PDF/DOCX exports, no persistent history |
+| Global search | `Cmd/Ctrl+K`, grouped results (FILE/NOTE/FINDING/TIMELINE), per-result open/navigate, FTS-backed with sanitized prefix, search persistence per case | 🟠 **broken at runtime** | `search_all` backend returns `Vec<String>` like `"file:<id>"`; UI types it as `SearchHit[]` with `.entityType`/`.title`/`.snippet`. Dialog opens but renders nothing — runtime contract mismatch |
+| Workspace prefs | `view_mode`, `report_mode`, panel visibility, navigator state, auto-sync | 🟡 partial | Panel sizes not persisted; only toggles/view mode/auto-sync prefs saved |
+| App settings | theme (light/dark/system) + system-file-filter config (patterns: `.DS_Store`, `Thumbs.db`, `~$*`, etc.) | 🟡 theme only | `ThemeToggle` exists but lives on case list, not in workspace settings. No system-file-filter UI; backend has no such command |
+| Splash / loading | `SplashScreen` | 🟠 unwired | Component exists but never rendered |
+| Toast notifications | `useToast`, success/error variants | 🟡 present | Used in `useWorkspaceAutoSync`; not consistently used elsewhere |
+| Theme | system theme detection, persistent across reloads, applied to PDF reader | ✅ done | `ThemeProvider` + PDF theme sync works |
+| Update flow | `tauri-plugin-updater` + `updateService`, signed binary auto-update | 🔴 missing | Updater plugin not in `Cargo.toml`; `tauri.conf.json` has no endpoints |
+| Code signing | macOS Developer ID + Windows signing strategy in v1 build pipeline | 🟠 ad-hoc only | `tauri.conf.json` uses `"signingIdentity": "-"`; no Developer ID config, no Windows signing, no notarization — fine for local install with manual Gatekeeper approval, not safe for unattended distribution |
 
-## Portable-with-redesign
+## Critical breakage to fix immediately
 
-- Zustand stores → `lib/state/*`
-- Services → `lib/services/*` wrapping command-client
-- Panel layout → smaller composable components
-- Search hook debounce/caps
+| Item | Evidence | Severity | Fix sketch |
+|------|----------|----------|------------|
+| Search dialog shape mismatch | `search_all` returns `Vec<String>` (`apps/desktop-backend/src-tauri/src/lib.rs`) but `command-client.ts` types it as `SearchHit[]` and `search-dialog.tsx` reads `.entityType`/`.title`/`.snippet` | **P0** — dialog opens, renders nothing | Either change the Rust command to return structured `SearchHit { entity_type, id, title, snippet, score }` or parse the strings client-side and look up titles via separate fetches. Recommendation: change Rust to return structured hits and include findings/timeline (which already have FTS tables but aren't searched by `search_all`) |
+| `merge_duplicate_metadata` semantic gap | v2 implementation marks primary reviewed + soft-deletes other rows; v1 also moves notes / finding linked-file refs / timeline source-file refs | **P0** | Port v1's merge: update notes' `file_id`, update findings' `linked_files`, update timeline `source_file_id` to point to primary before soft-delete |
+| Viewer cannot rename / delete / show metadata / refresh on change | Header actions in `file-viewer-pane.tsx` only expose status + prev/next + close + open-externally; all corresponding backend commands exist | **P1** | Add `rename-file-dialog`, `delete-file-dialog`, metadata popover, `FileChangeWarning` strip — wire to existing commands |
+| Notes editor is plain textarea | v1 uses Tiptap with rich formatting; UX gap is large for forensic notes | **P1** | Add `@tiptap/react` + extensions (already in v1 deps list); replace textarea with Tiptap shell |
 
-## Not-portable-replace
+## Domain detail — file viewer (where the parity gap surfaced this session)
 
-- `IntegratedFileViewer` monolith → split viewers
-- `WorkflowBoard` 900-line kanban → table-first P0
-- Vite `App.tsx` bootstrap → Next.js layouts
-- `case-workspace.tsx` demo UI
+Routing is now correct (v0.1.6 commit `a11bf20` added video/audio/code categories and fixed the PDF `useMemo` regression). Per-viewer depth is still MVP.
 
-## Missing-in-v2
+| Viewer | v1 features | v2 features | Gap |
+|--------|------------|------------|-----|
+| PDF | `@react-pdf-viewer` with default layout + custom toolbar + theme integration + viewer-search Cmd/F prevention | same plugin + custom toolbar + theme sync | **No annotations, bookmarks, OCR text layer, saved viewer state, fullscreen toggle** |
+| DOCX | `mammoth` HTML render | `mammoth` HTML render | Parity |
+| XLSX | `xlsx-js-style`, header detection, multi-sheet, merged-cell title rendering | first sheet only, no header detection, simple table | **No sheet tabs, no header detection, no merged-cell handling** |
+| CSV | delimiter detection, normalized columns, full-rows | delimiter detection, 500-row cap, normalized columns | Mostly parity; v2 caps rows |
+| Image | `react-viewer` with zoom/rotate fullscreen | basic `<img>` fit | **No zoom, no rotate, no fullscreen** |
+| Markdown | `marked` + Tiptap read-only render | `<pre>` with `.prose` class | **No rendered markdown — shows raw text in mono** |
+| Code | lazy `react-syntax-highlighter` + custom OKLCH themes | `<pre>` mono fallback | **No syntax highlighting** |
+| Text | `<pre>` mono | `<pre>` mono | Parity |
+| Video | HTML5 `<video>` via `convertFileSrc` (streaming) | HTML5 `<video>` via base64 → blob URL (whole file in memory) | Works; whole-file in memory hurts large videos |
+| Audio | HTML5 `<audio>` via `convertFileSrc` | HTML5 `<audio>` via base64 → blob URL | Same as video |
 
-Entire workspace: navigator, viewer, panels, case list, dialogs, timer, reports, duplicates, settings.
+## Missing-entirely dialog catalog
 
-## Elite simplification decisions
+Every dialog in v1 that has **no v2 counterpart**:
 
-| Remove/simplify | Preserve outcome |
-|-----------------|------------------|
-| Enterprise case filters | Search + sort |
-| Full kanban P0 | Table + status |
-| Mapping wizard launch | Defer P1 |
-| 20+ shadcn primitives | Minimal `packages/ui` set |
-| In-app PDF P0 | Text/image + external open |
+- `EditCaseDialog` — edit case metadata + per-case column config
+- `LargeFolderWarningDialog` — warn before importing many files (depends on `count_directory_files`)
+- `RenameFileDialog` — file rename with name validation + sync-first option
+- `DeleteFileDialog` — file remove from case (separate from delete-case)
+- `DuplicateFileDialog` — viewer-level duplicate review
+- `DuplicateDecisionDialog` — confirm delete-or-merge on dup resolution
+- `BillingConfigDialog` — fixed-price vs pay-rate configuration
+- `SegmentEditDialog` — create/edit/delete time segments
+- `DailySummaryDialog` — capture summary after stopping the timer
+- `DeleteTimeEntryDialog` — confirm time entry deletion
+- `CreateNoteDialog` (Tiptap) — create/edit notes with rich text
+- `CreateFindingDialog` (Tiptap) — create/edit findings with rich text + severity + linked files
+- `CreateTimelineEventDialog` — create timeline event with date picker + event type + source file
+- `SettingsDialog` (app-level) — theme + system-file-filter config
+- Column manager modal (`ColumnManager`) — column visibility/order
+- Mapping stepper (`FieldMapperStepper`) — regex/pattern/date extraction config
 
-## UI execution cut (P0/P1/P2)
+## Missing-entirely components / hooks
 
-**P0:** Case hub, workspace 3-pane, navigator, viewer MVP, status, notes/findings/timeline panels, search palette, timer, report export UI
+- `MetadataPanel` (viewer) — file hashes + format-specific metadata
+- `FileChangeWarning` (viewer) — staleness banner with refresh action
+- `DuplicateBadge` (file rows + viewer) — visual dup indicator
+- `DuplicateIngestionNotification` — post-sync duplicate summary
+- `FileDuplicatePanel` — viewer-scoped duplicates
+- `DuplicateManagementPanel` — case-level duplicate review with stats
+- `ProgressDashboard` — board completion summary
+- `CaseFilters` — case-list filter chips
+- `CaseSwitcher` — dropdown to switch between recent cases
+- `useTimer` semantics with segment model
+- `useFileNavigation` keyboard navigation hook
+- `useWorkflowSelection` multi-select hook for board
+- `useSwimlaneFilter` per-lane filters
+- `useReportData` aggregator
+- `request-cache` performance layer
 
-**P1:** Duplicates, auto-sync warnings, PDF viewer, settings drawer, metadata panel
+## Missing-entirely backend surface
 
-**P2:** Kanban board, rich Tiptap, time management calendar page
+- `update_case_metadata` (exists, **unused**)
+- `get_or_create_case` (exists, **unused**)
+- `check_file_changed`, `refresh_single_file`, `refresh_files_bulk` (exist, **unused**)
+- `rename_file`, `remove_file_from_case` (exist, **unused**)
+- `extract_file_metadata` (exists, **unused**)
+- `get_file_note_counts` — not implemented; v1 uses for navigator note badges
+- `extract_dates_from_file` — not implemented; v1 uses to auto-create timeline events on ingest
+- Time tracking depth: v1 has `update_time_entry`, `update_time_segment`, `create_time_segment`, `delete_time_segment`, `delete_time_entry`, `batch_update_segments`, `get_time_entry`, `get_time_entries_summary`, `set_case_billing_config`, `get_case_billing_config`, `calculate_case_total` — v2 only has `start/stop/pause/resume_timer`, `get_time_entries`, `calculate_billing_amount`
+- System file filter: `get_system_file_filter_config`, `save_system_file_filter_config` — not implemented
+- `column_configs` / `mapping_configs` get/save commands exist but no UI; underlying extraction engine (regex/date/number/text-before/after/between) is not implemented at all
+- `tauri-plugin-updater` not installed; no update-check / download / install commands
+
+## Tests parity
+
+| Suite | v1 | v2 |
+|-------|----|----|
+| Backend unit (repositories) | ✅ `src-tauri/src/repositories/tests*.rs`, `commands/tests*.rs` | 🟡 inline `parity_flows.rs` + `hardening_pass.rs` — many tests insert directly into SQLite rather than calling commands |
+| Backend critical features | ✅ `commands/tests_critical_features.rs` | 🟠 partial — covered by `parity_flows.rs` |
+| Backend performance | ✅ `commands/tests_performance.rs` | 🟠 10k-file insert in `hardening_pass.rs` only |
+| Frontend unit (vitest) | ✅ inventory, duplicate, hook, debounce, error-handler | 🔴 missing — no vitest setup in any app |
+| E2E | scripts/test-built-app.sh | 🔴 missing |
+
+## Updater & code signing
+
+| Concern | v1 | v2 | Recommendation |
+|---------|----|----|----------------|
+| Updater plugin | `tauri-plugin-updater` wired | 🔴 missing | Add when there's a signed release stream |
+| Update manifest endpoints | configured in `tauri.conf.json` | 🔴 missing | Same |
+| Updater pubkey | configured | 🔴 missing | Same |
+| macOS Developer ID | available in v1 build env | 🔴 missing — ad-hoc only | Required before public distribution; current "is damaged" was solved with ad-hoc fix in v0.1.5 |
+| Windows code signing | available in v1 | 🔴 missing | Required before public distribution |
+| Notarization | available in v1 | 🔴 missing | Required for Gatekeeper-clean macOS auto-update |
+
+## Recommended next phases (honest)
+
+Numbered in dependency order, not chronological.
+
+1. **Search dialog runtime fix** — make `search_all` return structured `SearchHit` with findings + timeline included. Half-day.
+2. **Viewer header parity** — add `rename-file-dialog`, `delete-file-dialog`, metadata popover, file-change warning. Wire to existing backend commands. 1–2 days.
+3. **File table** (replaces / supplements navigator) — full data grid with columns, filters, sort, group, bulk actions, inline edit, multi-select. The single biggest UX gap. 4–6 days.
+4. **Column/mapping config** — port `ColumnManager` + `FieldMapperStepper`. Implement the Rust extraction engine (regex/date/number/text-before/after/between). 5–8 days.
+5. **Notes + findings + timeline depth** — Tiptap rich text, dedicated create dialogs, severity selector, file links, date picker, event types. 3–4 days.
+6. **Duplicates depth** — `DuplicateManagementPanel`, `DuplicateDecisionDialog`, conflict-resolution UI, ignore action, badges in navigator + viewer, fix `merge_duplicate_metadata` to actually move artifact references. 3 days.
+7. **Time / billing depth** — segment model in Rust, `SegmentEditDialog`, `DailySummaryDialog`, `BillingConfigDialog`, `DeleteTimeEntryDialog`, list/calendar views, batch update. 5–7 days.
+8. **Reports depth** — structured section model, preview-per-type, PDF/DOCX exports, persistent history. 3–4 days.
+9. **App settings** — `SettingsDialog` with theme + system-file-filter config (and the missing Rust commands). 1–2 days.
+10. **Ingest UX** — progress bar, cancellable sync, `LargeFolderWarningDialog`, `DuplicateIngestionNotification`. 2–3 days.
+11. **Case rename / edit metadata** — `EditCaseDialog` + wire `update_case_metadata`. Half-day.
+12. **Frontend unit tests** — vitest setup + start coverage on `command-client`, `file-preview`, viewer routing. Ongoing.
+13. **Updater + production signing** — `tauri-plugin-updater`, Developer ID, Windows signing, notarization. Distinct workstream — needs paid Apple/Windows certs.
+
+## Honest readiness for production
+
+The app installs, opens, can ingest a folder, syncs incrementally, lets a user click through files in a tree, preview common formats, take simple notes, set status, and run a Markdown export. That is a real but **shallow** baseline — closer to **30–40% of v1 by user-flow surface** than the previous docs' implied 80–90%.
+
+It is **not** ready to replace v1 for day-to-day forensic / inventory work because of: no file table, no rich notes, broken search, no metadata panel, no rename/delete in viewer, no real billing depth, no real duplicate resolution, no column mapping, no production signing/updater.

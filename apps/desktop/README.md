@@ -2,7 +2,7 @@
 
 Next.js desktop UX shell for CaseSpace v2.
 
-**Status (2026-05-21):** U1–U6 shipped — case hub, workspace shell, in-app viewers (PDF/DOCX/XLSX/image/text/code/markdown/CSV/TSV/video/audio with v1 extension parity), artifact panel MVP. U7/U8/U9/U10 MVP work is in place (swimlanes, duplicates, timer widget, reports panel, cmdk search). **Next:** parity polish + U11 gate. Plan: [docs/ui-port-plan.md](../../docs/ui-port-plan.md).
+**Status (2026-05-21 — post evidence-based source re-audit):** **Shallow MVP** of v1 surface (~30–40% by user-flow). Functional baseline: case CRUD, multi-source ingest/sync with dedup, folder-tree navigator, viewer routing for 15 file categories (extensions match v1 after v0.1.6 PDF fix), plain-text notes/findings/timeline CRUD, status-lane board with DnD, timer widget, markdown report exports, workspace prefs persistence. **Known gaps and bugs:** global search dialog broken at runtime (Rust↔UI shape mismatch); `merge_duplicate_metadata` doesn't relink artifacts; no inventory data grid; no viewer metadata panel / rename / delete / file-change UI; no Tiptap rich-text editors; no column/mapping config UI; no production code-signing or updater. Full evidence table: [`docs/spec/gap-analysis-ui-workflows.md`](../../docs/spec/gap-analysis-ui-workflows.md). Re-prioritized phase plan: [`docs/ui-port-plan.md`](../../docs/ui-port-plan.md).
 
 ## Role in v2 architecture
 

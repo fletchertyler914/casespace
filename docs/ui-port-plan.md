@@ -5,21 +5,27 @@ Continuation plan after **Core Parity backend gate** passed locally. Backend com
 **v1 reference:** `/Users/tyler/projects/malissa_projects/inventory-generator`  
 **v2 target:** `apps/desktop` (Next.js + Tauri shell via `apps/desktop-backend`)
 
-## Executive status (2026-05-21)
+> **2026-05-21 honesty pass:** an evidence-based source re-audit shows previous "done" labels on U5–U10 were overstated. Phase tags below have been re-categorized to **MVP (shallow)** vs **partial** vs **done**. The detailed gap is in [spec/gap-analysis-ui-workflows.md](spec/gap-analysis-ui-workflows.md); the rewritten critical path is in [spec/gap-analysis-master.md](spec/gap-analysis-master.md).
+
+## Executive status (2026-05-21, honest)
 
 | Track | Status |
 |-------|--------|
 | Backend Core Parity | **PASS** — [command-parity-ledger.md](command-parity-ledger.md), `pnpm test:parity`, `pnpm test:hardening` |
-| UI foundation + case hub (U1–U3) | **implemented** |
-| Workspace + ingest/sync (U4) | **implemented** |
-| Viewers (U5) | **implemented + v1 parity** — in-app PDF/DOCX/XLSX, image, text/code (50+ exts), markdown, CSV/TSV, video, audio; external fallback only for archives/presentations/installers/fonts/HEIC |
-| Artifact panels (U6) | **MVP implemented** — notes/findings/timeline CRUD (notes pin included); rich editors deferred |
-| U7 duplicates + board | **in progress** — duplicates panel MVP + metadata merge + board swimlanes with drag/drop shipped; conflict dialogs/polish pending |
-| U8 time | **in progress** — timer widget MVP shipped |
-| U9 reports | **in progress** — reports side panel MVP shipped |
-| U10 search/settings | **in progress** — cmdk search + workspace settings dialog shipped; deeper parity pending |
-| UX gate + legacy cleanup (U11) | **pending** |
+| UI foundation (U1) | **done** |
+| Primitives (U2) | **done** |
+| Case hub (U3) | **MVP** — create/list/open/delete only; no EditCaseDialog / LargeFolderWarning / CaseFilters / CaseSwitcher |
+| Workspace shell (U4) | **MVP** — layout, navigator (folder tree), header. **No inventory data grid** (single biggest UX gap) |
+| Viewers (U5) | **routing done, viewers MVP** — extension routing matches v1 after v0.1.6 PDF fix + video/audio add. Per-viewer depth is shallow: no metadata panel, no rename/delete/file-change UI in viewer, no syntax highlighting, no markdown rendering (raw `<pre>` only), no image zoom/rotate, no XLSX sheet tabs |
+| Artifact panels (U6) | **MVP** — plain-text CRUD only; no Tiptap, no severity selector, no linked files, no date picker, no event types, no source links |
+| Duplicates + board (U7) | **MVP** — duplicates panel lists groups + set primary; "merge metadata" has a known bug (doesn't relink artifacts to primary). Board has 5 lanes + DnD; no multi-select / filters / rich cards |
+| Time (U8) | **MVP** — timer widget + time panel. `pause_timer` actually stops; no segment model, no manual entry CRUD, no billing config UI, no daily summary capture, no calendar view |
+| Reports (U9) | **MVP** — side panel with 5 export buttons; markdown only; no structured sections; no preview-per-type; no persistent history |
+| Search / settings (U10) | **search broken at runtime + settings shallow** — `search_all` returns `Vec<String>` but UI expects structured `SearchHit[]` (dialog opens empty). Workspace settings dialog persists toggles only; no app-level settings (theme/system-file-filter) |
+| Mapping / column config | **🔴 missing** — backend get/save commands exist with no UI; extraction engine (regex/date/number/text-between) not implemented |
+| UX gate + legacy cleanup (U11) | **not earned** — cannot be claimed until items 1–11 of the rewritten critical path land |
 | AINative | **blocked** — until UX Parity Build Gate |
+| Updater + production signing | **🔴 missing** — `tauri-plugin-updater` not installed; macOS ad-hoc only; no Windows signing; no notarization |
 | Toolchain | Next **16.2.6** pinned via pnpm catalog — see [Supply chain](#supply-chain) |
 
 ## Local development (canonical)
@@ -82,7 +88,20 @@ Button, card, input, textarea, label, dialog, alert-dialog, dropdown, context-me
 | Duplicate groups (SHA-256) | rebuild on ingest; UI panel shipped (set primary), merge UX pending |
 | Orphan cleanup | soft-delete when missing from source |
 
-### Phase U5 — Viewers ✅ (v1 extension parity)
+### Phase U5 — Viewers (extension routing ✅; per-viewer depth 🟡 MVP)
+
+Extension routing matches v1 after v0.1.6 PDF crash fix + video/audio add. The categories below are routed correctly; per-viewer fidelity is still shallow. **Specific viewer-depth gaps** are tracked in [spec/gap-analysis-ui-workflows.md](spec/gap-analysis-ui-workflows.md) ("Domain detail — file viewer" table):
+
+- No metadata panel (`extract_file_metadata` backend command orphaned)
+- No rename / delete / file-change warning in viewer pane (backend commands orphaned)
+- No fullscreen, no viewer keyboard shortcuts
+- Markdown renders as raw `<pre>` (no Tiptap markdown viewer)
+- Code renders as raw `<pre>` (no `react-syntax-highlighter`)
+- Image: no zoom / rotate / fullscreen (no `react-viewer`)
+- XLSX: first sheet only, no header detection, no merged-cell handling
+- CSV: capped at 500 rows
+- Video/audio loaded as base64-→-blob URL (whole file in memory)
+
 
 | Kind | Extensions | Implementation |
 |------|-----------|----------------|
@@ -107,82 +126,88 @@ The PDF viewer is wrapped in a local `ErrorBoundary` with a fallback that offers
 
 **Deferred:** `MetadataPanel`, `FileChangeWarning`, Tiptap read-only markdown, syntax-highlighted code (lazy-loaded `react-syntax-highlighter`).
 
-### Phase U6 — Artifact panels ✅ (MVP)
+### Phase U6 — Artifact panels 🟡 MVP only
 
-| Panel | Path | Scope |
-|-------|------|-------|
-| Notes | `components/artifacts/notes-panel.tsx` | CRUD + pin/unpin via `command-client` |
-| Findings | `components/artifacts/findings-panel.tsx` | CRUD |
-| Timeline | `components/artifacts/timeline-panel.tsx` | CRUD |
+| Panel | Path | Scope (current) | Gap vs v1 |
+|-------|------|-----------------|-----------|
+| Notes | `components/artifacts/notes-panel.tsx` | Plain textarea CRUD + pin/unpin | **No Tiptap**, no `CreateNoteDialog`, no file-link surface, no filters, no search-in-panel |
+| Findings | `components/artifacts/findings-panel.tsx` | Title + plain-text description CRUD | **No severity selector**, **no linked files**, **no tags UI**, **no Tiptap**, no `CreateFindingDialog` |
+| Timeline | `components/artifacts/timeline-panel.tsx` | Description-only CRUD | **No date picker**, **no event types**, **no source-file link**, **no auto-extracted events from ingest** (v1 `extract_dates_from_file` not implemented) |
 
-**Deferred:** Tiptap rich note editor, dedicated create dialogs (v1 parity).
+### Phase U7 — Board + duplicates 🟡 MVP
 
-### Phase U7 — Board + duplicates 🚧
+- Duplicates panel implemented in split view (`components/artifacts/duplicates-panel.tsx`) — list groups + set primary + "merge metadata"
+- **Known bug:** `merge_duplicate_metadata` marks primary as reviewed + soft-deletes other rows but **does not** move notes / finding `linked_files` / timeline `source_file_id` like v1 does. Needs fix.
+- **Missing vs v1:** `DuplicateManagementPanel` (case-level stats), `DuplicateGroupView`, `DuplicateFileCard` (primary/recommended/viewing badges), `DuplicateDecisionDialog` (delete-or-merge confirm), `DuplicateBadge` (across navigator + viewer rows), `DuplicateIngestionNotification`
+- Board has 5 status lanes + DnD; **missing**: multi-select (`Cmd/Ctrl+Click`, `Shift+Click`), per-swimlane filters, folder-filtered board, rich card content (note count, dup badge, change indicator, tags, mapping fields), `ProgressDashboard`
 
-- Duplicates panel implemented in split view (`components/artifacts/duplicates-panel.tsx`)
-- Primary-file selection wired via `mark_duplicate_primary`
-- Metadata merge action wired via `merge_duplicate_metadata` (into selected primary)
-- Board upgraded to status swimlanes with drag/drop in `components/workspace/board-view.tsx`
-- Remaining: conflict-resolution dialogs + board/table parity polish
-
-### Phase U8 — Time management 🚧
+### Phase U8 — Time management 🟡 MVP only
 
 - Timer widget MVP in header (`components/billing/timer-widget.tsx`) with start/stop + live elapsed
 - Time side panel MVP in split view (`components/billing/time-panel.tsx`) with entries, billing summary, and start/pause/resume/stop controls
-- Remaining: daily summary, segment editing, billing config dialogs
+- **Known bug:** `pause_timer` actually stops the entry; `resume_timer` starts a new one. There is no segment model. v1 has start/pause/resume on the **same entry** with multiple segments.
+- **Missing vs v1:** manual entry CRUD, `SegmentEditDialog`, `DailySummaryDialog` (post-stop), `BillingConfigDialog` (fixed-price vs pay-rate + rate units), `DeleteTimeEntryDialog`, calendar view, search entries, batch update segments. Backend commands `update_time_entry`, `update_time_segment`, `create_time_segment`, `delete_time_segment`, `delete_time_entry`, `batch_update_segments`, `get_time_entry`, `get_time_entries_summary`, `set_case_billing_config`, `get_case_billing_config`, `calculate_case_total` all **not implemented**
 
-## Next phases (execution order)
+## Next phases (re-prioritized 2026-05-21 from honest audit)
 
-### Phase U7 continuation — Board parity
+This list **supersedes** the previous "U7/U8/U9/U10 continuation" sections. Numbered in dependency order; see [spec/gap-analysis-master.md](spec/gap-analysis-master.md) for sizings.
 
-- Workflow board or swimlanes with `@dnd-kit` (improve `board-view.tsx`)
-- File review status polish in board/table
-- Duplicate metadata merge UX (`merge_duplicate_metadata`) and safe confirmation flow
+1. **Fix broken search dialog** (P0 runtime bug; half-day)
+2. **Fix `merge_duplicate_metadata` artifact relink** (P0 backend bug; half-day)
+3. **Viewer header parity:** RenameFileDialog, DeleteFileDialog, MetadataPanel, FileChangeWarning, fullscreen, keyboard nav (1–2 days)
+4. **Inventory data grid** — biggest UX gap (4–6 days)
+5. **Tiptap rich artifact editors** + dedicated create dialogs with severity/date/event-type/source-file (3–4 days)
+6. **Duplicates depth** — DuplicateManagementPanel + DuplicateDecisionDialog + badges (3 days)
+7. **Time/billing depth** — Rust segment model + Segment/DailySummary/BillingConfig/DeleteTimeEntry dialogs + list/calendar (5–7 days)
+8. **Reports depth** — structured sections + preview + PDF/DOCX + persistent history (3–4 days)
+9. **Column / mapping config** — ColumnManager + FieldMapperStepper + Rust extraction engine (5–8 days)
+10. **EditCaseDialog** + rename in case list (half-day)
+11. **App SettingsDialog** — theme + system-file-filter + missing Rust commands (1 day)
+12. **Ingest UX** — progress + cancellation + LargeFolderWarningDialog + DuplicateIngestionNotification (2–3 days)
+13. **Frontend unit tests** — vitest setup; cover command-client, file-preview, viewer routing (ongoing)
+14. **Updater + production signing** — `tauri-plugin-updater`, Developer ID, Windows signing, notarization (distinct workstream, needs paid certs)
 
-### Phase U8 continuation — Time parity
-
-- Time management page, calendar day UI, segment edit, billing config
-
-### Phase U9 — Reports 🚧
+### Phase U9 — Reports 🟡 MVP only
 
 - Reports side panel MVP implemented (`components/artifacts/reports-panel.tsx`)
-- Exports wired to `export_case_report` for: narrative, executive, evidence index, financial, billing invoice
+- Exports wired to `export_case_report` for: narrative, executive, evidence index, financial, billing invoice — **markdown files only**, written to app data exports dir
 - Narrative preview wired via `generate_case_report`
-- In-panel recent export history added
-- Remaining: full report workspace/page UX, templating controls, richer filters
+- In-panel recent export history is **in-memory** (lost on reload)
+- **Missing vs v1:** `ReportView` workspace page, `ReportSections` (Executive Summary / Case Overview / Findings / Timeline / Inventory Summary / Notes / Appendices) with structured rendering and preview-per-type; template editor; persistent export history (DB); PDF / DOCX exports; report customization; signatures / exhibits
 
-### Phase U10 — Search + settings 🚧
+### Phase U10 — Search + settings 🟠 search broken + settings shallow
 
-- Cmdk search dialog shipped (`components/search/search-dialog.tsx`)
-- Workspace settings dialog shipped (`components/workspace/settings-dialog.tsx`) with auto-sync and panel default controls
-- Search upgraded to cross-entity (`search_all`) with panel-aware actions for non-file hits
-- Remaining: mapping/settings parity, advanced column manager workflows
+- **Search dialog is broken at runtime** (`components/search/search-dialog.tsx`): `search_all` Rust returns `Vec<String>` like `"file:<id>"`; UI types it as `SearchHit[]` and reads `.entityType` / `.title` / `.snippet`. Dialog opens but renders nothing. Fix: change Rust to return structured hits **and** include findings + timeline (which have FTS tables but are not searched today).
+- Workspace settings dialog shipped (`components/workspace/settings-dialog.tsx`) — auto-sync + panel default controls. Persists to `workspace_preferences` table.
+- **Missing vs v1:** app-level `SettingsDialog` (theme + system-file-filter config with patterns `.DS_Store`, `Thumbs.db`, `desktop.ini`, `~$*`, etc.); backend commands `get_system_file_filter_config` / `save_system_file_filter_config` not implemented; theme toggle currently lives on case-list only, not reachable from workspace
 
-### Phase U11 — UX gate + cleanup
+### Phase U11 — UX gate + cleanup (NOT EARNED)
 
-- Legacy `components/case-workspace.tsx` removed (shell is `case-workspace-shell.tsx`)
-- Manual E2E on [spec/user-flow-map.md](spec/user-flow-map.md)
-- `pnpm ops:validate:local`
-- Refresh [desktop-workflow-mapping.md](desktop-workflow-mapping.md), [spec/feature-catalog.md](spec/feature-catalog.md) row statuses
+- Legacy `components/case-workspace.tsx` removed (shell is `case-workspace-shell.tsx`) ✅
+- UX Parity Build Gate **cannot be claimed** until items 1–11 of [spec/gap-analysis-master.md](spec/gap-analysis-master.md) "Launch critical path (rewritten)" land
+- After that: manual E2E on [spec/user-flow-map.md](spec/user-flow-map.md) + `pnpm ops:validate:local` + refresh [desktop-workflow-mapping.md](desktop-workflow-mapping.md) and [spec/feature-catalog.md](spec/feature-catalog.md) row statuses
 
-## UX Parity Build Gate (target)
+## UX Parity Build Gate (honest)
 
 All must pass before AINative:
 
 | # | Criterion | Status |
 |---|-----------|--------|
-| G1 | Case hub: list, create, open, delete, search/sort | **done** |
-| G2 | Workspace: navigator + viewer + notes/findings/timeline panels | **done** (panels MVP) |
-| G3 | File review status + ingest/sync from header | **done** |
-| G4 | In-app viewers for PDF/Office/spreadsheets + text/image/CSV | **done** |
-| G5 | Global search dialog (cmdk) with FTS | **in progress** — cross-entity MVP shipped |
-| G6 | Timer + time management entry | **in progress** — header widget + side panel MVP shipped |
-| G7 | Report mode (five export types) | **in progress** — reports panel MVP + exports/preview shipped |
-| G8 | Duplicate review UI | **in progress** — duplicate groups + primary + metadata merge shipped |
-| G9 | Theme/splash/error boundary on all routes | **done** |
+| G1 | Case hub: list, create, open, delete, search/sort | **MVP** — no rename / edit metadata (`EditCaseDialog` missing) |
+| G2 | Workspace: navigator + viewer + notes/findings/timeline panels | **MVP** — viewer header lacks rename/delete/metadata/file-change; artifact editors are plain textareas (no Tiptap) |
+| G3 | File review status + ingest/sync from header | **MVP** — sync OK; no progress UI, no cancellation, no LargeFolderWarningDialog, no DuplicateIngestionNotification |
+| G4 | In-app viewers for PDF/Office/spreadsheets + text/image/CSV + media | **routing done, depth MVP** — see U5 phase block above |
+| G5 | Global search dialog (cmdk) with FTS | **🔴 BROKEN** — contract mismatch; renders empty |
+| G6 | Timer + time management entry | **MVP** — pause/resume actually stop/restart; no segment model; no manual entry CRUD; no billing config UI |
+| G7 | Report mode (five export types) | **MVP** — markdown exports only; no structured sections; no preview-per-type |
+| G8 | Duplicate review UI | **MVP** — list + set primary only; `merge_duplicate_metadata` doesn't relink artifacts (known bug); no badges across navigator/viewer; no decision dialog |
+| G9 | Theme/splash/error boundary on all routes | **partial** — theme done; splash component exists but unwired; error boundary present at root + viewer pane |
 | G10 | No `invoke()` in components; `command-client` only | **done** |
-| G11 | `pnpm dev` smoke on primary flows | validate at U11 |
+| G11 | `pnpm dev` smoke on primary flows | not yet executed against v1 user-flow-map oracle |
 | G12 | Backend regression suites on every merge | **ongoing** |
+| G13 | **NEW** — Inventory data grid (replaces or supplements folder-tree navigator) | **🔴 missing** — single biggest UX gap |
+| G14 | **NEW** — Column / mapping config UI + Rust extraction engine | **🔴 missing** — backend tables orphaned |
+| G15 | **NEW** — Frontend unit tests (vitest) at parity with v1 test count | **🔴 missing** |
 
 ## Supply chain
 
