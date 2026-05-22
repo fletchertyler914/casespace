@@ -3,6 +3,7 @@ import type {
   CaseSummary,
   Finding,
   Note,
+  ReportDocument,
   ReportExportHistoryEntry,
   SearchHit,
   TimeEntry,
@@ -11,6 +12,39 @@ import type {
 import type { InvokeFn } from "@/lib/invoke-bridge";
 
 export const E2E_CASE_ID = "e2e-case-1";
+
+function mockReportDocument(templateId = "cfe-long"): string {
+  const doc: ReportDocument = {
+    templateId: templateId as ReportDocument["templateId"],
+    caseId: E2E_CASE_ID,
+    generatedAt: new Date().toISOString(),
+    sections: [
+      {
+        id: "findings",
+        heading: "Findings",
+        text: "E2E mock finding content.",
+        citations: [
+          {
+            kind: "finding",
+            id: "f1",
+            label: "Finding: Mock",
+          },
+        ],
+        standardsTags: ["ACFE-EVIDENCE"],
+      },
+    ],
+    compliance: [
+      {
+        id: "ACFE-III.C.2",
+        label: "ACFE Code III.C.2 — No guilt/innocence opinion",
+        status: "verified",
+      },
+    ],
+    markdown: "# E2E Report\n\nPreview body.",
+  };
+  return JSON.stringify(doc);
+}
+
 
 const mockCase: CaseSummary = {
   id: E2E_CASE_ID,
@@ -235,7 +269,16 @@ export const e2eMockInvoke = (async (command, args = {}) => {
         generatedAt: new Date().toISOString(),
       };
     case "generate_case_report":
-      return "# E2E Report\n\nPreview body.";
+      return mockReportDocument(String(args.templateId ?? "cfe-long"));
+    case "seed_sample_fraud_case":
+      return {
+        id: "sample-fraud-examination",
+        name: "Sample — Asset Misappropriation Examination",
+        status: "active",
+        createdAt: "2026-01-01T00:00:00Z",
+        updatedAt: "2026-01-01T00:00:00Z",
+        sourcePaths: [],
+      } satisfies CaseSummary;
     case "search_all": {
       const q = String(args.query ?? "").toLowerCase();
       if (q.length < 2) return [];

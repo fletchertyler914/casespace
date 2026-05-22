@@ -3,7 +3,7 @@
 Desktop UX and release milestones for `apps/desktop`. Backend command matrix: [command-catalog.md](command-catalog.md). Component map: [desktop-workflow-mapping.md](desktop-workflow-mapping.md). Agent track: [architecture-agents.md](architecture-agents.md).
 
 **Last updated:** 2026-05-22
-**Current version:** 0.1.8 (local-validated)
+**Current version:** 0.1.9 (Wave A report library — local-validated pending gate)
 
 ## Status summary
 
@@ -14,17 +14,24 @@ Desktop UX and release milestones for `apps/desktop`. Backend command matrix: [c
 | In-app viewers (PDF, Office, media, text) | **Done** — PDF toolbar uses native CaseSpace chrome |
 | Notes, findings, timeline panels | **Done (MVP)** |
 | Board, duplicates, reports, search | **Done (local)** |
-| Time management (day model, list + calendar, billing) | **Done (local)** — validated 2026-05-22 with `pnpm ops:validate:local` |
-| Agent scaffold (`@repo/agents` + AgentPanel stub) | **Shipped in 0.1.8 (UI inert)** — see [architecture-agents.md](architecture-agents.md) §Spike log |
-| UX release gate (native E2E) | **Pending** — [spec/native-e2e-checklist.md](spec/native-e2e-checklist.md) |
-| AI-native features (live graphs, report agent, autosuggest) | **Blocked** until UX gate |
+| Time management (day model, list + calendar, billing) | **Done (local)** |
+| **Report library Wave A** (CFE long/short, expert witness, engagement letter) | **Shipped in 0.1.9** — citation pills + standards footer |
+| Sample case demo flow | **Shipped in 0.1.9** |
+| Agent report graph + MCP bridge (Phase B) | **Shipped (local)** — wired in AgentPanel; PMF gate before Wave B templates |
+| UX release gate (native E2E) | **Pending** |
+| Wave B templates (PI) | **Blocked** — [pmf-gate-eval.md](spec/pmf-gate-eval.md) |
 
-## PDF viewer
+## Release: 0.1.9 (2026-05-22) — Report Library Wave A
 
-- Engine: `@react-pdf-viewer` + `pdf.worker.min.js`
-- Chrome: `components/viewer/pdf-toolbar.tsx` — Lucide + shadcn `Button`, not library toolbar icons
-- Controls: search, zoom, page nav, print, download
-- No thumbnail sidebar (outline-only workflows use file navigator)
+- Template library: `cfe-long`, `cfe-short`, `expert-witness-frcp26`, `engagement-letter` ([report-library-research.md](spec/report-library-research.md))
+- Citation-backed `ReportDocument` JSON from `generate_case_report(caseId, templateId?)`
+- Standards compliance footer (ACFE III.C.2, FRCP 26, FRE 702, SSFS No. 1)
+- Report template picker in reports workspace
+- Sample fraud examination case (`seed_sample_fraud_case`) + case hub CTA
+- Schema v7: `report_export_history.template_id`, `citations_json`
+- Phase B: `@repo/agents` MCP server stub, redaction policy, report graph wired to AgentPanel
+
+PMF thesis: [spec/pmf-thesis-cfe.md](spec/pmf-thesis-cfe.md)
 
 ## Release: 0.1.8 (2026-05-22)
 

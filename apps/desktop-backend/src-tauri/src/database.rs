@@ -25,7 +25,7 @@ fn segment_duration_seconds(started_at: &str, ended_at: Option<&str>) -> Result<
     Ok((end_ts - start.timestamp()).max(0))
 }
 
-const SCHEMA_VERSION: i32 = 6;
+const SCHEMA_VERSION: i32 = 7;
 
 fn table_has_column(conn: &Connection, table: &str, column: &str) -> Result<bool, String> {
     let mut stmt = conn
@@ -76,6 +76,11 @@ CREATE TABLE IF NOT EXISTS report_export_history (
 );
 
 CREATE INDEX IF NOT EXISTS idx_report_export_history_case_id ON report_export_history(case_id);
+"#;
+
+const MIGRATION_V7: &str = r#"
+ALTER TABLE report_export_history ADD COLUMN template_id TEXT;
+ALTER TABLE report_export_history ADD COLUMN citations_json TEXT;
 "#;
 
 const MIGRATION_V1: &str = r#"
@@ -390,6 +395,12 @@ impl Database {
         }
         if version == 6 {
             self.migrate_v6_day_based_entries(&conn)?;
+        }
+        if version == 7 {
+            if !table_has_column(&conn, "report_export_history", "template_id")? {
+                conn.execute_batch(MIGRATION_V7)
+                    .map_err(|e| format!("migration v7 failed: {e}"))?;
+            }
         }
         let now = chrono::Utc::now().to_rfc3339();
         conn.execute(

@@ -5,6 +5,7 @@
     "paths": {
       "@/*": ["./*"]
     },
+    "resolveJsonModule": true,
     "plugins": [
       {
         "name": "next"

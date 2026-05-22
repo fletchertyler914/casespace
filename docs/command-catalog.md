@@ -68,7 +68,8 @@ Native Tauri commands exposed to `apps/desktop` via `lib/command-client.ts`.
 | `set_case_billing_config` | billing | implemented | REQ-TIME-001 |
 | `calculate_billing_amount` | billing | implemented | REQ-TIME-001 — fixed/daily/weekly/monthly + segment overrides |
 | `extract_file_metadata` | ingest | implemented | REQ-INGEST-001 |
-| `generate_case_report` | reports | implemented | REQ-REPORT-001 |
+| `generate_case_report` | reports | implemented | REQ-REPORT-001 — accepts optional `templateId`; returns JSON `ReportDocument` |
+| `seed_sample_fraud_case` | cases | implemented | PMF demo — seeds sample fraud examination case |
 | `export_case_report` | reports | implemented | REQ-REPORT-001 |
 | `run_ocr_preview` | ai | stub | REQ-AI-001 |
 

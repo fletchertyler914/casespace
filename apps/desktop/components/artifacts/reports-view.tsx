@@ -7,7 +7,9 @@ import type {
   CaseSummary,
   Finding,
   Note,
+  ReportDocument,
   ReportExportHistoryEntry,
+  ReportTemplateId,
   TimelineEvent,
 } from "@repo/types";
 import { Badge } from "@/components/ui/badge";
@@ -26,6 +28,30 @@ import {
   REPORT_SECTION_DEFS,
   type ReportSectionId,
 } from "@/lib/report-sections";
+import { DEFAULT_REPORT_TEMPLATE_ID } from "@/lib/report-templates";
+import { ReportTemplatePicker } from "./report-template-picker";
+import { ComplianceFooter } from "./compliance-footer";
+import { CitationPillList } from "./citation-pill";
+
+const TEMPLATE_STORAGE_KEY = "casespace.reportTemplate";
+
+function loadTemplateForCase(caseId: string): ReportTemplateId {
+  if (typeof window === "undefined") return DEFAULT_REPORT_TEMPLATE_ID;
+  try {
+    const raw = localStorage.getItem(`${TEMPLATE_STORAGE_KEY}.${caseId}`);
+    return (raw as ReportTemplateId) || DEFAULT_REPORT_TEMPLATE_ID;
+  } catch {
+    return DEFAULT_REPORT_TEMPLATE_ID;
+  }
+}
+
+function saveTemplateForCase(caseId: string, templateId: ReportTemplateId) {
+  try {
+    localStorage.setItem(`${TEMPLATE_STORAGE_KEY}.${caseId}`, templateId);
+  } catch {
+    /* ignore */
+  }
+}
 
 function stripHtml(html: string): string {
   return html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
@@ -64,8 +90,17 @@ export function ReportsView({
   const [billingAmount, setBillingAmount] = useState<number | null>(null);
   const [generating, setGenerating] = useState(false);
   const [generatedPreview, setGeneratedPreview] = useState("");
+  const [reportDocument, setReportDocument] = useState<ReportDocument | null>(null);
+  const [templateId, setTemplateId] = useState<ReportTemplateId>(() =>
+    loadTemplateForCase(caseId),
+  );
+  const [pickerOpen, setPickerOpen] = useState(false);
   const [history, setHistory] = useState<ReportExportHistoryEntry[]>([]);
   const [historyLoading, setHistoryLoading] = useState(true);
+
+  useEffect(() => {
+    setTemplateId(loadTemplateForCase(caseId));
+  }, [caseId]);
 
   const loadHistory = useCallback(async () => {
     setHistoryLoading(true);
@@ -88,15 +123,26 @@ export function ReportsView({
     void loadHistory();
   }, [loadBilling, loadHistory]);
 
-  async function generateReport() {
+  async function generateReport(selectedTemplate?: ReportTemplateId) {
+    const tid = selectedTemplate ?? templateId;
     setGenerating(true);
-    const res = await commandClient.generateCaseReport(caseId);
+    const res = await commandClient.generateCaseReport(caseId, tid);
     setGenerating(false);
     if (res.ok && res.data) {
-      setGeneratedPreview(res.data);
+      try {
+        const doc = JSON.parse(res.data) as ReportDocument;
+        setReportDocument(doc);
+        setGeneratedPreview(doc.markdown);
+        setTemplateId(tid);
+        saveTemplateForCase(caseId, tid);
+      } catch {
+        setReportDocument(null);
+        setGeneratedPreview(res.data);
+      }
       void loadHistory();
     } else {
       setGeneratedPreview("Report generation failed. Try again.");
+      setReportDocument(null);
     }
   }
 
@@ -154,6 +200,14 @@ export function ReportsView({
             </p>
           </div>
           <div className="flex shrink-0 items-center gap-1.5">
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8"
+              onClick={() => setPickerOpen(true)}
+            >
+              Template: {templateId}
+            </Button>
             <Button
               size="sm"
               className="h-8"
@@ -215,12 +269,36 @@ export function ReportsView({
 
       {generatedPreview ? (
         <div className="shrink-0 border-b border-border/40 bg-muted/10 px-4 py-2">
-          <pre className="max-h-24 overflow-auto rounded-md border border-border/40 bg-card p-3 text-xs leading-relaxed whitespace-pre-wrap">
-            {generatedPreview.slice(0, 1200)}
-            {generatedPreview.length > 1200 ? "…" : ""}
+          <pre className="max-h-32 overflow-auto rounded-md border border-border/40 bg-card p-3 text-xs leading-relaxed whitespace-pre-wrap">
+            {generatedPreview.slice(0, 1600)}
+            {generatedPreview.length > 1600 ? "…" : ""}
           </pre>
+          {reportDocument?.sections?.length ? (
+            <div className="mt-2 space-y-2">
+              {reportDocument.sections.slice(0, 2).map((section) => (
+                <div key={section.id}>
+                  <p className="text-[11px] font-medium">{section.heading}</p>
+                  <CitationPillList citations={section.citations} />
+                </div>
+              ))}
+            </div>
+          ) : null}
+          {reportDocument?.compliance?.length ? (
+            <ComplianceFooter checks={reportDocument.compliance} />
+          ) : null}
         </div>
       ) : null}
+
+      <ReportTemplatePicker
+        open={pickerOpen}
+        onOpenChange={setPickerOpen}
+        selectedId={templateId}
+        onSelect={(id) => {
+          setTemplateId(id);
+          saveTemplateForCase(caseId, id);
+          void generateReport(id);
+        }}
+      />
 
       <ScrollArea className="min-h-0 flex-1">
         <div className="space-y-4 p-4 pb-6">

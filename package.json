@@ -13,6 +13,7 @@
     "check-types": "turbo run check-types --filter=!desktop-backend",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
     "arch:check": "node ./scripts/enforce-architecture.mjs",
+    "codegen:report-templates": "node ./scripts/codegen-report-templates.mjs",
     "release:verify-links": "node ./scripts/verify-release-links.mjs",
     "release:status": "node ./scripts/release-automation.mjs status",
     "release:validate": "node ./scripts/release-automation.mjs validate",

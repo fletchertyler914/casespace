@@ -23,7 +23,14 @@ describe("ReportsWorkspace (FLOW-005)", () => {
     });
     vi.mocked(commandClient.generateCaseReport).mockResolvedValue({
       ok: true,
-      data: "# Report\n\nPreview body.",
+      data: JSON.stringify({
+        templateId: "cfe-long",
+        caseId: MOCK_CASE_ID,
+        generatedAt: new Date().toISOString(),
+        sections: [],
+        compliance: [],
+        markdown: "# Report\n\nPreview body.",
+      }),
     });
     vi.mocked(commandClient.calculateBillingAmount).mockResolvedValue({
       ok: true,
@@ -46,7 +53,10 @@ describe("ReportsWorkspace (FLOW-005)", () => {
       screen.getByRole("button", { name: /Generate report/i }),
     );
     await waitFor(() => {
-      expect(commandClient.generateCaseReport).toHaveBeenCalledWith(MOCK_CASE_ID);
+      expect(commandClient.generateCaseReport).toHaveBeenCalledWith(
+        MOCK_CASE_ID,
+        "cfe-long",
+      );
     });
   });
 });

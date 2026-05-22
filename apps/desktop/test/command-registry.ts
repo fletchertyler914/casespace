@@ -355,7 +355,7 @@ export const INVOKE_CONTRACTS: Array<{
   },
   {
     label: "generateCaseReport",
-    run: () => commandClient.generateCaseReport("c1"),
+    run: () => commandClient.generateCaseReport("c1", "cfe-long"),
     command: "generate_case_report",
   },
 ];

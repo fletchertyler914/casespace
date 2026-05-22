@@ -2,8 +2,14 @@ pub mod database;
 pub mod field_extraction;
 pub mod ingest;
 pub mod path;
+#[path = "report_templates.generated.rs"]
+mod report_templates_generated;
+mod reports;
+mod sample_case;
 mod search;
 mod time_tracking;
+
+pub use reports::{build_report_body, build_report_document};
 
 use base64::{engine::general_purpose::STANDARD, Engine as _};
 use chrono::Utc;
@@ -172,6 +178,10 @@ struct ReportExportHistoryEntry {
     report_type: String,
     file_path: String,
     generated_at: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    template_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    citations_json: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -1987,88 +1997,6 @@ fn export_dir(app: &AppHandle, case_id: &str) -> Result<PathBuf, String> {
 }
 
 /// Used by Tauri commands and integration tests (`tests/command_parity.rs`).
-pub fn build_report_body(case_id: &str, conn: &rusqlite::Connection, kind: &str) -> Result<String, String> {
-    let case_name: String = conn
-        .query_row(
-            "SELECT name FROM cases WHERE id = ?1",
-            params![case_id],
-            |row| row.get(0),
-        )
-        .map_err(|_| "case not found".to_string())?;
-    let file_count: i64 = conn
-        .query_row(
-            "SELECT COUNT(*) FROM files WHERE case_id = ?1 AND deleted_at IS NULL",
-            params![case_id],
-            |row| row.get(0),
-        )
-        .map_err(|e| e.to_string())?;
-    let notes: i64 = conn
-        .query_row(
-            "SELECT COUNT(*) FROM notes WHERE case_id = ?1",
-            params![case_id],
-            |row| row.get(0),
-        )
-        .map_err(|e| e.to_string())?;
-    let findings: i64 = conn
-        .query_row(
-            "SELECT COUNT(*) FROM findings WHERE case_id = ?1",
-            params![case_id],
-            |row| row.get(0),
-        )
-        .map_err(|e| e.to_string())?;
-    let timeline: i64 = conn
-        .query_row(
-            "SELECT COUNT(*) FROM timeline_events WHERE case_id = ?1",
-            params![case_id],
-            |row| row.get(0),
-        )
-        .map_err(|e| e.to_string())?;
-    let _ = (notes, findings, timeline);
-    // Billing computed inline below
-    let (total_seconds, amount, _) =
-        time_tracking::compute_case_billing_totals(conn, case_id)?;
-    let total_minutes = total_seconds / 60;
-
-    match kind {
-        "narrative" => Ok(format!(
-            "# Narrative Report — {case_name}\n\nGenerated: {}\n\n## Summary\nCase contains {file_count} evidence files, {notes} notes, {findings} findings, and {timeline} timeline events.\n\n## Narrative\nThis report synthesizes investigator work product for deliverable review.\n",
-            now_iso(),
-        )),
-        "executive" => Ok(format!(
-            "# Executive Summary — {case_name}\n\n- Files reviewed: {file_count}\n- Key findings: {findings}\n- Timeline events: {timeline}\n- Billable amount: ${amount:.2}\n",
-        )),
-        "evidence_index" => {
-            let mut stmt = conn
-                .prepare(
-                    "SELECT file_name, absolute_path, status FROM files WHERE case_id = ?1 AND deleted_at IS NULL ORDER BY file_name LIMIT 5000",
-                )
-                .map_err(|e| e.to_string())?;
-            let rows = stmt
-                .query_map(params![case_id], |row| {
-                    Ok(format!(
-                        "- {} | {} | {}",
-                        row.get::<_, String>(0)?,
-                        row.get::<_, String>(1)?,
-                        row.get::<_, String>(2)?
-                    ))
-                })
-                .map_err(|e| e.to_string())?;
-            let list: String = rows.filter_map(Result::ok).collect::<Vec<_>>().join("\n");
-            Ok(format!(
-                "# Evidence Index — {case_name}\n\n{list}\n",
-            ))
-        }
-        "financial" => Ok(format!(
-            "# Financial Package — {case_name}\n\nTotal billable minutes: {total_minutes}\nComputed amount: ${amount:.2}\nFiles in scope: {file_count}\n",
-        )),
-        "billing_invoice" => Ok(format!(
-            "# Billing Invoice — {case_name}\n\nInvoice date: {}\nBillable minutes: {total_minutes}\nAmount due: ${amount:.2}\n",
-            now_iso()
-        )),
-        _ => Err("unknown report type".into()),
-    }
-}
-
 #[tauri::command]
 fn export_case_report(
     case_id: String,
@@ -2076,12 +2004,16 @@ fn export_case_report(
     app: AppHandle,
     state: State<AppState>,
 ) -> Result<ReportExport, String> {
-    let body = with_conn(&state, |conn| build_report_body(&case_id, conn, &report_type))?;
+    let generated_at = now_iso();
+    let doc = with_conn(&state, |conn| {
+        reports::build_report_document(&case_id, &report_type, &generated_at, conn)
+    })?;
     let dir = export_dir(&app, &case_id)?;
     let file_name = format!("{}-{}-{}.md", case_id, report_type, unix_now());
     let file_path = dir.join(&file_name);
-    fs::write(&file_path, body).map_err(|e| e.to_string())?;
-    let generated_at = now_iso();
+    fs::write(&file_path, &doc.markdown).map_err(|e| e.to_string())?;
+    let citations_json = serde_json::to_string(&reports::all_citations(&doc.sections))
+        .map_err(|e| e.to_string())?;
     let export = ReportExport {
         report_type: report_type.clone(),
         file_path: file_path.to_string_lossy().to_string(),
@@ -2093,8 +2025,8 @@ fn export_case_report(
         }
         let id = Uuid::new_v4().to_string();
         conn.execute(
-            "INSERT INTO report_export_history (id, case_id, report_type, file_path, generated_at) VALUES (?1, ?2, ?3, ?4, ?5)",
-            params![id, case_id, report_type, export.file_path, generated_at],
+            "INSERT INTO report_export_history (id, case_id, report_type, file_path, generated_at, template_id, citations_json) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+            params![id, case_id, report_type, export.file_path, generated_at, doc.template_id, citations_json],
         )
         .map_err(|e| e.to_string())?;
         Ok(())
@@ -2113,7 +2045,7 @@ fn list_report_exports(
         }
         let mut stmt = conn
             .prepare(
-                "SELECT id, case_id, report_type, file_path, generated_at
+                "SELECT id, case_id, report_type, file_path, generated_at, template_id, citations_json
                  FROM report_export_history
                  WHERE case_id = ?1
                  ORDER BY generated_at DESC
@@ -2128,6 +2060,8 @@ fn list_report_exports(
                     report_type: row.get(2)?,
                     file_path: row.get(3)?,
                     generated_at: row.get(4)?,
+                    template_id: row.get(5)?,
+                    citations_json: row.get(6)?,
                 })
             })
             .map_err(|e| e.to_string())?;
@@ -2136,8 +2070,25 @@ fn list_report_exports(
 }
 
 #[tauri::command]
-fn generate_case_report(case_id: String, state: State<AppState>) -> Result<String, String> {
-    with_conn(&state, |conn| build_report_body(&case_id, conn, "narrative"))
+fn generate_case_report(
+    case_id: String,
+    template_id: Option<String>,
+    state: State<AppState>,
+) -> Result<String, String> {
+    let tid = template_id.unwrap_or_else(|| "cfe-long".to_string());
+    if !report_templates_generated::is_known_template(&tid) {
+        return Err(format!("unknown report template: {tid}"));
+    }
+    let generated_at = now_iso();
+    let doc = with_conn(&state, |conn| {
+        reports::build_report_document(&case_id, &tid, &generated_at, conn)
+    })?;
+    serde_json::to_string(&doc).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn seed_sample_fraud_case(state: State<AppState>) -> Result<CaseSummary, String> {
+    with_conn(&state, |conn| sample_case::seed_sample_fraud_case(conn))
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -2242,6 +2193,7 @@ pub fn run() {
             export_case_report,
             list_report_exports,
             generate_case_report,
+            seed_sample_fraud_case,
             check_for_update,
         ])
         .run(tauri::generate_context!())

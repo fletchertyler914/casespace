@@ -5,7 +5,8 @@
   "license": "BUSL-1.1",
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./report-templates.json": "./report-templates.json"
   },
   "scripts": {
     "build": "tsc --noEmit",

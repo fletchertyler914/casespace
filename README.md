@@ -2,7 +2,7 @@
 
 CaseSpace is a desktop-first investigative case workspace for CFE and fraud examination practitioners. The product ships as a **3-app monorepo**: native engine, desktop UX, and marketing/download web surface.
 
-**Current release line:** `0.1.8` (see [GitHub Releases](https://github.com/fletchertyler914/casespace/releases))  
+**Current release line:** `0.1.9` (see [GitHub Releases](https://github.com/fletchertyler914/casespace/releases))  
 **Status:** Core backend and desktop UX are **implemented locally**; production release validation and native E2E sign-off are the remaining gates before calling the product **release-validated**. Details: [`docs/readiness.md`](docs/readiness.md), [`docs/product-roadmap.md`](docs/product-roadmap.md).
 
 ## Repository layout

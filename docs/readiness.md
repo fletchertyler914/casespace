@@ -28,13 +28,13 @@ Tracks implemented scope, validated scope, and gates before production sign-off 
 
 | Run | Date | Command | Result |
 |-----|------|---------|--------|
-| Parity | 2026-05-22 | `pnpm test:parity` | pass (11 parity + 4 hardening) |
-| Hardening | 2026-05-22 | `pnpm test:hardening` | pass |
-| Local validate | 2026-05-22 | `pnpm ops:validate:local` | pass |
-| Desktop unit | 2026-05-22 | `pnpm test:desktop` | pass (161 tests) |
+| Parity | 2026-05-22 | `pnpm test:parity` | pass (12 parity + 4 hardening incl. Wave A templates) |
+| Local validate | 2026-05-22 | `pnpm ops:validate:local` | pass (0.1.9) |
+| Desktop unit | 2026-05-22 | `pnpm test:desktop` | pass (166 tests) |
 | Desktop E2E (mocked) | 2026-05-22 | `pnpm test:e2e` | pass (12 tests) |
-| Agents typecheck/tests | 2026-05-22 | `pnpm --filter @repo/agents test` | pass (2 tests) |
-| v0.1.8 bundle | 2026-05-22 | `pnpm build` | `CaseSpace_0.1.8_aarch64.dmg` (ad-hoc signed) |
+| Agents tests | 2026-05-22 | `pnpm --filter @repo/agents test` | pass (3 tests) |
+| v0.1.9 bundle | 2026-05-22 | `pnpm build` | `CaseSpace_0.1.9_aarch64.dmg` (ad-hoc signed) |
+| PMF gate (Wave B) | — | [spec/pmf-gate-eval.md](spec/pmf-gate-eval.md) | **NOT EARNED** — 30 days post Wave A |
 
 ## Next execution
 

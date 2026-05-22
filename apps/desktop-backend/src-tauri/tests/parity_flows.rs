@@ -534,3 +534,57 @@ fn flow_file_note_counts_and_metadata_batch() {
         Ok(())
     });
 }
+
+#[test]
+fn flow_wave_a_report_templates_compliance() {
+    let (_dir, db) = temp_db();
+    let _ = with_db(&db, |conn| {
+        let case_id = uuid::Uuid::new_v4().to_string();
+        let now = chrono::Utc::now().to_rfc3339();
+        conn.execute(
+            "INSERT INTO cases (id, name, status, created_at, updated_at) VALUES (?1, 'Wave A', 'active', ?2, ?2)",
+            params![case_id, now],
+        )
+        .unwrap();
+        let finding_id = uuid::Uuid::new_v4().to_string();
+        let file_id = uuid::Uuid::new_v4().to_string();
+        conn.execute(
+            "INSERT INTO files (id, case_id, file_name, folder_path, absolute_path, file_size, modified_at, status)
+             VALUES (?1, ?2, 'evidence.pdf', '/', '/evidence.pdf', 100, ?3, 'reviewed')",
+            params![file_id, case_id, now],
+        )
+        .unwrap();
+        let linked = serde_json::json!([file_id]).to_string();
+        conn.execute(
+            "INSERT INTO findings (id, case_id, title, description, severity, linked_files, created_at, updated_at)
+             VALUES (?1, ?2, 'Test finding', 'Description', 'high', ?3, ?4, ?4)",
+            params![finding_id, case_id, linked, now],
+        )
+        .unwrap();
+        conn.execute(
+            "INSERT INTO timeline_events (id, case_id, description, occurred_at, source_file_id, created_at)
+             VALUES (?1, ?2, 'Event one', ?3, ?4, ?3)",
+            params![uuid::Uuid::new_v4().to_string(), case_id, now, file_id],
+        )
+        .unwrap();
+
+        for template in ["cfe-long", "cfe-short", "expert-witness-frcp26", "engagement-letter"] {
+            let doc = desktop_backend_lib::build_report_document(
+                &case_id,
+                template,
+                &now,
+                conn,
+            )
+            .unwrap_or_else(|e| panic!("template {template}: {e}"));
+            assert_eq!(doc.template_id, template);
+            assert!(!doc.markdown.is_empty());
+            assert!(doc.sections.iter().any(|s| !s.heading.is_empty()));
+            let combined = doc.markdown.to_lowercase();
+            assert!(!combined.contains("guilty of fraud"));
+            if template == "expert-witness-frcp26" {
+                assert!(doc.compliance.iter().any(|c| c.id == "FRCP-26-B"));
+            }
+        }
+        Ok(())
+    });
+}

@@ -194,7 +194,37 @@
           generatedAt: new Date().toISOString(),
         };
       case "generate_case_report":
-        return "# E2E Report\n\nPreview body.";
+        return JSON.stringify({
+          templateId: args.templateId || "cfe-long",
+          caseId: "e2e-case-1",
+          generatedAt: new Date().toISOString(),
+          sections: [
+            {
+              id: "findings",
+              heading: "Findings",
+              text: "E2E mock finding.",
+              citations: [{ kind: "finding", id: "f1", label: "Finding: Mock" }],
+              standardsTags: [],
+            },
+          ],
+          compliance: [
+            {
+              id: "ACFE-III.C.2",
+              label: "No guilt/innocence opinion",
+              status: "verified",
+            },
+          ],
+          markdown: "# E2E Report\n\nPreview body.",
+        });
+      case "seed_sample_fraud_case":
+        return {
+          id: "sample-fraud-examination",
+          name: "Sample — Asset Misappropriation Examination",
+          status: "active",
+          createdAt: "2026-01-01T00:00:00Z",
+          updatedAt: "2026-01-01T00:00:00Z",
+          sourcePaths: [],
+        };
       case "search_all": {
         const q = String(args.query || "").toLowerCase();
         if (q.length < 2) return [];

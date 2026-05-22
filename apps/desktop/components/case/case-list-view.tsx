@@ -8,6 +8,7 @@ import {
   Plus,
   Search,
   Settings,
+  Sparkles,
   X,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -53,12 +54,37 @@ export function CaseListView() {
   const [appSettingsOpen, setAppSettingsOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<CaseSummary | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [seedingSample, setSeedingSample] = useState(false);
 
   const [searchQuery, setSearchQuery] = useState("");
   const debouncedQuery = useDebounce(searchQuery, 150);
   const [sortOption, setSortOption] = useState<SortOption>("recent");
   const [statusFilter, setStatusFilter] = useState<CaseStatusFilter>("all");
   const searchRef = useRef<HTMLInputElement>(null);
+
+  async function trySampleCase() {
+    setSeedingSample(true);
+    try {
+      const res = await commandClient.seedSampleFraudCase();
+      if (!res.ok || !res.data) {
+        throw new Error(res.error?.message ?? "Could not load sample case");
+      }
+      toast({
+        title: "Sample case ready",
+        description: "Open the sample fraud examination to generate a CFE report in under 60 seconds.",
+      });
+      await refresh();
+      router.push(`/case?id=${encodeURIComponent(res.data.id)}`);
+    } catch (err) {
+      toast({
+        title: "Sample case failed",
+        description: err instanceof Error ? err.message : "Try again",
+        variant: "destructive",
+      });
+    } finally {
+      setSeedingSample(false);
+    }
+  }
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -398,12 +424,29 @@ export function CaseListView() {
               <p className="mb-6 max-w-md text-center text-sm text-muted-foreground">
                 {isFiltering
                   ? "Try adjusting your search to find what you're looking for."
-                  : "Get started by creating your first case to organize evidence, take notes, and produce reports."}
+                  : "Try a sample fraud examination with pre-loaded evidence, findings, and timeline — or create your own case."}
               </p>
-              <Button size="lg" onClick={() => setCreateOpen(true)}>
-                <Plus className="mr-2 h-4 w-4" />
-                Create your first case
-              </Button>
+              <div className="flex flex-col gap-2 sm:flex-row">
+                {!isFiltering ? (
+                  <Button
+                    size="lg"
+                    variant="default"
+                    disabled={seedingSample}
+                    onClick={() => void trySampleCase()}
+                  >
+                    <Sparkles className="mr-2 h-4 w-4" />
+                    {seedingSample ? "Loading sample…" : "Try sample fraud examination"}
+                  </Button>
+                ) : null}
+                <Button
+                  size="lg"
+                  variant={isFiltering ? "default" : "outline"}
+                  onClick={() => setCreateOpen(true)}
+                >
+                  <Plus className="mr-2 h-4 w-4" />
+                  Create your first case
+                </Button>
+              </div>
             </div>
           ) : (
             <div className="space-y-8">

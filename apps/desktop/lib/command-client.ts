@@ -416,7 +416,10 @@ export const commandClient = {
       caseId,
     });
   },
-  generateCaseReport(caseId: string) {
-    return safeInvoke<string>("generate_case_report", { caseId });
+  generateCaseReport(caseId: string, templateId?: string) {
+    return safeInvoke<string>("generate_case_report", { caseId, templateId });
+  },
+  seedSampleFraudCase() {
+    return safeInvoke<CaseSummary>("seed_sample_fraud_case", {});
   },
 };

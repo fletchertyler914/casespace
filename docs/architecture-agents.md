@@ -119,48 +119,29 @@ Per [ai-capability-matrix.md](spec/ai-capability-matrix.md): default **redacted-
 | Date | LangGraph | Mastra | Notes |
 |------|-----------|--------|-------|
 | 2026-05-21 | pass (scaffold) | — | `@repo/agents` package: tool policy, report/supervisor graphs, MCP tool defs; desktop `AgentPanel` + approvals queue |
-| 2026-05-22 | pass (build + tests green) | — | Released alongside v0.1.8. Scaffolding compiled into desktop via workspace dep; tool policy covered by Vitest. C0 hardening (Sqlite checkpoint + redaction module + first confirm round-trip) remains before C1 |
+| 2026-05-22 | pass (Wave A + C1/C2 local) | — | v0.1.9: report template library + `ReportDocument` citations; MCP server stub + redaction + report graph wired in AgentPanel with approval queue |
 
 ## Implementation phases
 
 | Track | Scope | Status |
 |-------|-------|--------|
-| **C0** Scaffold + spike | `packages/agents` skeleton, policy table, report/supervisor graph stubs, desktop `AgentPanel`/`ApprovalsQueue` | **Shipped in 0.1.8** |
-| **C1** MCP server + native bridge | `packages/agents/src/mcp/server.ts` exposing CaseSpace native commands via `command-client` proxy; `agent_runs` table + Sqlite checkpointer | next |
-| **C2** Graphs + UI wiring | Wire `report_generation` subgraph into `AgentPanel` → live token stream; `interrupt()` round-trip surfaces in `ApprovalsQueue` | after C1 |
-| **C3** Arcade external | Optional Gmail/Slack via Arcade MCP gateway; raw-cloud opt-in toggle | post-UX gate |
-| **C4** Validation + AINative GA | E2E for autonomous + confirm-required flows; redaction tests; ship behind feature flag | gates AINative GA |
+| **C0** Scaffold + spike | `packages/agents` skeleton, policy table, graph stubs, `AgentPanel`/`ApprovalsQueue` | **Done (0.1.8)** |
+| **C1** MCP server + native bridge | `packages/agents/src/mcp/server.ts` + memory checkpointer stub | **Done (0.1.9 local)** — native Sqlite `agent_runs` deferred |
+| **C2** Graphs + UI wiring | `report_generation` graph → AgentPanel → ApprovalsQueue approve/reject | **Done (0.1.9 local)** — deterministic compose via native command; LLM stream deferred |
+| **C3** Arcade external | Optional Gmail/Slack via Arcade MCP gateway | post-UX gate |
+| **C4** Validation + AINative GA | E2E agent round-trip + PMF gate | blocked on [pmf-gate-eval.md](spec/pmf-gate-eval.md) |
 
-C0 deliverables verified in 0.1.8:
+Template library (Wave A) is the anchoring contract for C2 — see [spec/report-library-research.md](spec/report-library-research.md) and [spec/pmf-thesis-cfe.md](spec/pmf-thesis-cfe.md).
 
-- `packages/agents/src/policy/tool-policy.ts` enforces `confirm_required` for `delete_case`, `merge_duplicate_metadata`, `remove_file_from_case`
-- `createReportGenerationGraph` + `createSupervisorGraph` compile against `@langchain/langgraph@^0.4`
-- `apps/desktop/components/agents/agent-panel.tsx` renders a side panel with run log + approvals queue (UI stub, no live runs yet)
+## Report generation integration (updated 0.1.9)
 
-C1 entry criteria (do not start before this is true):
+Native command: `generate_case_report(caseId, templateId?)` returns JSON `ReportDocument` with `sections[].citations[]` and `compliance[]` footer. Composer: `apps/desktop-backend/src-tauri/src/reports.rs`.
 
-1. v0.1.8 ships and passes `pnpm ops:validate:local`
-2. UX release gate (native E2E checklist) green — see [product-roadmap.md](product-roadmap.md)
-3. Decision recorded for LLM provider default (redacted-cloud vs. local-only)
+Agent overlay (shipped locally):
 
-## Report generation integration plan
-
-Current native command (preserved, non-breaking): `apps/desktop-backend/src-tauri/src/lib.rs::generate_case_report` builds narrative text from SQLite artifacts via `build_report_body(case_id, conn, "narrative")`. Desktop calls `commandClient.generateCaseReport(caseId)` from `reports-view.tsx`.
-
-Agent overlay (C2):
-
-1. Desktop `AgentPanel` → `createReportGenerationGraph().invoke({ caseId, status: "loading" })`
-2. `load` node calls native `load_case_files`, `list_notes`, `list_findings`, `list_timeline` via MCP → `command-client`
-3. `draft` node calls LLM with redacted context, streams sections into `ReportsView` (existing UI) via Vercel AI SDK channel
-4. `review` node opens `interrupt()` → user clicks **Approve** in `ApprovalsQueue` → graph resumes and persists final text via `generate_case_report` (server of record stays SQLite)
-
-Validation hooks for C2:
-
-```bash
-pnpm --filter @repo/agents test          # tool policy + (future) graph unit tests
-pnpm test:parity                          # backend command paths
-pnpm test:e2e --grep "report"             # agent run E2E (to be added)
-pnpm ops:validate:local                   # full local gate
-```
+1. `AgentPanel` → `createReportGenerationGraph({ loadArtifacts, composeReport })`
+2. `load` node aggregates artifacts via `command-client` (redacted via `redactForLlm`)
+3. `draft` node calls `generate_case_report` (deterministic; LLM overlay later)
+4. `review` → `ApprovalsQueue` → `onReportDraft` pushes draft to reports workspace
 
 Out of scope until UX gate clears: ML-driven duplicate auto-merge, auto-summarize on ingest, Arcade SaaS connectors.

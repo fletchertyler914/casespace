@@ -1,0 +1,149 @@
+[
+  {
+    "id": "cfe-long",
+    "persona": "cfe",
+    "name": "Fraud Examination Report (Long)",
+    "description": "ACFE-aligned long-form examination report with scope, approach, findings, chronology, and evidence index.",
+    "tier": "pro",
+    "wave": "A",
+    "standardsCited": ["ACFE Code III.C.2", "ACFE Evidence Standards", "AICPA SSFS No. 1"],
+    "sections": [
+      { "id": "overview", "label": "Case Overview", "required": true },
+      { "id": "executive", "label": "Executive Summary", "required": true },
+      { "id": "scope", "label": "Scope", "required": true },
+      { "id": "approach", "label": "Approach", "required": true },
+      { "id": "findings", "label": "Findings", "required": true },
+      { "id": "timeline", "label": "Chronology", "required": true },
+      { "id": "inventory", "label": "Evidence Index", "required": true },
+      { "id": "recommendations", "label": "Recommendations", "required": false }
+    ],
+    "evidenceLinking": "required",
+    "guardrails": [
+      "Do not opine on legal guilt or innocence (ACFE III.C.2)",
+      "Do not state fraud occurred as ultimate legal conclusion (SSFS No. 1)"
+    ],
+    "complianceChecks": ["ACFE-III.C.2", "ACFE-EVIDENCE", "SSFS-NO-ULTIMATE"]
+  },
+  {
+    "id": "cfe-short",
+    "persona": "cfe",
+    "name": "Fraud Examination Report (Short)",
+    "description": "ACFE short-form report for routine examinations.",
+    "tier": "free",
+    "wave": "A",
+    "standardsCited": ["ACFE Code III.C.2", "AICPA SSFS No. 1"],
+    "sections": [
+      { "id": "overview", "label": "Case Overview", "required": true },
+      { "id": "executive", "label": "Executive Summary", "required": true },
+      { "id": "findings", "label": "Findings", "required": true },
+      { "id": "timeline", "label": "Chronology", "required": true },
+      { "id": "inventory", "label": "Evidence Index", "required": true }
+    ],
+    "evidenceLinking": "preferred",
+    "guardrails": ["Do not opine on legal guilt or innocence (ACFE III.C.2)"],
+    "complianceChecks": ["ACFE-III.C.2", "SSFS-NO-ULTIMATE"]
+  },
+  {
+    "id": "expert-witness-frcp26",
+    "persona": "litigation_expert",
+    "name": "Expert Witness Report (FRCP 26)",
+    "description": "Federal expert disclosure report aligned with FRCP 26(a)(2)(B) and FRE 702/Daubert methodology requirements.",
+    "tier": "pro",
+    "wave": "A",
+    "standardsCited": ["FRCP 26(a)(2)(B)", "FRE 702", "AICPA SSFS No. 1", "ACFE Code III.C.2"],
+    "sections": [
+      { "id": "opinions", "label": "Opinions and Basis", "required": true },
+      { "id": "methodology", "label": "Methodology", "required": true },
+      { "id": "findings", "label": "Facts and Data Considered", "required": true },
+      { "id": "exhibits", "label": "Exhibits", "required": true },
+      { "id": "qualifications", "label": "Qualifications", "required": true },
+      { "id": "prior_testimony", "label": "Prior Testimony (4 years)", "required": true },
+      { "id": "compensation", "label": "Compensation", "required": true },
+      { "id": "timeline", "label": "Material Events", "required": false },
+      { "id": "inventory", "label": "Evidence Index", "required": true }
+    ],
+    "evidenceLinking": "required",
+    "guardrails": [
+      "Disclose testable methodology (FRE 702)",
+      "Do not opine on ultimate fraud occurrence (SSFS No. 1)"
+    ],
+    "complianceChecks": ["FRCP-26-B", "FRE-702", "ACFE-EVIDENCE", "SSFS-NO-ULTIMATE"]
+  },
+  {
+    "id": "engagement-letter",
+    "persona": "cfe",
+    "name": "Engagement Letter",
+    "description": "Fraud examination engagement proposal with scope, deliverables, and limitations.",
+    "tier": "free",
+    "wave": "A",
+    "standardsCited": ["ACFE Engagement Standards"],
+    "sections": [
+      { "id": "parties", "label": "Parties", "required": true },
+      { "id": "scope", "label": "Scope", "required": true },
+      { "id": "overview", "label": "Deliverables", "required": true },
+      { "id": "limitations", "label": "Limitations", "required": true },
+      { "id": "fees", "label": "Fees", "required": true },
+      { "id": "confidentiality", "label": "Confidentiality", "required": true }
+    ],
+    "evidenceLinking": "optional",
+    "guardrails": [],
+    "complianceChecks": []
+  },
+  {
+    "id": "pi-surveillance",
+    "persona": "private_investigator",
+    "name": "Surveillance Report",
+    "description": "Private investigator surveillance report with subject profile and chronological observations.",
+    "tier": "pro_plus",
+    "wave": "B",
+    "standardsCited": ["PI industry standard"],
+    "sections": [
+      { "id": "overview", "label": "Introduction", "required": true },
+      { "id": "subject_profile", "label": "Subject Profile", "required": true },
+      { "id": "observation_log", "label": "Observation Log", "required": true },
+      { "id": "inventory", "label": "Evidence", "required": true },
+      { "id": "executive", "label": "Summary", "required": true },
+      { "id": "recommendations", "label": "Recommendations", "required": false }
+    ],
+    "evidenceLinking": "preferred",
+    "guardrails": ["Objective observations only; no legal conclusions"],
+    "complianceChecks": []
+  },
+  {
+    "id": "pi-background",
+    "persona": "private_investigator",
+    "name": "Background / Due Diligence Report",
+    "description": "OSINT and field-verification background investigation report.",
+    "tier": "pro_plus",
+    "wave": "B",
+    "standardsCited": ["PI due diligence standard"],
+    "sections": [
+      { "id": "overview", "label": "Introduction", "required": true },
+      { "id": "scope", "label": "Scope", "required": true },
+      { "id": "osint_findings", "label": "OSINT Findings", "required": true },
+      { "id": "notes", "label": "Interviews", "required": false },
+      { "id": "findings", "label": "Conclusions", "required": true },
+      { "id": "recommendations", "label": "Recommendations", "required": false }
+    ],
+    "evidenceLinking": "preferred",
+    "guardrails": [],
+    "complianceChecks": []
+  },
+  {
+    "id": "fraud-incident-log",
+    "persona": "cfe",
+    "name": "Fraud Incident Log",
+    "description": "ACFE-style incident log entry for suspected fraud events.",
+    "tier": "pro_plus",
+    "wave": "B",
+    "standardsCited": ["ACFE Incident Documentation"],
+    "sections": [
+      { "id": "overview", "label": "Incident Summary", "required": true },
+      { "id": "timeline", "label": "Actions Taken", "required": true },
+      { "id": "findings", "label": "Conclusions", "required": false }
+    ],
+    "evidenceLinking": "optional",
+    "guardrails": [],
+    "complianceChecks": ["ACFE-III.C.2"]
+  }
+]

@@ -190,6 +190,101 @@ export interface ReportExportHistoryEntry {
   reportType: string;
   filePath: string;
   generatedAt: string;
+  templateId?: string;
+  citationsJson?: string;
+}
+
+export type ReportPersona = "cfe" | "private_investigator" | "litigation_expert";
+
+export type ReportTemplateId =
+  | "cfe-long"
+  | "cfe-short"
+  | "expert-witness-frcp26"
+  | "engagement-letter"
+  | "pi-surveillance"
+  | "pi-background"
+  | "fraud-incident-log";
+
+export type ReportSectionId =
+  | "findings"
+  | "timeline"
+  | "inventory"
+  | "overview"
+  | "executive"
+  | "notes"
+  | "scope"
+  | "approach"
+  | "methodology"
+  | "recommendations"
+  | "qualifications"
+  | "compensation"
+  | "prior_testimony"
+  | "observation_log"
+  | "subject_profile"
+  | "osint_findings"
+  | "opinions"
+  | "exhibits"
+  | "parties"
+  | "limitations"
+  | "fees"
+  | "confidentiality";
+
+export type CitationKind = "file" | "finding" | "note" | "timeline" | "case_field";
+
+export interface Citation {
+  kind: CitationKind;
+  id: string;
+  anchor?: string;
+  label: string;
+}
+
+export interface ReportSectionSpec {
+  id: ReportSectionId;
+  label: string;
+  required?: boolean;
+}
+
+export interface ReportSection {
+  id: ReportSectionId;
+  heading: string;
+  text: string;
+  citations: Citation[];
+  standardsTags: string[];
+}
+
+export type StandardsComplianceStatus =
+  | "verified"
+  | "not_applicable"
+  | "missing_data";
+
+export interface StandardsComplianceCheck {
+  id: string;
+  label: string;
+  status: StandardsComplianceStatus;
+  detail?: string;
+}
+
+export interface ReportDocument {
+  templateId: ReportTemplateId;
+  caseId: string;
+  generatedAt: string;
+  sections: ReportSection[];
+  compliance: StandardsComplianceCheck[];
+  markdown: string;
+}
+
+export interface ReportTemplate {
+  id: ReportTemplateId;
+  persona: ReportPersona;
+  name: string;
+  description: string;
+  tier: "free" | "pro" | "pro_plus";
+  wave: "A" | "B";
+  standardsCited: string[];
+  sections: ReportSectionSpec[];
+  evidenceLinking: "required" | "preferred" | "optional";
+  guardrails: string[];
+  complianceChecks: string[];
 }
 
 export interface SearchRequest {
