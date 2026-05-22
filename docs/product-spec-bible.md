@@ -17,7 +17,7 @@ Build a **solo-operator case operating system** that preserves v1 outcomes on an
 
 | Decision | Value |
 |----------|--------|
-| Launch wedge | Solo / private investigators |
+| Launch wedge | **CFE / fraud examination** practitioners (solo and small practices) |
 | Launch scope | Single-user; no team/collab features |
 | Deployment | Desktop, offline-first; optional cloud assists |
 | Execution order | Core parity → E2E validation → AI-native phase |
@@ -26,16 +26,23 @@ Build a **solo-operator case operating system** that preserves v1 outcomes on an
 
 ## Personas
 
-### Primary: Solo investigator / analyst
+### Primary: CFE / fraud examination practitioner
 
-- Handles 1–many cases concurrently
-- Ingests large folder trees; reviews mixed file types
-- Produces defensible reports and billing artifacts
-- Wants one workspace instead of Explorer + Excel + Word + PDF + notes + timer apps
+- Certified Fraud Examiner (ACFE) or equivalent fraud-investigation practice
+- Handles 1–many **matters** concurrently; ingests large evidence sets (email archives, PDFs, spreadsheets, images)
+- Documents **findings**, **chronology**, and **linked evidence** for defensible examination reports
+- Reviews duplicates and integrity signals; triages evidence through five-state workflow (table + board)
+- Wants one workspace instead of Explorer + Excel + Word + PDF + notes + separate trackers
 
-### Secondary (post-wedge): Financial analyst, criminal defense, court-ordered work
+**Canonical workflow spec:** [spec/cfe-workflows.md](spec/cfe-workflows.md)
 
-- Same core flows; report templates and compliance emphasis may differ (P1/P2)
+### Secondary: Solo private investigator, litigation support
+
+- Same core flows; interview and chain-of-custody emphasis may differ (P1 templates)
+
+### Explicitly not primary launch persona
+
+- **Financial analysts** (FP&A, corporate finance) — billing supports engagement admin, not product thesis
 
 ### Explicitly not for launch
 
@@ -64,13 +71,15 @@ Win dimensions: time-to-final-report, ingest throughput, billing capture complet
 
 AI work is **blocked** until the **UX Parity Build Gate** passes ([ui-port-plan.md](ui-port-plan.md); backend gate already passed locally).
 
-## P0 launch outputs (locked)
+## P0 launch outputs (locked, CFE-ordered)
 
-- Investigation narrative report
-- Financial analysis report package
-- Executive case summary
-- Evidence index / appendix
-- Billing / invoice package
+1. **Fraud examination / investigation narrative** (primary generate path)
+2. **Findings and timeline** (structured sections in reports workspace)
+3. **Evidence index / appendix** (inventory summary)
+4. **Executive case summary**
+5. Billing / invoice package (engagement administration — secondary in UX)
+
+*Financial analysis report package* remains a compatibility export type (P1/P2); not marketed to CFE wedge.
 
 ## P0 launch flows (locked)
 
@@ -140,6 +149,7 @@ See [spec/discovery-appendix.md](spec/discovery-appendix.md) for full Q&A and de
 | [spec/user-flows-and-ux-invariants.md](spec/user-flows-and-ux-invariants.md) | Flows and UX rules |
 | [spec/test-oracle-matrix.md](spec/test-oracle-matrix.md) | Acceptance and test oracles |
 | [spec/perf-security-reliability-gates.md](spec/perf-security-reliability-gates.md) | NFR and gates |
+| [spec/cfe-workflows.md](spec/cfe-workflows.md) | **Primary client (CFE) workflows and UX priorities** |
 | [spec/out-of-scope.md](spec/out-of-scope.md) | Launch exclusions |
 | [spec/v1-flaw-remediation.md](spec/v1-flaw-remediation.md) | Anti-patterns |
 

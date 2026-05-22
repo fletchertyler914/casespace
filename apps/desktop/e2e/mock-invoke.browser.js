@@ -75,11 +75,21 @@
     {
       id: "entry-1",
       caseId: E2E_CASE_ID,
-      startedAt: "2026-01-01T09:00:00Z",
-      endedAt: "2026-01-01T10:00:00Z",
-      billableMinutes: 60,
+      entryDate: "2026-01-01T00:00:00+00:00",
+      totalSeconds: 3600,
       summary: "Review",
-      segments: [],
+      createdAt: "2026-01-01T09:00:00Z",
+      updatedAt: "2026-01-01T10:00:00Z",
+      segments: [
+        {
+          id: "seg-1",
+          entryId: "entry-1",
+          startedAt: "2026-01-01T09:00:00Z",
+          endedAt: "2026-01-01T10:00:00Z",
+          durationSeconds: 3600,
+          discountPercent: 0,
+        },
+      ],
     },
   ];
   const mockReportHistory = [
@@ -131,6 +141,16 @@
         return mockDuplicateGroups;
       case "list_notes":
         return mockNotes;
+      case "get_file_note_counts":
+        return [{ fileId: "file-1", count: 1 }];
+      case "list_case_file_metadata":
+        return [{ fileId: "file-1", metadataJson: '{"title":"report"}' }];
+      case "get_system_file_filter_config":
+        return ".DS_Store,Thumbs.db";
+      case "save_system_file_filter_config":
+        return null;
+      case "get_mapping_config_db":
+        return null;
       case "list_findings":
         return mockFindings;
       case "list_timeline_events":
@@ -158,7 +178,13 @@
           rateUnit: "hour",
         };
       case "calculate_billing_amount":
-        return { caseId: E2E_CASE_ID, amount: 100, currency: "USD" };
+        return {
+          caseId: E2E_CASE_ID,
+          totalSeconds: 3600,
+          totalMinutes: 60,
+          amount: 100,
+          billingType: "pay_rate",
+        };
       case "list_report_exports":
         return mockReportHistory;
       case "export_case_report":

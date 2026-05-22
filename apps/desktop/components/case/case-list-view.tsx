@@ -25,8 +25,8 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { AppSettingsDialog } from "@/components/settings/app-settings-dialog";
+import { CaseFilters, type CaseStatusFilter } from "./case-filters";
 import { CaseListCard, type CaseWithCounts } from "./case-list-card";
-import { CaseListViewMode } from "./case-list-view-mode";
 import { CreateCaseDialog } from "./create-case-dialog";
 import { EditCaseDialog } from "./edit-case-dialog";
 import { DeleteCaseConfirmationDialog } from "./delete-case-confirmation-dialog";
@@ -36,7 +36,6 @@ import { commandClient } from "@/lib/command-client";
 
 type SortOption = "recent" | "name" | "created";
 
-const ADAPTIVE_LIST_THRESHOLD = 20;
 const RECENT_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
 const MAX_RECENT = 5;
 
@@ -58,9 +57,8 @@ export function CaseListView() {
   const [searchQuery, setSearchQuery] = useState("");
   const debouncedQuery = useDebounce(searchQuery, 150);
   const [sortOption, setSortOption] = useState<SortOption>("recent");
-  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [statusFilter, setStatusFilter] = useState<CaseStatusFilter>("all");
   const searchRef = useRef<HTMLInputElement>(null);
-  const hasAutoSwitched = useRef(false);
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -110,19 +108,6 @@ export function CaseListView() {
   }, [refresh]);
 
   useEffect(() => {
-    if (
-      cases.length >= ADAPTIVE_LIST_THRESHOLD &&
-      !hasAutoSwitched.current &&
-      viewMode === "grid"
-    ) {
-      setViewMode("list");
-      hasAutoSwitched.current = true;
-    } else if (cases.length < ADAPTIVE_LIST_THRESHOLD) {
-      hasAutoSwitched.current = false;
-    }
-  }, [cases.length, viewMode]);
-
-  useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement | null;
       const isInput =
@@ -143,8 +128,24 @@ export function CaseListView() {
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
+  const statusCounts = useMemo(() => {
+    const counts: Partial<Record<CaseStatusFilter, number>> = { all: cases.length };
+    for (const c of cases) {
+      const key = (c.status?.toLowerCase() ?? "active") as CaseStatusFilter;
+      if (key === "active" || key === "archived" || key === "closed") {
+        counts[key] = (counts[key] ?? 0) + 1;
+      }
+    }
+    return counts;
+  }, [cases]);
+
   const filtered = useMemo(() => {
     let result = cases;
+    if (statusFilter !== "all") {
+      result = result.filter(
+        (c) => (c.status?.toLowerCase() ?? "active") === statusFilter,
+      );
+    }
     if (debouncedQuery.trim()) {
       const q = debouncedQuery.toLowerCase();
       result = result.filter(
@@ -155,7 +156,7 @@ export function CaseListView() {
       );
     }
     return result;
-  }, [cases, debouncedQuery]);
+  }, [cases, debouncedQuery, statusFilter]);
 
   const sorted = useMemo(() => {
     const copy = [...filtered];
@@ -312,7 +313,7 @@ export function CaseListView() {
               <div>
                 <h1 className="text-3xl font-bold tracking-tight">Cases</h1>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  Manage and organize your investigation cases
+                  Manage fraud examination matters and evidence workspaces
                 </p>
               </div>
             </div>
@@ -367,16 +368,17 @@ export function CaseListView() {
               </SelectContent>
             </Select>
 
-            <CaseListViewMode
-              viewMode={viewMode}
-              onViewModeChange={setViewMode}
-            />
-
             <Button onClick={() => setCreateOpen(true)} className="h-10">
               <Plus className="mr-2 h-4 w-4" />
               New Case
             </Button>
           </div>
+
+          <CaseFilters
+            value={statusFilter}
+            onChange={setStatusFilter}
+            counts={statusCounts}
+          />
         </div>
       </div>
 
@@ -416,7 +418,6 @@ export function CaseListView() {
                   </div>
                   <CaseGrid
                     cases={recent}
-                    viewMode={viewMode}
                     isRecent
                     fileCountsLoading={fileCountsLoading}
                     onSelect={handleSelect}
@@ -436,7 +437,6 @@ export function CaseListView() {
                   </h2>
                   <CaseGrid
                     cases={others}
-                    viewMode={viewMode}
                     fileCountsLoading={fileCountsLoading}
                     onSelect={handleSelect}
                     onEdit={handleEditRequest}
@@ -484,7 +484,6 @@ export function CaseListView() {
 
 function CaseGrid({
   cases,
-  viewMode,
   isRecent = false,
   fileCountsLoading,
   onSelect,
@@ -492,38 +491,18 @@ function CaseGrid({
   onDelete,
 }: {
   cases: CaseWithCounts[];
-  viewMode: "grid" | "list";
   isRecent?: boolean;
   fileCountsLoading: Set<string>;
   onSelect: (c: CaseSummary) => void;
   onEdit?: (c: CaseSummary, e: React.MouseEvent) => void;
   onDelete: (c: CaseSummary, e: React.MouseEvent) => void;
 }) {
-  if (viewMode === "grid") {
-    return (
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {cases.map((case_) => (
-          <CaseListCard
-            key={case_.id}
-            case_={case_}
-            viewMode="grid"
-            isRecent={isRecent}
-            loadingFileCount={fileCountsLoading.has(case_.id)}
-            onSelect={onSelect}
-            onEdit={onEdit}
-            onDelete={onDelete}
-          />
-        ))}
-      </div>
-    );
-  }
   return (
-    <div className="space-y-2">
+    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
       {cases.map((case_) => (
         <CaseListCard
           key={case_.id}
           case_={case_}
-          viewMode="list"
           isRecent={isRecent}
           loadingFileCount={fileCountsLoading.has(case_.id)}
           onSelect={onSelect}

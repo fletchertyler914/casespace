@@ -51,6 +51,12 @@ import { commandClient } from "@/lib/command-client";
 import { displayFilePath } from "@/lib/case-path-utils";
 import { getFilePreviewKind, isUnsupportedPreview } from "@/lib/file-preview";
 import { openCaseFile } from "@/lib/open-file";
+import { cn } from "@/lib/utils";
+import {
+  elementSupportsFullscreen,
+  tryEnterElementFullscreen,
+  tryExitFullscreen,
+} from "@/lib/preview-fullscreen";
 
 const FILE_STATUSES = [
   "unreviewed",
@@ -123,23 +129,33 @@ export const FileViewerPane = memo(function FileViewerPane({
   const [fileChanged, setFileChanged] = useState(false);
   const [changeDismissed, setChangeDismissed] = useState(false);
   const [fullscreen, setFullscreen] = useState(false);
+  const [expandedPreview, setExpandedPreview] = useState(false);
   const previewRef = useRef<HTMLDivElement>(null);
 
   const toggleFullscreen = useCallback(async () => {
     const el = previewRef.current;
     if (!el) return;
-    if (!document.fullscreenElement) {
-      await el.requestFullscreen();
-      setFullscreen(true);
-    } else {
-      await document.exitFullscreen();
+    if (fullscreen || expandedPreview) {
+      setExpandedPreview(false);
       setFullscreen(false);
+      await tryExitFullscreen();
+      return;
     }
-  }, []);
+    if (elementSupportsFullscreen(el)) {
+      const entered = await tryEnterElementFullscreen(el);
+      if (entered) {
+        setFullscreen(true);
+        return;
+      }
+    }
+    setExpandedPreview(true);
+  }, [expandedPreview, fullscreen]);
 
   useEffect(() => {
     const onFsChange = () => {
-      setFullscreen(Boolean(document.fullscreenElement));
+      const active = Boolean(document.fullscreenElement);
+      setFullscreen(active);
+      if (!active) setExpandedPreview(false);
     };
     document.addEventListener("fullscreenchange", onFsChange);
     return () => document.removeEventListener("fullscreenchange", onFsChange);
@@ -185,8 +201,13 @@ export const FileViewerPane = memo(function FileViewerPane({
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-background">
-      <header className="flex h-11 shrink-0 items-center gap-2 border-b border-border/40 px-2">
-        <div className="flex min-w-0 flex-1 items-center gap-2">
+      <header
+        className={cn(
+          "grid shrink-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-2 border-b border-border/40 px-2",
+          fillsPane ? "h-9" : "h-11",
+        )}
+      >
+        <div className="flex min-w-0 items-center gap-2">
           {!navigatorOpen && (
             <Button
               variant="ghost"
@@ -215,7 +236,7 @@ export const FileViewerPane = memo(function FileViewerPane({
           </div>
         </div>
 
-        <div className="flex shrink-0 items-center">
+        <div className="flex shrink-0 items-center gap-0.5">
           <Select
             value={file.status}
             onValueChange={(v) => onStatusChange(file.id, v)}
@@ -232,31 +253,6 @@ export const FileViewerPane = memo(function FileViewerPane({
             </SelectContent>
           </Select>
 
-          {(isDuplicate || showOpenExternal) && <ViewerChromeDivider />}
-
-          {isDuplicate && (
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-8 shrink-0 gap-1 px-2 text-xs"
-              onClick={() => setDuplicateDialogOpen(true)}
-            >
-              <Copy className="h-3.5 w-3.5" />
-              Duplicates
-            </Button>
-          )}
-          {showOpenExternal && (
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-8 shrink-0 gap-1 px-2 text-xs"
-              onClick={() => void openCaseFile(caseId, file.filePath)}
-            >
-              <ExternalLink className="h-3.5 w-3.5" />
-              Open
-            </Button>
-          )}
-
           <ViewerChromeDivider />
 
           <DropdownMenu>
@@ -271,6 +267,51 @@ export const FileViewerPane = memo(function FileViewerPane({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
+              {fillsPane ? (
+                <>
+                  <DropdownMenuItem onClick={() => void toggleFullscreen()}>
+                    {fullscreen || expandedPreview ? (
+                      <Minimize2 className="mr-2 h-4 w-4" />
+                    ) : (
+                      <Maximize2 className="mr-2 h-4 w-4" />
+                    )}
+                    {fullscreen || expandedPreview
+                      ? "Exit fullscreen"
+                      : "Fullscreen preview"}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={onRefresh}>
+                    <RefreshCw className="mr-2 h-4 w-4" />
+                    Refresh file
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    disabled={!hasPrevious}
+                    onClick={onPrevious}
+                  >
+                    <ChevronLeft className="mr-2 h-4 w-4" />
+                    Previous file
+                  </DropdownMenuItem>
+                  <DropdownMenuItem disabled={!hasNext} onClick={onNext}>
+                    <ChevronRight className="mr-2 h-4 w-4" />
+                    Next file
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                </>
+              ) : null}
+              {isDuplicate ? (
+                <DropdownMenuItem onClick={() => setDuplicateDialogOpen(true)}>
+                  <Copy className="mr-2 h-4 w-4" />
+                  Review duplicates
+                </DropdownMenuItem>
+              ) : null}
+              {showOpenExternal ? (
+                <DropdownMenuItem
+                  onClick={() => void openCaseFile(caseId, file.filePath)}
+                >
+                  <ExternalLink className="mr-2 h-4 w-4" />
+                  Open externally
+                </DropdownMenuItem>
+              ) : null}
+              {isDuplicate || showOpenExternal ? <DropdownMenuSeparator /> : null}
               <DropdownMenuItem onClick={() => setMetadataOpen(true)}>
                 <Hash className="mr-2 h-4 w-4" />
                 Metadata
@@ -290,51 +331,59 @@ export const FileViewerPane = memo(function FileViewerPane({
             </DropdownMenuContent>
           </DropdownMenu>
 
-          <ViewerChromeDivider />
+          {fillsPane ? null : <ViewerChromeDivider />}
 
-          <div className="flex items-center gap-0.5">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 shrink-0"
-              title={fullscreen ? "Exit fullscreen" : "Fullscreen preview"}
-              onClick={() => void toggleFullscreen()}
-            >
-              {fullscreen ? (
-                <Minimize2 className="h-4 w-4" />
-              ) : (
-                <Maximize2 className="h-4 w-4" />
-              )}
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 shrink-0"
-              title="Refresh file"
-              onClick={onRefresh}
-            >
-              <RefreshCw className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 shrink-0"
-              title="Previous file"
-              disabled={!hasPrevious}
-              onClick={onPrevious}
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 shrink-0"
-              title="Next file"
-              disabled={!hasNext}
-              onClick={onNext}
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
+          <div className="flex items-center">
+            {fillsPane ? null : (
+              <>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 shrink-0"
+                  title={
+                    fullscreen || expandedPreview
+                      ? "Exit fullscreen"
+                      : "Fullscreen preview"
+                  }
+                  onClick={() => void toggleFullscreen()}
+                >
+                  {fullscreen || expandedPreview ? (
+                    <Minimize2 className="h-4 w-4" />
+                  ) : (
+                    <Maximize2 className="h-4 w-4" />
+                  )}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 shrink-0"
+                  title="Refresh file"
+                  onClick={onRefresh}
+                >
+                  <RefreshCw className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 shrink-0"
+                  title="Previous file"
+                  disabled={!hasPrevious}
+                  onClick={onPrevious}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 shrink-0"
+                  title="Next file"
+                  disabled={!hasNext}
+                  onClick={onNext}
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </>
+            )}
             <Button
               variant="ghost"
               size="icon"
@@ -361,11 +410,12 @@ export const FileViewerPane = memo(function FileViewerPane({
 
       <div
         ref={previewRef}
-        className={
-          fillsPane
-            ? "min-h-0 flex-1 overflow-hidden bg-background"
-            : "min-h-0 flex-1 overflow-hidden bg-background"
-        }
+        className={cn(
+          "min-h-0 flex-1 overflow-hidden bg-background",
+          expandedPreview &&
+            !fullscreen &&
+            "fixed inset-0 z-[200] flex flex-col",
+        )}
       >
         {fillsPane ? (
           <FileViewer caseId={caseId} file={file} className="h-full" />

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { TimelineEvent } from "@repo/types";
+import type { CaseFile, TimelineEvent } from "@repo/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -27,6 +27,7 @@ type EventType = (typeof EVENT_TYPES)[number];
 
 interface TimelinePanelProps {
   caseId: string;
+  files: CaseFile[];
   events: TimelineEvent[];
   onClose: () => void;
   onChanged: () => void;
@@ -53,6 +54,7 @@ function eventTypeLabel(type: string): string {
 
 export function TimelinePanel({
   caseId,
+  files,
   events,
   onClose,
   onChanged,
@@ -60,11 +62,13 @@ export function TimelinePanel({
   const [draft, setDraft] = useState("");
   const [occurredAt, setOccurredAt] = useState(defaultDatetimeLocal);
   const [eventType, setEventType] = useState<EventType>("manual");
+  const [sourceFileId, setSourceFileId] = useState<string>("");
   const [saving, setSaving] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingDescription, setEditingDescription] = useState("");
   const [editingOccurredAt, setEditingOccurredAt] = useState("");
   const [editingEventType, setEditingEventType] = useState<EventType>("manual");
+  const [editingSourceFileId, setEditingSourceFileId] = useState<string>("");
 
   async function createEvent() {
     if (!draft.trim()) return;
@@ -74,12 +78,14 @@ export function TimelinePanel({
       draft.trim(),
       fromDatetimeLocal(occurredAt),
       eventType,
+      sourceFileId || undefined,
     );
     setSaving(false);
     if (res.ok) {
       setDraft("");
       setOccurredAt(defaultDatetimeLocal());
       setEventType("manual");
+      setSourceFileId("");
       onChanged();
     }
   }
@@ -92,6 +98,7 @@ export function TimelinePanel({
       editingDescription.trim(),
       fromDatetimeLocal(editingOccurredAt),
       editingEventType,
+      editingSourceFileId || undefined,
     );
     setSaving(false);
     if (res.ok) {
@@ -118,7 +125,7 @@ export function TimelinePanel({
         <Textarea
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
-          placeholder="Event description"
+          placeholder="Event description (chronology entry)"
           rows={2}
           className="text-xs"
         />
@@ -147,6 +154,27 @@ export function TimelinePanel({
               {EVENT_TYPES.map((type) => (
                 <SelectItem key={type} value={type}>
                   {eventTypeLabel(type)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-1.5">
+          <Label className="text-[11px] text-muted-foreground">Source file (optional)</Label>
+          <Select
+            value={sourceFileId || "__none__"}
+            onValueChange={(value) =>
+              setSourceFileId(value === "__none__" ? "" : value)
+            }
+          >
+            <SelectTrigger className="h-8 text-xs">
+              <SelectValue placeholder="None" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__none__">None</SelectItem>
+              {files.slice(0, 200).map((file) => (
+                <SelectItem key={file.id} value={file.id}>
+                  {file.fileName}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -210,6 +238,29 @@ export function TimelinePanel({
                         </SelectContent>
                       </Select>
                     </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-[11px] text-muted-foreground">
+                        Source file
+                      </Label>
+                      <Select
+                        value={editingSourceFileId || "__none__"}
+                        onValueChange={(value) =>
+                          setEditingSourceFileId(value === "__none__" ? "" : value)
+                        }
+                      >
+                        <SelectTrigger className="h-8 text-xs">
+                          <SelectValue placeholder="None" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="__none__">None</SelectItem>
+                          {files.slice(0, 200).map((file) => (
+                            <SelectItem key={file.id} value={file.id}>
+                              {file.fileName}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
                     <div className="flex gap-2">
                       <Button
                         size="sm"
@@ -228,6 +279,7 @@ export function TimelinePanel({
                           setEditingDescription("");
                           setEditingOccurredAt("");
                           setEditingEventType("manual");
+                          setEditingSourceFileId("");
                         }}
                       >
                         Cancel
@@ -245,6 +297,13 @@ export function TimelinePanel({
                     <p className="text-muted-foreground">
                       {new Date(e.occurredAt).toLocaleString()}
                     </p>
+                    {e.sourceFileId ? (
+                      <p className="text-[10px] text-muted-foreground">
+                        Source:{" "}
+                        {files.find((f) => f.id === e.sourceFileId)?.fileName ??
+                          e.sourceFileId}
+                      </p>
+                    ) : null}
                     <div className="flex gap-1">
                       <Button
                         size="sm"
@@ -257,6 +316,7 @@ export function TimelinePanel({
                           setEditingEventType(
                             (e.eventType as EventType | undefined) ?? "manual",
                           );
+                          setEditingSourceFileId(e.sourceFileId ?? "");
                         }}
                       >
                         Edit

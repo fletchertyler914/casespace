@@ -1,0 +1,29 @@
+{
+  "name": "@repo/agents",
+  "version": "0.0.0",
+  "private": true,
+  "license": "BUSL-1.1",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./policy": "./src/policy/tool-policy.ts",
+    "./graphs": "./src/graphs/supervisor.ts"
+  },
+  "scripts": {
+    "build": "tsc --noEmit",
+    "check-types": "tsc --noEmit",
+    "lint": "echo \"No lint rules configured for @repo/agents\"",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@langchain/core": "^0.3.66",
+    "@langchain/langgraph": "^0.4.4",
+    "@repo/types": "workspace:*",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@repo/typescript-config": "workspace:*",
+    "typescript": "5.9.2",
+    "vitest": "^3.2.4"
+  }
+}

@@ -18,10 +18,9 @@ export function PdfFilePreview({ fileUrl }: PdfFilePreviewProps) {
 
   // CRITICAL: defaultLayoutPlugin() registers internal hooks. It must be
   // called inline during render — NOT inside useMemo — otherwise React
-  // sees a different hook count between renders and throws error #300
-  // ("Rendered fewer hooks than expected"). This matches v1's working
-  // PdfViewerWrapper.tsx pattern; see commit history / inventory-generator.
+  // sees a different hook count between renders and throws error #300.
   const defaultLayoutPluginInstance = defaultLayoutPlugin({
+    sidebarTabs: () => [],
     renderToolbar: renderCaseSpacePdfToolbar,
   });
 

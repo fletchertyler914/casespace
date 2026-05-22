@@ -3,7 +3,41 @@ use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 
-const SCHEMA_VERSION: i32 = 5;
+fn utc_day_start_rfc3339(ts: &str) -> Result<String, String> {
+    let dt = chrono::DateTime::parse_from_rfc3339(ts).map_err(|e| e.to_string())?;
+    let date = dt.date_naive();
+    let day_start = date
+        .and_hms_opt(0, 0, 0)
+        .ok_or_else(|| "invalid date".to_string())?
+        .and_utc()
+        .fixed_offset();
+    Ok(day_start.to_rfc3339())
+}
+
+fn segment_duration_seconds(started_at: &str, ended_at: Option<&str>) -> Result<i64, String> {
+    let start = chrono::DateTime::parse_from_rfc3339(started_at).map_err(|e| e.to_string())?;
+    let end_ts = match ended_at {
+        Some(ts) => chrono::DateTime::parse_from_rfc3339(ts)
+            .map_err(|e| e.to_string())?
+            .timestamp(),
+        None => chrono::Utc::now().timestamp(),
+    };
+    Ok((end_ts - start.timestamp()).max(0))
+}
+
+const SCHEMA_VERSION: i32 = 6;
+
+fn table_has_column(conn: &Connection, table: &str, column: &str) -> Result<bool, String> {
+    let mut stmt = conn
+        .prepare(&format!("PRAGMA table_info({table})"))
+        .map_err(|e| format!("pragma table_info({table}): {e}"))?;
+    let names = stmt
+        .query_map([], |row| row.get::<_, String>(1))
+        .map_err(|e| format!("pragma query {table}: {e}"))?
+        .filter_map(Result::ok)
+        .collect::<Vec<_>>();
+    Ok(names.iter().any(|n| n == column))
+}
 
 const MIGRATION_V2: &str = r#"
 ALTER TABLE files ADD COLUMN source_path TEXT;
@@ -176,6 +210,12 @@ CREATE TABLE IF NOT EXISTS workspace_preferences (
     updated_at TEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS app_settings (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+);
+
 CREATE INDEX IF NOT EXISTS idx_files_case_id ON files(case_id);
 CREATE INDEX IF NOT EXISTS idx_files_status ON files(status);
 CREATE INDEX IF NOT EXISTS idx_notes_case_id ON notes(case_id);
@@ -285,7 +325,19 @@ impl Database {
         for version in 1..=SCHEMA_VERSION {
             self.apply_migration(&conn, version)?;
         }
+        self.ensure_day_based_time_entries(&conn)?;
         Ok(())
+    }
+
+    /// Runs v6 migration when `time_entries` still uses the legacy session columns.
+    fn ensure_day_based_time_entries(&self, conn: &Connection) -> Result<(), String> {
+        if table_has_column(conn, "time_entries", "entry_date")? {
+            return Ok(());
+        }
+        eprintln!(
+            "casespace: repairing time_entries schema (day-based v6 migration required)"
+        );
+        self.migrate_v6_day_based_entries(conn)
     }
 
     fn apply_migration(&self, conn: &Connection, version: i32) -> Result<(), String> {
@@ -336,12 +388,233 @@ impl Database {
             conn.execute_batch(MIGRATION_V5)
                 .map_err(|e| format!("migration v5 failed: {e}"))?;
         }
+        if version == 6 {
+            self.migrate_v6_day_based_entries(&conn)?;
+        }
         let now = chrono::Utc::now().to_rfc3339();
         conn.execute(
             "INSERT INTO _migrations (version, applied_at) VALUES (?1, ?2)",
             params![version, now],
         )
         .map_err(|e| format!("record migration failed: {e}"))?;
+        Ok(())
+    }
+
+    /// v6: one time_entries row per case per UTC day; segments carry duration_seconds.
+    fn migrate_v6_day_based_entries(&self, conn: &Connection) -> Result<(), String> {
+        if table_has_column(conn, "time_entries", "entry_date")? {
+            return Ok(());
+        }
+
+        conn.execute_batch("PRAGMA foreign_keys=OFF;")
+            .map_err(|e| format!("migration v6 fk off: {e}"))?;
+
+        conn.execute("DROP TABLE IF EXISTS time_entries_new", [])
+            .map_err(|e| format!("migration v6 cleanup: {e}"))?;
+
+        if !table_has_column(conn, "time_segments", "duration_seconds")? {
+            conn.execute(
+                "ALTER TABLE time_segments ADD COLUMN duration_seconds INTEGER NOT NULL DEFAULT 0",
+                [],
+            )
+            .map_err(|e| format!("migration v6 duration_seconds: {e}"))?;
+        }
+
+        conn.execute_batch(
+            r#"
+            CREATE TABLE IF NOT EXISTS time_entries_new (
+                id TEXT PRIMARY KEY,
+                case_id TEXT NOT NULL,
+                entry_date TEXT NOT NULL,
+                total_seconds INTEGER NOT NULL DEFAULT 0,
+                summary TEXT,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                FOREIGN KEY (case_id) REFERENCES cases(id) ON DELETE CASCADE,
+                UNIQUE(case_id, entry_date)
+            );
+            CREATE INDEX IF NOT EXISTS idx_time_entries_case_date
+                ON time_entries_new(case_id, entry_date DESC);
+            "#,
+        )
+        .map_err(|e| format!("migration v6 schema: {e}"))?;
+
+        let legacy_sql = if table_has_column(conn, "time_entries", "summary")? {
+            "SELECT id, case_id, started_at, ended_at, billable_minutes, summary FROM time_entries"
+        } else {
+            "SELECT id, case_id, started_at, ended_at, billable_minutes, NULL FROM time_entries"
+        };
+        let mut stmt = conn
+            .prepare(legacy_sql)
+            .map_err(|e| format!("migration v6 read entries: {e}"))?;
+        let legacy_rows: Vec<(String, String, String, Option<String>, i64, Option<String>)> = stmt
+            .query_map([], |row| {
+                Ok((
+                    row.get(0)?,
+                    row.get(1)?,
+                    row.get(2)?,
+                    row.get(3)?,
+                    row.get(4)?,
+                    row.get(5)?,
+                ))
+            })
+            .map_err(|e| format!("migration v6 query entries: {e}"))?
+            .filter_map(Result::ok)
+            .collect();
+
+        use std::collections::HashMap;
+        #[derive(Default)]
+        struct DayAgg {
+            id: String,
+            total_seconds: i64,
+            summaries: Vec<String>,
+            created_at: String,
+            updated_at: String,
+        }
+
+        let mut by_day: HashMap<(String, String), DayAgg> = HashMap::new();
+        let mut entry_id_map: HashMap<String, String> = HashMap::new();
+
+        for (old_id, case_id, started_at, _ended_at, billable_minutes, summary) in legacy_rows {
+            let entry_date = utc_day_start_rfc3339(&started_at)?;
+            let key = (case_id.clone(), entry_date.clone());
+            let agg = by_day.entry(key).or_insert_with(|| DayAgg {
+                id: uuid::Uuid::new_v4().to_string(),
+                total_seconds: 0,
+                summaries: Vec::new(),
+                created_at: started_at.clone(),
+                updated_at: started_at.clone(),
+            });
+            entry_id_map.insert(old_id, agg.id.clone());
+            agg.total_seconds += billable_minutes * 60;
+            if let Some(s) = summary.filter(|t| !t.trim().is_empty()) {
+                agg.summaries.push(s);
+            }
+            if started_at < agg.created_at {
+                agg.created_at = started_at.clone();
+            }
+            if started_at > agg.updated_at {
+                agg.updated_at = started_at.clone();
+            }
+        }
+
+        for ((case_id, entry_date), agg) in by_day {
+            let summary = if agg.summaries.is_empty() {
+                None
+            } else {
+                Some(agg.summaries.join("\n\n"))
+            };
+            conn.execute(
+                "INSERT INTO time_entries_new (id, case_id, entry_date, total_seconds, summary, created_at, updated_at)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+                params![
+                    agg.id,
+                    case_id,
+                    entry_date,
+                    agg.total_seconds,
+                    summary,
+                    agg.created_at,
+                    agg.updated_at
+                ],
+            )
+            .map_err(|e| format!("migration v6 insert day entry: {e}"))?;
+        }
+
+        let mut seg_stmt = conn
+            .prepare(
+                "SELECT id, entry_id, started_at, ended_at, rate_override, discount_percent, notes
+                 FROM time_segments",
+            )
+            .map_err(|e| format!("migration v6 read segments: {e}"))?;
+        let seg_rows: Vec<(String, String, String, Option<String>, Option<f64>, i64, Option<String>)> =
+            seg_stmt
+                .query_map([], |row| {
+                    Ok((
+                        row.get(0)?,
+                        row.get(1)?,
+                        row.get(2)?,
+                        row.get(3)?,
+                        row.get(4)?,
+                        row.get(5)?,
+                        row.get(6)?,
+                    ))
+                })
+                .map_err(|e| format!("migration v6 query segments: {e}"))?
+                .filter_map(Result::ok)
+                .collect();
+
+        let timer_rows: Vec<(String, String)> = conn
+            .prepare("SELECT case_id, entry_id FROM active_timers")
+            .map_err(|e| format!("migration v6 read timers: {e}"))?
+            .query_map([], |row| Ok((row.get(0)?, row.get(1)?)))
+            .map_err(|e| format!("migration v6 query timers: {e}"))?
+            .filter_map(Result::ok)
+            .collect();
+
+        // Swap tables before re-inserting segments so FK targets the renamed table.
+        conn.execute_batch(
+            r#"
+            DROP TABLE time_entries;
+            ALTER TABLE time_entries_new RENAME TO time_entries;
+            "#,
+        )
+        .map_err(|e| format!("migration v6 swap tables: {e}"))?;
+
+        if table_has_column(conn, "time_segments", "entry_id")? {
+            conn.execute("DELETE FROM time_segments", [])
+                .map_err(|e| format!("migration v6 clear segments: {e}"))?;
+
+            for (seg_id, old_entry_id, started_at, ended_at, rate_override, discount_percent, notes) in
+                seg_rows
+            {
+                let Some(new_entry_id) = entry_id_map.get(&old_entry_id).cloned() else {
+                    continue;
+                };
+                let duration = segment_duration_seconds(&started_at, ended_at.as_deref())?;
+                conn.execute(
+                    "INSERT INTO time_segments (id, entry_id, started_at, ended_at, duration_seconds, rate_override, discount_percent, notes)
+                     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
+                    params![
+                        seg_id,
+                        new_entry_id,
+                        started_at,
+                        ended_at,
+                        duration,
+                        rate_override,
+                        discount_percent,
+                        notes
+                    ],
+                )
+                .map_err(|e| format!("migration v6 insert segment: {e}"))?;
+            }
+        }
+
+        for (case_id, old_entry_id) in timer_rows {
+            if let Some(new_id) = entry_id_map.get(&old_entry_id) {
+                conn.execute(
+                    "UPDATE active_timers SET entry_id = ?1 WHERE case_id = ?2",
+                    params![new_id, case_id],
+                )
+                .ok();
+            } else {
+                conn.execute(
+                    "DELETE FROM active_timers WHERE case_id = ?1",
+                    params![case_id],
+                )
+                .ok();
+            }
+        }
+
+        conn.execute_batch("PRAGMA foreign_keys=ON;")
+            .map_err(|e| format!("migration v6 fk on: {e}"))?;
+
+        if !table_has_column(conn, "time_entries", "entry_date")? {
+            return Err(
+                "migration v6 failed: time_entries still missing entry_date column".into(),
+            );
+        }
+        eprintln!("casespace: time_entries schema upgraded to day-based v6");
+
         Ok(())
     }
 

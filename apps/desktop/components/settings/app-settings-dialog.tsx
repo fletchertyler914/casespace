@@ -20,8 +20,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useTheme, type Theme } from "@/components/providers/theme-provider";
-
-const FILE_FILTER_STORAGE_KEY = "casespace.fileFilterPatterns";
+import { commandClient } from "@/lib/command-client";
+import { useToast } from "@/hooks/use-toast";
 
 interface AppSettingsDialogProps {
   open: boolean;
@@ -30,28 +30,32 @@ interface AppSettingsDialogProps {
 
 export function AppSettingsDialog({ open, onOpenChange }: AppSettingsDialogProps) {
   const { theme, setTheme } = useTheme();
+  const { toast } = useToast();
   const [fileFilterPatterns, setFileFilterPatterns] = useState("");
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (!open) return;
-    try {
-      const stored = window.localStorage.getItem(FILE_FILTER_STORAGE_KEY);
-      setFileFilterPatterns(stored ?? "");
-    } catch {
-      setFileFilterPatterns("");
-    }
+    void commandClient.getSystemFileFilterConfig().then((res) => {
+      if (res.ok) {
+        setFileFilterPatterns(res.data ?? "");
+      }
+    });
   }, [open]);
 
-  function handleSave() {
-    try {
-      const trimmed = fileFilterPatterns.trim();
-      if (trimmed) {
-        window.localStorage.setItem(FILE_FILTER_STORAGE_KEY, trimmed);
-      } else {
-        window.localStorage.removeItem(FILE_FILTER_STORAGE_KEY);
-      }
-    } catch {
-      // ignore storage failures
+  async function handleSave() {
+    setSaving(true);
+    const res = await commandClient.saveSystemFileFilterConfig(
+      fileFilterPatterns.trim(),
+    );
+    setSaving(false);
+    if (!res.ok) {
+      toast({
+        title: "Failed to save settings",
+        description: res.error?.message ?? "Unknown error",
+        variant: "destructive",
+      });
+      return;
     }
     onOpenChange(false);
   }
@@ -90,8 +94,8 @@ export function AppSettingsDialog({ open, onOpenChange }: AppSettingsDialogProps
               placeholder="e.g. .DS_Store, Thumbs.db, *.tmp"
             />
             <p className="text-xs text-muted-foreground">
-              Comma-separated patterns to skip during ingest. Stored locally until
-              backend support is available.
+              Comma-separated patterns to skip during ingest (e.g. .DS_Store,
+              Thumbs.db, desktop.ini).
             </p>
           </div>
         </div>
@@ -99,22 +103,11 @@ export function AppSettingsDialog({ open, onOpenChange }: AppSettingsDialogProps
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button onClick={handleSave}>Save</Button>
+          <Button onClick={() => void handleSave()} disabled={saving}>
+            {saving ? "Saving…" : "Save"}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
   );
-}
-
-export function getStoredFileFilterPatterns(): string[] {
-  try {
-    const raw = window.localStorage.getItem(FILE_FILTER_STORAGE_KEY);
-    if (!raw?.trim()) return [];
-    return raw
-      .split(",")
-      .map((p) => p.trim())
-      .filter(Boolean);
-  } catch {
-    return [];
-  }
 }

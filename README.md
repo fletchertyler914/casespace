@@ -1,126 +1,61 @@
-# CaseSpace v2 Monorepo
+# CaseSpace
 
-CaseSpace v2 is an elite, net-new rebuild of the CaseSpace product foundation using a 3-app architecture.
+CaseSpace is a desktop-first investigative case workspace for CFE and fraud examination practitioners. The product ships as a **3-app monorepo**: native engine, desktop UX, and marketing/download web surface.
 
-Current status (2026-05-21, **v0.1.7-rc.1**): **Core Parity backend complete (local)**. **V1 parity closure implemented (local)** — inventory table, viewer actions, structured search, Tiptap artifacts, duplicates depth, time/billing, reports workspace, mapping UI, settings dialogs. **UX Parity Build Gate:** manual E2E pending. **Production distribution:** updater placeholders; signing/notarization blocked. **Next:** UX gate E2E → board depth → AINative. Docs: [`docs/readiness.md`](docs/readiness.md), [`docs/ui-port-plan.md`](docs/ui-port-plan.md).
+**Current release line:** `0.1.8` (see [GitHub Releases](https://github.com/fletchertyler914/casespace/releases))  
+**Status:** Core backend and desktop UX are **implemented locally**; production release validation and native E2E sign-off are the remaining gates before calling the product **release-validated**. Details: [`docs/readiness.md`](docs/readiness.md), [`docs/product-roadmap.md`](docs/product-roadmap.md).
 
-## Repository purpose
+## Repository layout
 
-This repository is the implementation home for:
-
-- `apps/desktop-backend`: Tauri/Rust native core engine
-- `apps/desktop`: Next.js desktop UX shell
-- `apps/web`: marketing/sales/docs/download surface (no product workflow UI)
-- shared packages for contracts, UI, and configuration
-
-v1 reference source path:
-
-- `/Users/tyler/projects/malissa_projects/inventory-generator`
+| Path | Role |
+|------|------|
+| `apps/desktop-backend` | Tauri / Rust — commands, SQLite, ingest, search |
+| `apps/desktop` | Next.js desktop UX (Tauri shell) |
+| `apps/web` | Marketing, docs, `/download` |
+| `packages/*` | Shared types, UI, agents |
 
 ## License
 
-CaseSpace is licensed under the **Business Source License 1.1 (BUSL-1.1)**.
+**BUSL-1.1** — public source; commercial use requires [COMMERCIAL-LICENSE.md](COMMERCIAL-LICENSE.md). Converts to **Apache 2.0** on **2029-05-21**.
 
-- Source is public for transparency and personal/non-commercial use
-- **Commercial use requires a separate license** — see [COMMERCIAL-LICENSE.md](COMMERCIAL-LICENSE.md)
-- On **2029-05-21**, this codebase converts to **Apache 2.0**
+## Documentation
 
-Contact for commercial licensing: `fletchertyler914@yahoo.com`
-
-## Core principles
-
-- Preserve v1 business intent and user outcomes
-- Rebuild implementation layers for v2 architecture quality
-- Optimize for performance, security, scalability, maintainability, and cost efficiency
-- Keep architecture extensible for future hybrid monetization
-
-## Documentation map
-
-- `docs/product-spec-bible.md` - canonical product requirements and phase partitioning
-- `docs/implementation-readiness-gate.md` - planning / parity / AI gates
-- `docs/architecture.md` - v2 architecture (current vs target)
-- `docs/readiness.md` - readiness and blockers
-- `docs/ui-port-plan.md` - active UI port phases (U1–U11) and UX gate
-- `docs/migrating-from-v1.md` - migration playbook (status-tagged manifest)
-- `docs/command-parity-ledger.md` - v1 ↔ v2 command mapping
-- `docs/v1-reference.md` - v1 capability inventory
-- `docs/spec/` - flows, features, AI matrix, gap analysis, test oracles
-- `docs/release-runbook.md` - RC/prod release process
-- `docs/release-validation-cli.md` - CLI validation policy
+- [docs/product-spec-bible.md](docs/product-spec-bible.md) — requirements and phases
+- [docs/architecture.md](docs/architecture.md) — runtime architecture
+- [docs/readiness.md](docs/readiness.md) — gates and validation evidence
+- [docs/product-roadmap.md](docs/product-roadmap.md) — UX milestones and checklist
+- [docs/desktop-workflow-mapping.md](docs/desktop-workflow-mapping.md) — component map
+- [docs/command-catalog.md](docs/command-catalog.md) — native command matrix
+- [docs/spec/](docs/spec/) — flows, features, gap analysis, E2E checklist
+- [docs/release-runbook.md](docs/release-runbook.md) — release process
 
 ## Quickstart
 
-**Prerequisites:** Node.js **24+**, pnpm **10.19** (see `.nvmrc`)
+**Prerequisites:** Node.js **24+**, pnpm **10.19** (`.nvmrc`)
 
 ```bash
 corepack enable
-pnpm install   # uses pnpm-lock.yaml; CI uses --frozen-lockfile
+pnpm install
+pnpm dev          # Tauri + Next on :3000 (canonical)
+pnpm dev:ui       # Next only — no native APIs
+pnpm dev:web      # marketing :3001
 ```
-
-**Dependency policy:** Next.js is pinned in `pnpm-workspace.yaml` (`catalog:` → **16.2.6**). Bump only by editing the catalog and reviewing the lockfile diff. Root `minimumReleaseAge` (48h) blocks very fresh package publishes.
-
-Run the full desktop app (Tauri shell + Next.js UI + Rust backend):
 
 ```bash
-pnpm dev
+pnpm ops:validate:local   # lint, types, tests, build, parity
 ```
 
-This starts `desktop-backend` (`tauri dev`), which automatically runs the `desktop` Next dev server on port 3000.
+Next.js is catalog-pinned in `pnpm-workspace.yaml` (**16.2.6**). Do not float framework versions in app `package.json`.
 
-Optional dev entrypoints:
+## URLs
+
+- Web: `https://casespace.vercel.app`
+- Download: `https://casespace.vercel.app/download`
+
+## Branding
+
+Regenerate icons from `apps/web/public/casespace-owl.png`:
 
 ```bash
-pnpm dev:ui    # Next.js UI only in the browser (no Tauri; native commands unavailable)
-pnpm dev:web   # marketing site on port 3001
-pnpm dev:all   # web + full desktop (Tauri) + @repo/ui watchers (no duplicate Next on :3000)
+node scripts/generate-brand-icons.mjs
 ```
-
-Run lint and type checks:
-
-```bash
-pnpm lint
-pnpm check-types
-```
-
-## Solo Ops Validation
-
-Use these canonical commands:
-
-```bash
-pnpm ops:validate:local
-pnpm ops:validate
-pnpm ops:validate:prod
-```
-
-- `ops:validate:local`: full local gates + unified release/web-link contract checks
-- `ops:validate`: local gates + remote workflow status discovery
-- `ops:validate:prod`: strict production validation (CI/Release success + stable release link checks)
-
-## Live URLs
-
-- Web/marketing: `https://casespace.vercel.app`
-- Download page: `https://casespace.vercel.app/download`
-- Latest stable desktop release: see [GitHub Releases](https://github.com/fletchertyler914/casespace/releases) (branding/icon updates on main; full parity pending)
-
-## Branding & icons
-
-Canonical owl source: `apps/web/public/casespace-owl.png` (mirrored to `apps/desktop/public/casespace-owl.png`). All app icons, favicons, and store logos are derived from this single asset by `scripts/generate-brand-icons.mjs`.
-
-Regenerate the full icon set after editing the owl source or changing the brand background color:
-
-```bash
-node scripts/generate-brand-icons.mjs                             # default warm-dark-gray
-node scripts/generate-brand-icons.mjs --color "#14110D"           # explicit hex
-node scripts/generate-brand-icons.mjs --color "oklch(0.18 0.01 85)" --preview  # write scripts/.preview-icon.png only
-```
-
-The script bakes the rounded squircle into every layer (including each `.icns` slice — macOS does not apply a system mask to app icons) and writes Tauri, web, and desktop favicons in one pass.
-
-`scripts/clean-owl-source.mjs` is a one-shot patch already applied to the committed `casespace-owl.png` to remove the small ink-blot artifact from the original v1 artwork (a cluster of transparent + dark pixels around `(610, 567)`). Re-run it only if the canonical source is ever restored from the raw v1 asset.
-
-## Notes
-
-- **Backend:** P0 commands, SQLite/FTS, ingest v2, parity + hardening — validated locally.
-- **Desktop UX:** Hub (U1–U3 MVP), workspace shell + viewer routing + panel MVP (U4–U6); U7–U11 still need real depth — see [docs/spec/gap-analysis-master.md](docs/spec/gap-analysis-master.md) rewritten critical path and [docs/ui-port-plan.md](docs/ui-port-plan.md).
-- **AINative:** blocked until UX Parity Build Gate passes (not yet earned).
-- **Production distribution:** blocked until `tauri-plugin-updater` + Developer ID + Windows signing + notarization land.

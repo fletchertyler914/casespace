@@ -1,5 +1,7 @@
 # Feature Catalog
 
+**Primary client:** CFE / fraud examination — see [cfe-workflows.md](cfe-workflows.md).
+
 All features tagged: `P0-CoreParity` | `P1-CoreParity` | `AI-Phase` | `deferred`
 
 **Snapshot (2026-05-21):** Backend P0 commands largely **implemented** (see [command-parity-ledger.md](../command-parity-ledger.md)). UI column below reflects **desktop UX** only — update rows as [ui-port-plan.md](../ui-port-plan.md) phases land.
@@ -32,7 +34,7 @@ All features tagged: `P0-CoreParity` | `P1-CoreParity` | `AI-Phase` | `deferred`
 | F-REPORT-01 | reports | Evidence index export | P0-CoreParity | REQ-REPORT-001 | implemented (MVP UI) |
 | F-REPORT-02 | reports | Executive summary export | P0-CoreParity | REQ-REPORT-001 | implemented (MVP UI) |
 | F-REPORT-03 | reports | Narrative report export | P0-CoreParity | REQ-REPORT-001 | implemented (MVP UI) |
-| F-REPORT-04 | reports | Financial analysis package | P0-CoreParity | REQ-REPORT-001 | implemented (MVP UI) |
+| F-REPORT-04 | reports | Financial analysis package | P1-CoreParity | REQ-REPORT-001 | implemented (legacy export; not CFE-primary) |
 | F-BILL-01 | time-billing | Start/stop timer | P0-CoreParity | REQ-TIME-001 | implemented (MVP) |
 | F-BILL-02 | time-billing | Pause/resume/segments | P1-CoreParity | REQ-TIME-001 | planned |
 | F-BILL-03 | time-billing | Billing config + calculations | P0-CoreParity | REQ-TIME-001 | partial (summary + totals visible) |

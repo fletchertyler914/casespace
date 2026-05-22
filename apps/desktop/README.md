@@ -2,7 +2,7 @@
 
 Next.js desktop UX shell for CaseSpace v2.
 
-**Status (2026-05-21, v0.1.7):** V1 parity closure **implemented (local)** — inventory table, viewer actions (metadata/rename/delete/file-change), structured search, Tiptap artifacts, duplicates depth, time segments + billing UI, reports workspace, column/mapping UI, settings dialogs. **UX Parity Build Gate:** not yet manually validated. **Next:** board multi-select/filters, manual E2E, AINative (blocked). Evidence: [`docs/ui-port-plan.md`](../../docs/ui-port-plan.md), [`docs/readiness.md`](../../docs/readiness.md).
+**Status (2026-05-22, v0.1.8):** V1 parity closure **implemented (local)** — inventory table, viewer actions, structured search, Tiptap artifacts, duplicates depth, **day-based time management (list + calendar)**, reports workspace, column/mapping UI, settings dialogs, **agent panel stub (inert UI)**. **UX Parity Build Gate:** not yet manually validated. **Next:** manual E2E, agent C1 (MCP bridge), production signing. Evidence: [`docs/ui-port-plan.md`](../../docs/ui-port-plan.md), [`docs/readiness.md`](../../docs/readiness.md).
 
 ## Role in v2 architecture
 

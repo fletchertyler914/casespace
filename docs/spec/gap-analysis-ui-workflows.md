@@ -1,6 +1,6 @@
 # UI and Workflow Gap Analysis (v1 → v2)
 
-**Last refresh:** 2026-05-21 (v0.1.7 parity closure). Implementation pass landed; rows below are being aligned to current code. UX Parity Build Gate still requires manual E2E — see [readiness.md](../readiness.md).
+**Last refresh:** 2026-05-22 (v0.1.8 time management port + agent scaffold). Implementation pass landed; UX Parity Build Gate still requires manual E2E — see [readiness.md](../readiness.md).
 
 ## Audit method
 
@@ -20,9 +20,9 @@ Each row below carries the v1 reference path, the v2 path (if any), and an hones
 
 | Domain | v1 surface | v2 status | Headline gap |
 |--------|-----------|-----------|--------------|
-| Case CRUD | create, list, open, rename/edit metadata, delete | 🟡 create/list/open/delete only | No rename / edit-metadata / case-settings dialog (`update_case_metadata` backend command exists, no UI calls it) |
+| Case CRUD | create, list, open, rename/edit metadata, delete | ✅ done (local) | `edit-case-dialog.tsx` + `update_case_metadata` |
 | Sources | add folder/file, list, auto-sync, manual sync | 🟡 add + sync only | No per-source UI, no remove-source (v1 also lacks this) |
-| Ingest / sync UI | dialog progress, duplicate notification, large-folder warning | 🟡 toast summary only | No progress bar, no cancellable sync, no `LargeFolderWarningDialog`, no `DuplicateIngestionNotification` |
+| Ingest / sync UI | dialog progress, duplicate notification, large-folder warning | 🟡 partial | `sync-progress-banner` + duplicate notification; cancel not in v2 backend |
 | Inventory table | full data grid with columns/filters/sort/group/bulk/multi-select/inline edit | ✅ done (local) | `file-table.tsx` + tree/table toggle; persisted column visibility |
 | Column / mapping config | `ColumnManager`, `FieldMapperStepper`, extraction engine | ✅ done (local) | `columns-mapping-dialog`, `field_extraction.rs`, column manager |
 | File viewer router | image, pdf, docx, xlsx, csv, code (syntax-highlighted), markdown (Tiptap), text, video, audio, unsupported | 🟡 extensions match | Routing OK; per-viewer depth is the real gap (see Viewer table below) |
@@ -30,17 +30,17 @@ Each row below carries the v1 reference path, the v2 path (if any), and an hones
 | Metadata panel | MD5+SHA-256, PDF info, EXIF, etc. | ✅ done (local) | `metadata-panel.tsx` |
 | File-change warning | live staleness detection, refresh | ✅ done (local) | `file-change-warning.tsx` |
 | Rename / delete file dialogs | RenameFileDialog, DeleteFileDialog | ✅ done (local) | `rename-file-dialog`, `delete-file-dialog` |
-| Notes editor | Tiptap rich text + dedicated `CreateNoteDialog` | 🟡 plain textarea | No formatting, headings, lists, task lists, links, images, code blocks, undo/redo |
-| Findings | severity selector + linked-files + tags + Tiptap description + `CreateFindingDialog` | 🟡 title + plain description only | Severity exists in backend, not selectable; no linked files, no tags, no Tiptap |
-| Timeline | date picker, event type, source-file link, auto-extracted events from ingest | 🟡 description-only CRUD | No date picker, no event types, no source link, no `extract_dates_from_file` wiring |
-| Duplicates panel | `DuplicateManagementPanel`, group view, primary/recommended ordering, keep/delete cards, decision dialog, ingestion notification, badges across navigator + viewer | 🟡 list + set primary + "merge metadata" | "Merge" only marks primary reviewed + soft-deletes others; does **not** move notes/finding/timeline refs like v1. No comparison UI, no ignore/delete actions, no badges, no decision dialog |
-| Board | DnD between status lanes, **multi-select** (`Cmd/Ctrl+Click`, `Shift+Click`), per-swimlane filters, folder-filtered board, rich cards (note count, dup badge, change indicator, tags, mapping fields), progress dashboard | 🟡 @dnd-kit lanes + multi-drag + filters + dup badge cards | Status via drag only (no card dropdown). Missing: note counts, change dot, tags/mapping on cards, `ProgressDashboard` |
-| Time / billing | `useTimer`, segments, `SegmentEditDialog`, `DailySummaryDialog`, `BillingConfigDialog`, list/calendar views, search, batch update, billable vs non-billable, rate units (hourly/daily/weekly/monthly), pause/resume = same entry | 🟡 timer widget + simple entries | `pause_timer` actually stops; `resume_timer` starts a new entry — no segment model. No manual entry CRUD, no billing config UI, no daily summary dialog, no calendar view, no batch edit |
-| Reports | structured sections (Executive Summary, Case Overview, Findings, Timeline, Inventory Summary, Notes, Appendices), preview, section navigation, `useReportData` aggregator | 🟡 markdown export only | Side panel with 5 export buttons; backend `export_case_report` writes Markdown files to app data dir. No structured sections, no preview-per-type, no PDF/DOCX exports, no persistent history |
+| Notes editor | Tiptap rich text + dedicated `CreateNoteDialog` | ✅ done (local) | Tiptap + `create-note-dialog`; file-linked notes in Track A |
+| Findings | severity selector + linked-files + tags + Tiptap description + `CreateFindingDialog` | ✅ done (local) | `linked-files-picker` + Rust `linked_files` CRUD |
+| Timeline | date picker, event type, source-file link, auto-extracted events from ingest | ✅ done (local) | Source file picker; ingest date hints via `field_extraction` |
+| Duplicates panel | `DuplicateManagementPanel`, group view, primary/recommended ordering, keep/delete cards, decision dialog, ingestion notification, badges across navigator + viewer | ✅ done (local) | Merge relinks artifacts; management panel + badges |
+| Board | DnD between status lanes, **multi-select**, per-swimlane filters, rich cards, progress dashboard | ✅ done (local) | `board-view` + hooks + `ProgressDashboard`; gate E2E pending |
+| Time / billing | segments, billing config, daily summary, segment CRUD | ✅ done (local) | `time-panel`, segment/billing dialogs; calendar optional |
+| Reports | structured sections, preview, generation | ✅ done (local) | `reports-workspace` + `generate_case_report`; v1 export UX not ported |
 | Global search | grouped FTS results | ✅ done (local) | Structured `SearchHit[]`; findings + timeline included |
 | Workspace prefs | `view_mode`, `report_mode`, panel visibility, navigator state, auto-sync | 🟡 partial | Panel sizes not persisted; only toggles/view mode/auto-sync prefs saved |
-| App settings | theme (light/dark/system) + system-file-filter config (patterns: `.DS_Store`, `Thumbs.db`, `~$*`, etc.) | 🟡 theme only | `ThemeToggle` exists but lives on case list, not in workspace settings. No system-file-filter UI; backend has no such command |
-| Splash / loading | `SplashScreen` | 🟠 unwired | Component exists but never rendered |
+| App settings | theme (light/dark/system) + system-file-filter config (patterns: `.DS_Store`, `Thumbs.db`, `~$*`, etc.) | ✅ done (local) | `app-settings-dialog` + `get/save_system_file_filter_config` |
+| Splash / loading | `SplashScreen` | ✅ done (local) | Wired in `app-providers` (session once) |
 | Toast notifications | `useToast`, success/error variants | 🟡 present | Used in `useWorkspaceAutoSync`; not consistently used elsewhere |
 | Theme | system theme detection, persistent across reloads, applied to PDF reader | ✅ done | `ThemeProvider` + PDF theme sync works |
 | Update flow | `tauri-plugin-updater` + signed releases | 🟠 placeholder | Plugin wired; pubkey/endpoints placeholder; prod signing blocked |
@@ -101,9 +101,9 @@ Every dialog in v1 that has **no v2 counterpart**:
 - `DuplicateIngestionNotification` — post-sync duplicate summary
 - `FileDuplicatePanel` — viewer-scoped duplicates
 - `DuplicateManagementPanel` — case-level duplicate review with stats
-- `ProgressDashboard` — board completion summary
-- `CaseFilters` — case-list filter chips
-- `CaseSwitcher` — dropdown to switch between recent cases
+- ~~`ProgressDashboard`~~ — implemented (`progress-dashboard.tsx`)
+- ~~`CaseFilters`~~ — implemented (`case-filters.tsx`)
+- ~~`CaseSwitcher`~~ — implemented (`case-switcher.tsx`)
 - `useTimer` semantics with segment model
 - `useFileNavigation` keyboard navigation hook
 - `useWorkflowSelection` multi-select hook for board
@@ -118,10 +118,10 @@ Every dialog in v1 that has **no v2 counterpart**:
 - `check_file_changed`, `refresh_single_file`, `refresh_files_bulk` (exist, **unused**)
 - `rename_file`, `remove_file_from_case` (exist, **unused**)
 - `extract_file_metadata` (exists, **unused**)
-- `get_file_note_counts` — not implemented; v1 uses for navigator note badges
-- `extract_dates_from_file` — not implemented; v1 uses to auto-create timeline events on ingest
+- ~~`get_file_note_counts`~~ — implemented; board + navigator hooks
+- `extract_dates_from_file` — partial; `extract_dates_from_text` on ingest in `field_extraction.rs`
 - Time tracking depth: v1 has `update_time_entry`, `update_time_segment`, `create_time_segment`, `delete_time_segment`, `delete_time_entry`, `batch_update_segments`, `get_time_entry`, `get_time_entries_summary`, `set_case_billing_config`, `get_case_billing_config`, `calculate_case_total` — v2 only has `start/stop/pause/resume_timer`, `get_time_entries`, `calculate_billing_amount`
-- System file filter: `get_system_file_filter_config`, `save_system_file_filter_config` — not implemented
+- ~~System file filter~~ — `get/save_system_file_filter_config` + app settings UI
 - `column_configs` / `mapping_configs` get/save commands exist but no UI; underlying extraction engine (regex/date/number/text-before/after/between) is not implemented at all
 - `tauri-plugin-updater` not installed; no update-check / download / install commands
 
@@ -167,6 +167,6 @@ Numbered in dependency order, not chronological.
 
 ## Honest readiness for production
 
-v0.1.7 delivers the major v1 desktop workflows in code (table, viewer actions, artifacts, duplicates, time, reports, mapping, search). **UX Parity Build Gate** is not validated until manual E2E passes. Remaining depth: board multi-select/filters, PDF/DOCX reports, production signing.
+v0.1.8 delivers the major v1 desktop workflows in code (table, viewer actions, artifacts, duplicates, day-based time management + billing, reports, mapping, search) plus agent platform scaffolding. **UX Parity Build Gate** is not validated until manual E2E passes. Remaining depth: agent C1 (MCP bridge), PDF/DOCX reports, production signing.
 
 It is **not** ready to replace v1 for day-to-day forensic / inventory work because of: no file table, no rich notes, broken search, no metadata panel, no rename/delete in viewer, no real billing depth, no real duplicate resolution, no column mapping, no production signing/updater.

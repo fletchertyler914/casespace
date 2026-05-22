@@ -36,7 +36,7 @@ Linked to [product-spec-bible.md](product-spec-bible.md), [implementation-readin
 
 ## Phase 2b: Core Parity UX port (implemented — gate validation pending)
 
-v1 parity closure landed in `apps/desktop` for v0.1.7 (2026-05-21). Automated local gates pass; **UX Parity Build Gate** requires manual E2E.
+v1 parity closure landed in `apps/desktop` for v0.1.7 (2026-05-21). Time management port + agent scaffolding shipped in v0.1.8 (2026-05-22). Automated local gates pass; **UX Parity Build Gate** requires manual E2E.
 
 ### Complete (code)
 
@@ -51,10 +51,10 @@ v1 parity closure landed in `apps/desktop` for v0.1.7 (2026-05-21). Automated lo
 - [x] **U10** Structured search + app settings
 - [x] DevX — `pnpm dev`, vitest, Next 16.2.6 catalog pin
 
-### Next (post v0.1.7)
+### Next (post v0.1.8)
 
-- [ ] **U11** UX gate — [spec/native-e2e-checklist.md](spec/native-e2e-checklist.md) in `pnpm dev` (see [spec/v1-parity-closeout.md](spec/v1-parity-closeout.md))
-- [ ] Board multi-select / lane filters / rich cards (optional depth)
+- [ ] **U11** UX gate — [spec/native-e2e-checklist.md](spec/native-e2e-checklist.md) in `pnpm dev`
+- [ ] Agent **C1** — MCP bridge + Sqlite checkpointer (see [architecture-agents.md](architecture-agents.md) §Implementation phases)
 - [ ] Report PDF/DOCX exports (deferred)
 - [ ] Production signing + live updater keys
 

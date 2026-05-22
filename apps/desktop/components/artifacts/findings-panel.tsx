@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { Finding } from "@repo/types";
+import type { CaseFile, Finding } from "@repo/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,6 +16,7 @@ import {
   TiptapEditor,
   isEmptyEditorContent,
 } from "@/components/editor/tiptap-editor";
+import { LinkedFilesPicker } from "@/components/artifacts/linked-files-picker";
 import { WorkspaceSidePanel } from "@/components/workspace/workspace-side-panel";
 import { commandClient } from "@/lib/command-client";
 
@@ -24,6 +25,7 @@ type Severity = (typeof SEVERITIES)[number];
 
 interface FindingsPanelProps {
   caseId: string;
+  files: CaseFile[];
   findings: Finding[];
   onClose: () => void;
   onChanged: () => void;
@@ -41,6 +43,7 @@ function severityLabel(severity: string): string {
 
 export function FindingsPanel({
   caseId,
+  files,
   findings,
   onClose,
   onChanged,
@@ -48,11 +51,13 @@ export function FindingsPanel({
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [severity, setSeverity] = useState<Severity>("medium");
+  const [linkedFiles, setLinkedFiles] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingTitle, setEditingTitle] = useState("");
   const [editingBody, setEditingBody] = useState("");
   const [editingSeverity, setEditingSeverity] = useState<Severity>("medium");
+  const [editingLinkedFiles, setEditingLinkedFiles] = useState<string[]>([]);
 
   async function createFinding() {
     if (!title.trim()) return;
@@ -62,12 +67,14 @@ export function FindingsPanel({
       title.trim(),
       body,
       severity,
+      linkedFiles.length > 0 ? linkedFiles : undefined,
     );
     setSaving(false);
     if (res.ok) {
       setTitle("");
       setBody("");
       setSeverity("medium");
+      setLinkedFiles([]);
       onChanged();
     }
   }
@@ -80,6 +87,7 @@ export function FindingsPanel({
       editingTitle.trim(),
       editingBody,
       editingSeverity,
+      editingLinkedFiles,
     );
     setSaving(false);
     if (res.ok) {
@@ -87,6 +95,7 @@ export function FindingsPanel({
       setEditingTitle("");
       setEditingBody("");
       setEditingSeverity("medium");
+      setEditingLinkedFiles([]);
       onChanged();
     }
   }
@@ -106,7 +115,7 @@ export function FindingsPanel({
         <Input
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          placeholder="Finding title"
+          placeholder="Finding title (e.g. indicator, interview outcome)"
           className="h-8 text-xs"
         />
         <div className="space-y-1.5">
@@ -131,6 +140,11 @@ export function FindingsPanel({
           content={body}
           onChange={(html) => setBody(html)}
           placeholder="Description"
+        />
+        <LinkedFilesPicker
+          files={files}
+          value={linkedFiles}
+          onChange={setLinkedFiles}
         />
         <Button
           size="sm"
@@ -183,6 +197,11 @@ export function FindingsPanel({
                       onChange={(html) => setEditingBody(html)}
                       placeholder="Description"
                     />
+                    <LinkedFilesPicker
+                      files={files}
+                      value={editingLinkedFiles}
+                      onChange={setEditingLinkedFiles}
+                    />
                     <div className="flex gap-2">
                       <Button
                         size="sm"
@@ -201,6 +220,7 @@ export function FindingsPanel({
                           setEditingTitle("");
                           setEditingBody("");
                           setEditingSeverity("medium");
+                          setEditingLinkedFiles([]);
                         }}
                       >
                         Cancel
@@ -222,6 +242,18 @@ export function FindingsPanel({
                         className="min-h-0 border-0 px-0 py-0"
                       />
                     ) : null}
+                    {(f.linkedFiles?.length ?? 0) > 0 ? (
+                      <p className="text-[10px] text-muted-foreground">
+                        Linked:{" "}
+                        {f.linkedFiles
+                          ?.map(
+                            (id) =>
+                              files.find((file) => file.id === id)?.fileName ??
+                              id,
+                          )
+                          .join(", ")}
+                      </p>
+                    ) : null}
                     <div className="flex gap-1">
                       <Button
                         size="sm"
@@ -234,6 +266,7 @@ export function FindingsPanel({
                           setEditingSeverity(
                             (f.severity as Severity | undefined) ?? "medium",
                           );
+                          setEditingLinkedFiles(f.linkedFiles ?? []);
                         }}
                       >
                         Edit

@@ -39,7 +39,6 @@ export function SettingsDialog({
     findingsVisible: prefs.findingsVisible ?? false,
     timelineVisible: prefs.timelineVisible ?? false,
     duplicatesVisible: prefs.duplicatesVisible ?? false,
-    reportsVisible: prefs.reportsVisible ?? false,
     timeVisible: prefs.timeVisible ?? false,
   };
 
@@ -96,7 +95,6 @@ export function SettingsDialog({
                   ["findingsVisible", "Findings"],
                   ["timelineVisible", "Timeline"],
                   ["duplicatesVisible", "Duplicates"],
-                  ["reportsVisible", "Reports"],
                   ["timeVisible", "Time"],
                 ] as const
               ).map(([key, label]) => (

@@ -9,6 +9,12 @@ import {
   ZoomOut,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+import {
+  elementSupportsFullscreen,
+  tryEnterElementFullscreen,
+  tryExitFullscreen,
+} from "@/lib/preview-fullscreen";
 
 interface ImageFilePreviewProps {
   src: string;
@@ -20,22 +26,32 @@ export function ImageFilePreview({ src, alt }: ImageFilePreviewProps) {
   const [scale, setScale] = useState(1);
   const [rotation, setRotation] = useState(0);
   const [fullscreen, setFullscreen] = useState(false);
+  const [expandedPreview, setExpandedPreview] = useState(false);
 
   const toggleFullscreen = useCallback(async () => {
     const el = containerRef.current;
     if (!el) return;
-    if (!document.fullscreenElement) {
-      await el.requestFullscreen();
-      setFullscreen(true);
-    } else {
-      await document.exitFullscreen();
+    if (fullscreen || expandedPreview) {
+      setExpandedPreview(false);
       setFullscreen(false);
+      await tryExitFullscreen();
+      return;
     }
-  }, []);
+    if (elementSupportsFullscreen(el)) {
+      const entered = await tryEnterElementFullscreen(el);
+      if (entered) {
+        setFullscreen(true);
+        return;
+      }
+    }
+    setExpandedPreview(true);
+  }, [expandedPreview, fullscreen]);
 
   useEffect(() => {
     const onFsChange = () => {
-      setFullscreen(Boolean(document.fullscreenElement));
+      const active = Boolean(document.fullscreenElement);
+      setFullscreen(active);
+      if (!active) setExpandedPreview(false);
     };
     document.addEventListener("fullscreenchange", onFsChange);
     return () => document.removeEventListener("fullscreenchange", onFsChange);
@@ -44,7 +60,12 @@ export function ImageFilePreview({ src, alt }: ImageFilePreviewProps) {
   return (
     <div
       ref={containerRef}
-      className="relative flex min-h-[280px] flex-col bg-muted/20"
+      className={cn(
+        "relative flex min-h-[280px] flex-col bg-muted/20",
+        expandedPreview &&
+          !fullscreen &&
+          "fixed inset-0 z-[200] min-h-0 bg-background",
+      )}
     >
       <div className="flex h-9 shrink-0 items-center justify-end gap-0.5 border-b border-border/40 px-2">
         <Button
@@ -81,10 +102,12 @@ export function ImageFilePreview({ src, alt }: ImageFilePreviewProps) {
           variant="ghost"
           size="icon"
           className="h-8 w-8"
-          title={fullscreen ? "Exit fullscreen" : "Fullscreen"}
+          title={
+            fullscreen || expandedPreview ? "Exit fullscreen" : "Fullscreen"
+          }
           onClick={() => void toggleFullscreen()}
         >
-          {fullscreen ? (
+          {fullscreen || expandedPreview ? (
             <Minimize2 className="h-4 w-4" />
           ) : (
             <Maximize2 className="h-4 w-4" />

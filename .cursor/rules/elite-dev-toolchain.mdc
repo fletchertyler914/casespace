@@ -26,7 +26,7 @@ Includes arch check, lint, types, `pnpm test:parity`, `pnpm test:hardening`, bui
 
 ## UI port phases (active workstream)
 
-Status and file paths: `docs/ui-port-plan.md`.
+Status and file paths: `docs/product-roadmap.md`.
 
 | Phase | Scope | Status |
 |-------|--------|--------|
@@ -38,7 +38,7 @@ Status and file paths: `docs/ui-port-plan.md`.
 
 Backend Core Parity is **separate** and already passed locally — do not block UI work on re-litigating backend unless regressing.
 
-AINative is **blocked** until UX Parity Build Gate (see `docs/ui-port-plan.md`).
+AINative is **blocked** until the UX release gate (see `docs/product-roadmap.md`).
 
 ## Dependency pinning (supply chain)
 

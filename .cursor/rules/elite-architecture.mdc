@@ -13,4 +13,4 @@ alwaysApply: true
   - `desktop-backend`: Tauri/Rust engine
   - `web`: marketing/sales/docs/download only
 - If a change introduces architectural ambiguity, stop and enforce the canonical boundary before adding features.
-- Desktop UX port status and phases: `docs/ui-port-plan.md` (backend parity is separate; do not add UI under `desktop-backend`).
+- Desktop UX milestones: `docs/product-roadmap.md` (do not add product UI under `desktop-backend`).

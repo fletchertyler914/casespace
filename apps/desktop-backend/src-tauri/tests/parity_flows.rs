@@ -188,30 +188,117 @@ fn flow_five_report_exports_non_empty() {
 }
 
 #[test]
-fn flow_timer_creates_entry() {
+fn flow_v6_schema_repair_when_migration_row_exists_without_entry_date() {
+    let dir = std::env::temp_dir().join(format!("casespace-parity-{}", uuid::Uuid::new_v4()));
+    fs::create_dir_all(&dir).unwrap();
+    let path = dir.join("casespace.db");
+
+    let db = Database::open(&path).expect("initial open");
+    let (case_id, entry_id, seg_id): (String, String, String) = with_db(&db, |conn| {
+        let case_id = uuid::Uuid::new_v4().to_string();
+        let entry_id = uuid::Uuid::new_v4().to_string();
+        let seg_id = uuid::Uuid::new_v4().to_string();
+        let now = chrono::Utc::now().to_rfc3339();
+        conn.execute(
+            "INSERT INTO cases (id, name, status, created_at, updated_at) VALUES (?1, 'Repair', 'active', ?2, ?2)",
+            params![case_id, now],
+        )
+        .unwrap();
+        conn.execute(
+            "INSERT INTO time_entries (id, case_id, entry_date, total_seconds, created_at, updated_at)
+             VALUES (?1, ?2, ?3, 60, ?4, ?4)",
+            params![entry_id, case_id, format!("{}T00:00:00+00:00", &now[..10]), now],
+        )
+        .unwrap();
+        conn.execute(
+            "INSERT INTO time_segments (id, entry_id, started_at, ended_at, duration_seconds, discount_percent)
+             VALUES (?1, ?2, ?3, ?3, 60, 0)",
+            params![seg_id, entry_id, now],
+        )
+        .unwrap();
+        Ok((case_id, entry_id, seg_id))
+    });
+    let _ = with_db(&db, |conn| {
+        let now = chrono::Utc::now().to_rfc3339();
+        conn.execute_batch(
+            r#"
+            PRAGMA foreign_keys=OFF;
+            DROP TABLE time_entries;
+            CREATE TABLE time_entries (
+                id TEXT PRIMARY KEY,
+                case_id TEXT NOT NULL,
+                started_at TEXT NOT NULL,
+                ended_at TEXT,
+                billable_minutes INTEGER DEFAULT 0,
+                summary TEXT
+            );
+            "#,
+        )
+        .unwrap();
+        conn.execute(
+            "INSERT INTO time_entries (id, case_id, started_at, ended_at, billable_minutes)
+             VALUES (?1, ?2, ?3, NULL, 1)",
+            params![entry_id, case_id, now],
+        )
+        .unwrap();
+        conn.execute(
+            "INSERT OR REPLACE INTO _migrations (version, applied_at) VALUES (6, ?1)",
+            params![now],
+        )
+        .unwrap();
+        Ok(())
+    });
+    drop(db);
+
+    let db2 = Database::open(&path).expect("repair open");
+    let _ = with_db(&db2, |conn| {
+        let cols: Vec<String> = conn
+            .prepare("PRAGMA table_info(time_entries)")
+            .unwrap()
+            .query_map([], |row| row.get(1))
+            .unwrap()
+            .filter_map(Result::ok)
+            .collect();
+        assert!(cols.iter().any(|c| c == "entry_date"));
+        let seg_count: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM time_segments WHERE id = ?1",
+                params![seg_id],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(seg_count, 1, "segments should survive v6 repair");
+        Ok(())
+    });
+}
+
+#[test]
+fn flow_day_based_time_entry_schema() {
     let (_dir, db) = temp_db();
     let _ = with_db(&db, |conn| {
         let case_id = uuid::Uuid::new_v4().to_string();
         let entry_id = uuid::Uuid::new_v4().to_string();
-        let started = chrono::Utc::now().to_rfc3339();
+        let now = chrono::Utc::now().to_rfc3339();
+        let day = format!("{}T00:00:00+00:00", now.chars().take(10).collect::<String>());
         conn.execute(
             "INSERT INTO cases (id, name, status, created_at, updated_at) VALUES (?1, 'Timer', 'active', ?2, ?2)",
-            params![case_id, started],
+            params![case_id, now],
         )
         .unwrap();
         conn.execute(
-            "INSERT INTO time_entries (id, case_id, started_at, ended_at, billable_minutes) VALUES (?1, ?2, ?3, NULL, 0)",
-            params![entry_id, case_id, started],
+            "INSERT INTO time_entries (id, case_id, entry_date, total_seconds, summary, created_at, updated_at)
+             VALUES (?1, ?2, ?3, 3600, 'work', ?4, ?4)",
+            params![entry_id, case_id, day, now],
         )
         .unwrap();
-        let active: i64 = conn
+        let total: i64 = conn
             .query_row(
-                "SELECT COUNT(*) FROM time_entries WHERE case_id = ?1 AND ended_at IS NULL",
+                "SELECT total_seconds FROM time_entries WHERE case_id = ?1",
                 params![case_id],
                 |row| row.get(0),
             )
             .unwrap();
-        assert_eq!(active, 1);
+        assert_eq!(total, 3600);
         Ok(())
     });
 }
@@ -390,6 +477,59 @@ fn flow_merge_duplicate_metadata_moves_notes() {
             )
             .unwrap();
         assert!(secondary_deleted.is_some());
+
+        Ok(())
+    });
+}
+
+#[test]
+fn flow_file_note_counts_and_metadata_batch() {
+    let (_dir, db) = temp_db();
+    let _ = with_db(&db, |conn| {
+        let case_id = uuid::Uuid::new_v4().to_string();
+        let file_id = uuid::Uuid::new_v4().to_string();
+        let note_id = uuid::Uuid::new_v4().to_string();
+        let now = chrono::Utc::now().to_rfc3339();
+
+        conn.execute(
+            "INSERT INTO cases (id, name, status, created_at, updated_at) VALUES (?1, 'Notes', 'active', ?2, ?2)",
+            params![case_id, now],
+        )
+        .unwrap();
+        conn.execute(
+            "INSERT INTO files (id, case_id, file_name, folder_path, absolute_path, file_hash, file_size, modified_at, status)
+             VALUES (?1, ?2, 'doc.pdf', '', '/tmp/doc.pdf', 'h', 1, ?3, 'unreviewed')",
+            params![file_id, case_id, now],
+        )
+        .unwrap();
+        conn.execute(
+            "INSERT INTO notes (id, case_id, file_id, content, pinned, created_at, updated_at) VALUES (?1, ?2, ?3, 'note', 0, ?4, ?4)",
+            params![note_id, case_id, file_id, now],
+        )
+        .unwrap();
+        conn.execute(
+            "INSERT INTO file_metadata (file_id, metadata_json, extracted_at) VALUES (?1, '{\"title\":\"Doc\"}', ?2)",
+            params![file_id, now],
+        )
+        .unwrap();
+
+        let note_count: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM notes WHERE case_id = ?1 AND file_id = ?2",
+                params![case_id, file_id],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(note_count, 1);
+
+        let meta_count: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM files f INNER JOIN file_metadata fm ON f.id = fm.file_id WHERE f.case_id = ?1",
+                params![case_id],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(meta_count, 1);
 
         Ok(())
     });

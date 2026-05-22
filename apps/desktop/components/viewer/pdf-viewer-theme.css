@@ -1,6 +1,5 @@
 /**
- * CaseSpace-native PDF viewer — maps react-pdf-viewer vars to app design tokens.
- * App theme (html.light / html.dark) drives reader chrome; PDF pages stay paper-white.
+ * PDF engine layout + tokens. Toolbar UI is native React in pdf-toolbar.tsx.
  */
 
 .pdf-preview-root {
@@ -14,26 +13,8 @@
 
   --rpv-default-layout__body-background-color: var(--background);
   --rpv-default-layout__container-border-color: transparent;
-  --rpv-default-layout__toolbar-background-color: var(--card);
-  --rpv-default-layout__toolbar-border-bottom-color: color-mix(
-    in srgb,
-    var(--border) 40%,
-    transparent
-  );
-  --rpv-default-layout__sidebar-border-color: color-mix(
-    in srgb,
-    var(--border) 40%,
-    transparent
-  );
-  --rpv-default-layout__sidebar--opened-background-color: var(--card);
-  --rpv-default-layout__sidebar-headers-background-color: var(--card);
-  --rpv-default-layout__sidebar-content--opened-background-color: var(--background);
-  --rpv-default-layout__sidebar-content--opened-border-color: color-mix(
-    in srgb,
-    var(--border) 40%,
-    transparent
-  );
-  --rpv-default-layout__sidebar-content--opened-color: var(--foreground);
+  --rpv-default-layout__toolbar-background-color: var(--background);
+  --rpv-default-layout__toolbar-border-bottom-color: transparent;
 
   --rpv-core__inner-page-background-color: oklch(0.99 0.002 85);
   --rpv-core__full-screen-target-background-color: var(--background);
@@ -41,47 +22,13 @@
   --rpv-core__doc-error-background-color: var(--background);
   --rpv-core__page-layer-box-shadow: var(--shadow-md);
 
-  --rpv-core__primary-button-background-color: var(--primary);
-  --rpv-core__primary-button-color: var(--primary-foreground);
-  --rpv-core__progress-bar-progress-background-color: var(--primary);
-  --rpv-core__minimal-button-color: var(--foreground);
+  --rpv-core__minimal-button-color: var(--muted-foreground);
   --rpv-core__minimal-button--hover-background-color: var(--accent);
-  --rpv-core__minimal-button--selected-background-color: color-mix(
-    in srgb,
-    var(--primary) 22%,
-    var(--accent)
-  );
-  --rpv-core__minimal-button--disabled-color: var(--muted-foreground);
   --rpv-core__textbox-background-color: var(--background);
   --rpv-core__textbox-border-color: color-mix(in srgb, var(--border) 50%, transparent);
   --rpv-core__textbox-color: var(--foreground);
-  --rpv-core__menu-item-color: var(--popover-foreground);
-  --rpv-core__menu-item--hover-background-color: var(--accent);
   --rpv-core__popover-body-background-color: var(--popover);
   --rpv-core__popover-body-color: var(--popover-foreground);
-  --rpv-thumbnail__item--selected-background-color: color-mix(
-    in srgb,
-    var(--primary) 28%,
-    var(--accent)
-  );
-  --rpv-bookmark__item-color: var(--foreground);
-  --rpv-bookmark__item--hover-background-color: var(--accent);
-  --rpv-attachment__item-color: var(--foreground);
-  --rpv-attachment__item--hover-background-color: var(--accent);
-  --rpv-toolbar__label--color: var(--foreground);
-}
-
-/* Library dark class — keep in sync when Viewer theme="dark" */
-.pdf-preview-root .rpv-core__viewer--dark {
-  --rpv-default-layout__body-background-color: var(--background);
-  --rpv-default-layout__toolbar-background-color: var(--card);
-  --rpv-default-layout__sidebar-headers-background-color: var(--card);
-  --rpv-default-layout__sidebar-content--opened-background-color: var(--background);
-  --rpv-core__minimal-button--selected-background-color: color-mix(
-    in srgb,
-    var(--primary) 35%,
-    var(--accent)
-  );
 }
 
 .pdf-preview-root .rpv-core__viewer {
@@ -94,92 +41,62 @@
 .pdf-preview-root .rpv-default-layout__container {
   height: 100% !important;
   border: none !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+.pdf-preview-root .rpv-default-layout__main {
+  flex: 1 !important;
+  min-height: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
 }
 
 .pdf-preview-root .rpv-default-layout__body {
-  flex: 1;
+  flex: 1 !important;
+  min-height: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  background-color: var(--background) !important;
+  padding-top: 0 !important;
+  overflow: hidden !important;
+}
+
+.pdf-preview-root .rpv-default-layout__toolbar {
+  position: static !important;
+  display: block !important;
+  flex-shrink: 0 !important;
+  width: 100% !important;
+  height: auto !important;
+  padding: 0 !important;
+  background: transparent !important;
+  border: none !important;
+}
+
+.pdf-preview-root .casespace-pdf-toolbar {
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+/* Hide any library toolbar chrome that leaks outside our slot renderers */
+.pdf-preview-root .rpv-toolbar {
+  display: none !important;
+}
+
+.pdf-preview-root .casespace-pdf-toolbar ~ * .rpv-toolbar,
+.pdf-preview-root .rpv-default-layout__toolbar > .rpv-toolbar {
+  display: none !important;
+}
+
+.pdf-preview-root .rpv-core__inner-pages {
+  flex: 1 !important;
   min-height: 0 !important;
   background-color: var(--background) !important;
 }
 
-.pdf-preview-root .rpv-default-layout__toolbar,
-.pdf-preview-root .rpv-default-layout__sidebar-headers {
-  background-color: var(--card) !important;
-  padding: 0 !important;
-  min-height: 2.25rem !important;
-}
-
-/* Custom toolbar row — align library controls to app chrome */
-.pdf-preview-root .rpv-toolbar {
-  min-height: 2.25rem;
-}
-
-.pdf-preview-root .rpv-toolbar .rpv-core__minimal-button {
-  display: inline-flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  width: 2rem !important;
-  height: 2rem !important;
-  padding: 0 !important;
-}
-
-.pdf-preview-root .rpv-toolbar .rpv-core__textbox {
-  height: 1.75rem !important;
-  min-width: 2rem !important;
-  padding: 0 0.375rem !important;
-  font-size: 0.75rem !important;
-  line-height: 1.25rem !important;
-  text-align: center !important;
-}
-
-.pdf-preview-root .rpv-toolbar .rpv-toolbar__label {
-  display: inline-flex !important;
-  align-items: center !important;
-  height: 2rem !important;
-  font-size: 0.75rem !important;
-  line-height: 1 !important;
-}
-
-.pdf-preview-root .rpv-toolbar .rpv-zoom__popover-target-scale {
-  font-size: 0.75rem !important;
-  min-width: 3rem !important;
-  text-align: center !important;
-}
-
-.pdf-preview-root .rpv-default-layout__sidebar-content--opened {
-  background-color: var(--background) !important;
-  color: var(--foreground) !important;
-}
-
-.pdf-preview-root .rpv-core__inner-pages {
-  background-color: var(--background) !important;
-}
-
-.pdf-preview-root .rpv-core__minimal-button {
-  color: var(--muted-foreground) !important;
-  border-radius: var(--radius) !important;
-}
-
-.pdf-preview-root .rpv-core__minimal-button:hover {
-  background-color: var(--accent) !important;
-  color: var(--accent-foreground) !important;
-}
-
-.pdf-preview-root .rpv-core__minimal-button--selected {
-  background-color: color-mix(in srgb, var(--primary) 28%, var(--accent)) !important;
-  color: var(--primary) !important;
-}
-
-/* Safety: hide actions we removed from custom toolbar */
-.pdf-preview-root [data-testid="open__button"],
-.pdf-preview-root [data-testid="full-screen__button"],
-.pdf-preview-root [data-testid="theme__button"],
-.pdf-preview-root [data-testid="switch-theme__button"],
-.pdf-preview-root button[aria-label*="Switch to dark"],
-.pdf-preview-root button[aria-label*="Switch to light"],
-.pdf-preview-root button[aria-label*="Open file"],
-.pdf-preview-root button[aria-label*="Full screen"] {
-  display: none !important;
+/* Search popover uses library UI — align to tokens */
+.pdf-preview-root .rpv-search__popover {
+  font-family: var(--font-sans) !important;
 }
 
 .pdf-preview-root .rpv-core__viewer ::-webkit-scrollbar {

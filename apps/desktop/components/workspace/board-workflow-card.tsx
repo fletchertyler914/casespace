@@ -1,13 +1,17 @@
 "use client";
 
 import { memo } from "react";
-import { Folder } from "lucide-react";
+import { Folder, StickyNote } from "lucide-react";
 import type { DraggableAttributes } from "@dnd-kit/core";
 import type { SyntheticListenerMap } from "@dnd-kit/core/dist/hooks/utilities";
 import type { CaseFile } from "@repo/types";
 import { Badge } from "@/components/ui/badge";
 import { DuplicateBadge } from "@/components/artifacts/duplicate-badge";
 import { getFileIcon } from "@/lib/file-icon-utils";
+import {
+  formatMappingValue,
+  type MappingFieldDisplay,
+} from "@/lib/mapping/display";
 import { cn } from "@/lib/utils";
 
 function fileExtensionLabel(fileName: string): string {
@@ -38,6 +42,9 @@ export interface BoardWorkflowCardProps {
   isDragging?: boolean;
   isDuplicate?: boolean;
   isPrimaryDuplicate?: boolean;
+  fileChanged?: boolean;
+  noteCount?: number;
+  mappingFields?: MappingFieldDisplay[];
   selectedFolderPath?: string | null;
   onSelect?: (event: React.MouseEvent) => void;
   onFileOpen?: (file: CaseFile) => void;
@@ -51,6 +58,9 @@ export const BoardWorkflowCard = memo(function BoardWorkflowCard({
   isDragging = false,
   isDuplicate = false,
   isPrimaryDuplicate = false,
+  fileChanged = false,
+  noteCount = 0,
+  mappingFields = [],
   selectedFolderPath = null,
   onSelect,
   onFileOpen,
@@ -59,6 +69,8 @@ export const BoardWorkflowCard = memo(function BoardWorkflowCard({
 }: BoardWorkflowCardProps) {
   const Icon = getFileIcon(file.fileName);
   const relativePath = relativeFolderPath(file, selectedFolderPath);
+  const showNoteOnFolder =
+    relativePath && noteCount > 0 && mappingFields.length === 0;
 
   const handleClick = (event: React.MouseEvent) => {
     const isMac = navigator.platform.toUpperCase().indexOf("MAC") >= 0;
@@ -99,6 +111,12 @@ export const BoardWorkflowCard = memo(function BoardWorkflowCard({
         isDragging && "scale-95 opacity-50",
       )}
     >
+      {fileChanged && (
+        <div
+          className="absolute top-1.5 right-1.5 h-1.5 w-1.5 rounded-full bg-amber-500 shadow-sm"
+          title="File changed on disk"
+        />
+      )}
       <div className="flex w-full min-w-0 items-center justify-between gap-2">
         <div className="flex min-w-0 flex-1 items-center gap-1.5 overflow-hidden">
           <Icon className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
@@ -126,11 +144,48 @@ export const BoardWorkflowCard = memo(function BoardWorkflowCard({
       </div>
 
       {relativePath && (
-        <div className="flex min-w-0 items-center gap-1.5 pl-[22px] text-[10px] text-muted-foreground">
-          <Folder className="h-3 w-3 shrink-0" />
-          <span className="min-w-0 truncate" title={relativePath}>
-            {relativePath}
-          </span>
+        <div className="flex min-w-0 items-center justify-between gap-2 pl-[22px] text-[10px] text-muted-foreground">
+          <div className="flex min-w-0 flex-1 items-center gap-1.5">
+            <Folder className="h-3 w-3 shrink-0" />
+            <span className="min-w-0 truncate" title={relativePath}>
+              {relativePath}
+            </span>
+          </div>
+          {showNoteOnFolder && (
+            <StickyNote className="h-3 w-3 shrink-0 opacity-40" />
+          )}
+        </div>
+      )}
+
+      {mappingFields.length > 0 && (
+        <div className="space-y-1">
+          {mappingFields.map((field, idx) => (
+            <div
+              key={field.columnId}
+              className={cn(
+                "flex min-w-0 items-center text-[10px] text-muted-foreground",
+                idx === mappingFields.length - 1
+                  ? "justify-between gap-2"
+                  : "gap-1.5",
+              )}
+            >
+              <div className="flex min-w-0 flex-1 items-center gap-1.5">
+                <span className="truncate font-medium">{field.label}:</span>
+                <span className="truncate text-foreground">
+                  {formatMappingValue(field.value)}
+                </span>
+              </div>
+              {idx === mappingFields.length - 1 && noteCount > 0 && (
+                <StickyNote className="h-3 w-3 shrink-0 opacity-40" />
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {!relativePath && noteCount > 0 && mappingFields.length === 0 && (
+        <div className="flex justify-end pl-[22px]">
+          <StickyNote className="h-3 w-3 opacity-40" />
         </div>
       )}
     </div>

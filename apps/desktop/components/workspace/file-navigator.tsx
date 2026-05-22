@@ -5,23 +5,20 @@ import {
   ChevronDown,
   ChevronRight,
   Folder,
-  List,
-  PanelLeftClose,
   Search,
-  Table,
 } from "lucide-react";
 import type { CaseFile } from "@repo/types";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
-import { buildFolderTree, filterFilesByFolder, type FolderNode } from "@/lib/file-tree-utils";
+import {
+  WorkspaceNavigatorShell,
+  workspaceNavigatorItemClass,
+  workspaceNavigatorListHeaderClass,
+} from "@/components/workspace/workspace-navigator-shell";
+import { buildFolderTree, type FolderNode } from "@/lib/file-tree-utils";
 import { DuplicateBadge } from "@/components/artifacts/duplicate-badge";
 import { findGroupForFile, type DuplicateGroup } from "@/lib/duplicate-utils";
 import { getFileIcon } from "@/lib/file-icon-utils";
-import { FileTable } from "./file-table";
-
-type NavigatorViewMode = "tree" | "table";
 
 interface FileNavigatorProps {
   caseId: string;
@@ -150,10 +147,7 @@ function FolderTreeNode({
             <button
               key={file.id}
               type="button"
-              className={cn(
-                "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-muted/60",
-                active && "bg-primary/10 text-foreground",
-              )}
+              className={workspaceNavigatorItemClass(active)}
               style={{
                 paddingLeft: `${(node.path === "" ? depth : depth + 1) * 12 + 8}px`,
               }}
@@ -174,27 +168,18 @@ function FolderTreeNode({
 }
 
 export const FileNavigator = memo(function FileNavigator({
-  caseId,
   files,
   currentFile,
   duplicateGroups,
   duplicateFileIds,
   onFileSelect,
-  onStatusChange,
-  onFilesChanged,
   selectedFolderPath,
   onFolderSelect,
   onToggleNavigator,
 }: FileNavigatorProps) {
-  const [viewMode, setViewMode] = useState<NavigatorViewMode>("tree");
   const [searchQuery, setSearchQuery] = useState("");
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(
     () => new Set(),
-  );
-
-  const scopedFiles = useMemo(
-    () => filterFilesByFolder(files, selectedFolderPath),
-    [files, selectedFolderPath],
   );
 
   const folderTree = useMemo(() => buildFolderTree(files), [files]);
@@ -227,92 +212,41 @@ export const FileNavigator = memo(function FileNavigator({
   }, [currentFile?.id, currentFile?.folderPath]);
 
   return (
-    <div className="flex h-full min-h-0 flex-col border-r border-border/40 bg-card">
-      <div className="flex items-center gap-2 border-b border-border/40 px-2 py-2">
-        {viewMode === "tree" && (
-          <div className="relative min-w-0 flex-1">
-            <Search className="absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Filter files…"
-              className="h-8 pl-8 text-xs"
-            />
-          </div>
-        )}
-        {viewMode === "table" && (
-          <span className="min-w-0 flex-1 truncate text-xs font-medium text-muted-foreground">
-            {scopedFiles.length} file{scopedFiles.length === 1 ? "" : "s"}
-            {selectedFolderPath ? ` in ${selectedFolderPath}` : ""}
-          </span>
-        )}
-        <Button
-          variant={viewMode === "tree" ? "secondary" : "ghost"}
-          size="icon"
-          className="h-8 w-8 shrink-0"
-          title="Tree view"
-          onClick={() => setViewMode("tree")}
+    <WorkspaceNavigatorShell
+      onToggleNavigator={onToggleNavigator}
+      header={
+        <div className="relative min-w-0 flex-1">
+          <Search className="absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Filter files…"
+            className="h-8 pl-8 text-xs"
+          />
+        </div>
+      }
+      listHeader={
+        <button
+          type="button"
+          className={workspaceNavigatorListHeaderClass(selectedFolderPath === null)}
+          onClick={() => onFolderSelect(null)}
         >
-          <List className="h-4 w-4" />
-        </Button>
-        <Button
-          variant={viewMode === "table" ? "secondary" : "ghost"}
-          size="icon"
-          className="h-8 w-8 shrink-0"
-          title="Table view"
-          onClick={() => setViewMode("table")}
-        >
-          <Table className="h-4 w-4" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-8 w-8 shrink-0"
-          title="Hide navigator"
-          onClick={onToggleNavigator}
-        >
-          <PanelLeftClose className="h-4 w-4" />
-        </Button>
-      </div>
-      {viewMode === "table" ? (
-        <FileTable
-          caseId={caseId}
-          files={scopedFiles}
-          currentFile={currentFile}
-          duplicateGroups={duplicateGroups}
-          duplicateFileIds={duplicateFileIds}
-          onFileSelect={onFileSelect}
-          onStatusChange={onStatusChange}
-          onFilesChanged={onFilesChanged}
-        />
-      ) : (
-        <ScrollArea className="min-h-0 flex-1">
-          <div className="py-1">
-            <button
-              type="button"
-              className={cn(
-                "mb-1 flex w-full items-center gap-2 rounded-md px-3 py-1.5 text-left text-xs font-medium text-muted-foreground hover:bg-muted/60",
-                selectedFolderPath === null && "bg-muted text-foreground",
-              )}
-              onClick={() => onFolderSelect(null)}
-            >
-              All files ({files.length})
-            </button>
-            <FolderTreeNode
-              node={displayTree}
-              depth={0}
-              expandedFolders={expandedFolders}
-              toggleFolder={toggleFolder}
-              currentFile={currentFile}
-              duplicateGroups={duplicateGroups}
-              duplicateFileIds={duplicateFileIds}
-              onFileSelect={onFileSelect}
-              selectedFolderPath={selectedFolderPath}
-              onFolderSelect={onFolderSelect}
-            />
-          </div>
-        </ScrollArea>
-      )}
-    </div>
+          All files ({files.length})
+        </button>
+      }
+    >
+      <FolderTreeNode
+        node={displayTree}
+        depth={0}
+        expandedFolders={expandedFolders}
+        toggleFolder={toggleFolder}
+        currentFile={currentFile}
+        duplicateGroups={duplicateGroups}
+        duplicateFileIds={duplicateFileIds}
+        onFileSelect={onFileSelect}
+        selectedFolderPath={selectedFolderPath}
+        onFolderSelect={onFolderSelect}
+      />
+    </WorkspaceNavigatorShell>
   );
 });

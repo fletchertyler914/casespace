@@ -104,16 +104,19 @@ export const mockTimeEntries: TimeEntry[] = [
   {
     id: "entry-1",
     caseId: MOCK_CASE_ID,
-    startedAt: "2026-01-01T09:00:00Z",
-    endedAt: "2026-01-01T10:00:00Z",
-    billableMinutes: 60,
+    entryDate: "2026-01-01T00:00:00+00:00",
+    totalSeconds: 3600,
     summary: "Review",
+    createdAt: "2026-01-01T09:00:00Z",
+    updatedAt: "2026-01-01T10:00:00Z",
     segments: [
       {
         id: "seg-1",
         entryId: "entry-1",
         startedAt: "2026-01-01T09:00:00Z",
         endedAt: "2026-01-01T10:00:00Z",
+        durationSeconds: 3600,
+        discountPercent: 0,
       },
     ],
   },

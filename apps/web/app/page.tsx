@@ -10,13 +10,14 @@ export default function Page() {
             CaseSpace
           </p>
           <h1 className="text-5xl font-semibold leading-tight max-w-3xl">
-            Investigative case intelligence built for speed, security, and
-            offline execution.
+            Fraud examination workspace built for CFEs — fast, secure, and
+            offline-ready.
           </h1>
           <p className="text-neutral-300 max-w-2xl">
-            CaseSpace helps investigators and analysts ingest large evidence
-            sets, manage findings, and produce defensible outputs from a single
-            desktop workflow.
+            CaseSpace helps Certified Fraud Examiners and investigative
+            professionals ingest evidence, document findings and chronology,
+            resolve duplicates, and produce defensible examination reports from
+            one desktop workflow.
           </p>
           <div className="flex flex-wrap gap-3">
             <Link
@@ -49,16 +50,16 @@ export default function Page() {
       <section className="grid md:grid-cols-3 gap-4 mt-14">
         {[
           {
+            title: "Evidence-First",
+            copy: "Review, flag, and link files to findings and timeline events.",
+          },
+          {
+            title: "Examination Reports",
+            copy: "Assemble findings, chronology, and evidence index for client deliverables.",
+          },
+          {
             title: "Offline-First",
-            copy: "Core workflows remain operational without network dependency.",
-          },
-          {
-            title: "Secure By Default",
-            copy: "Command-risk controls, least-privilege capabilities, and signed releases.",
-          },
-          {
-            title: "High Throughput",
-            copy: "Built to ingest and search large case datasets on low-power hardware.",
+            copy: "Core examination workflows run without network dependency.",
           },
         ].map((feature) => (
           <article

@@ -12,17 +12,22 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { formatDurationShort } from "@/lib/time-format";
 
 interface DailySummaryDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onConfirm: (summary?: string) => Promise<void>;
+  totalSeconds: number;
+  billablePreview?: string;
+  onSave: (summary: string) => void | Promise<void>;
 }
 
 export function DailySummaryDialog({
   open,
   onOpenChange,
-  onConfirm,
+  totalSeconds,
+  billablePreview,
+  onSave,
 }: DailySummaryDialogProps) {
   const [summary, setSummary] = useState("");
   const [loading, setLoading] = useState(false);
@@ -40,8 +45,7 @@ export function DailySummaryDialog({
     setLoading(true);
     setError(null);
     try {
-      const text = summary.trim();
-      await onConfirm(text || undefined);
+      await onSave(summary.trim());
       onOpenChange(false);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to stop timer");
@@ -56,9 +60,23 @@ export function DailySummaryDialog({
         <DialogHeader>
           <DialogTitle>Daily summary</DialogTitle>
           <DialogDescription>
-            Optionally describe what you worked on before stopping the timer.
+            Review today&apos;s time before stopping the timer.
           </DialogDescription>
         </DialogHeader>
+        <div className="rounded-md border border-border/40 bg-muted/30 px-3 py-2 text-sm">
+          <div className="flex justify-between gap-4">
+            <span className="text-muted-foreground">Total time</span>
+            <span className="font-mono tabular-nums font-medium">
+              {formatDurationShort(totalSeconds)}
+            </span>
+          </div>
+          {billablePreview ? (
+            <div className="mt-1 flex justify-between gap-4">
+              <span className="text-muted-foreground">Billable (est.)</span>
+              <span className="font-medium">{billablePreview}</span>
+            </div>
+          ) : null}
+        </div>
         <div className="space-y-2">
           <Label htmlFor="daily-summary">Summary (optional)</Label>
           <Textarea

@@ -1,6 +1,6 @@
 # User Flows and UX Invariants
 
-Launch wedge: **solo investigator / analyst**. Phase: **CoreParity** unless noted.
+Launch wedge: **CFE / fraud examination** (primary client). See [cfe-workflows.md](cfe-workflows.md). Phase: **CoreParity** unless noted.
 
 ## UX invariants (must not regress)
 
@@ -72,7 +72,7 @@ Launch wedge: **solo investigator / analyst**. Phase: **CoreParity** unless note
 |------|-------|--------|
 | 1 | User | Open report view for case |
 | 2 | System | Aggregate artifacts + file index |
-| 3 | User | Export executive summary, narrative, financial package, evidence index |
+| 3 | User | Generate examination report (findings, timeline, evidence index, executive summary) |
 
 **Tests:** e2e export smoke
 

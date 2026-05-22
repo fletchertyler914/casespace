@@ -10,8 +10,8 @@ alwaysApply: true
   - `docs/architecture.md`
   - `docs/readiness.md`
   - `docs/phase-gates.md`
-  - `docs/ui-port-plan.md` (when UX port phase status changes)
-  - `docs/desktop-workflow-mapping.md` (when v1→v2 component map changes)
+  - `docs/product-roadmap.md` (when UX milestone status changes)
+  - `docs/desktop-workflow-mapping.md` (when component map changes)
   - relevant app READMEs
 - Framework/catalog pin changes must update `pnpm-workspace.yaml` and note version in `README.md` + `docs/ui-port-plan.md` supply chain section.
 - **Desktop UX port** changes must update:
@@ -24,6 +24,6 @@ alwaysApply: true
   - `100% complete` only when all local and remote gates are proven
 - Split gates explicitly:
   - **Core Parity backend** — command matrix + SQLite/FTS + parity/hardening
-  - **UX Parity** — v1-shaped UI per `docs/ui-port-plan.md`
+  - **UX release gate** — per `docs/product-roadmap.md` and `docs/spec/native-e2e-checklist.md`
   - **AINative** — blocked until UX Parity Build Gate
 - Never leave stale statements that conflict with current code.

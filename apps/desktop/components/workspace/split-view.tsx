@@ -9,7 +9,6 @@ import { useWorkspacePanels } from "@/hooks/use-workspace-panels";
 import { FindingsPanel } from "@/components/artifacts/findings-panel";
 import { NotesPanel } from "@/components/artifacts/notes-panel";
 import { TimelinePanel } from "@/components/artifacts/timeline-panel";
-import { ReportsPanel } from "@/components/artifacts/reports-panel";
 import { TimePanel } from "@/components/billing/time-panel";
 import {
   DuplicateManagementPanel,
@@ -32,7 +31,6 @@ interface SplitViewProps {
   findingsVisible: boolean;
   timelineVisible: boolean;
   duplicatesVisible: boolean;
-  reportsVisible: boolean;
   timeVisible: boolean;
   notes: Note[];
   findings: Finding[];
@@ -55,8 +53,8 @@ interface SplitViewProps {
   onCloseFindings: () => void;
   onCloseTimeline: () => void;
   onCloseDuplicates: () => void;
-  onCloseReports: () => void;
   onCloseTime: () => void;
+  onOpenTimeManagement?: () => void;
   onArtifactsChanged: () => void;
   onFileSelect?: (file: CaseFile) => void;
   sourceRoots: string[];
@@ -69,7 +67,6 @@ export const SplitView = memo(function SplitView({
   findingsVisible,
   timelineVisible,
   duplicatesVisible,
-  reportsVisible,
   timeVisible,
   notes,
   findings,
@@ -92,8 +89,8 @@ export const SplitView = memo(function SplitView({
   onCloseFindings,
   onCloseTimeline,
   onCloseDuplicates,
-  onCloseReports,
   onCloseTime,
+  onOpenTimeManagement,
   onArtifactsChanged,
   onFileSelect,
   sourceRoots,
@@ -103,7 +100,6 @@ export const SplitView = memo(function SplitView({
     findingsVisible,
     timelineVisible,
     duplicatesVisible,
-    reportsVisible,
     timeVisible,
   });
 
@@ -189,6 +185,7 @@ export const SplitView = memo(function SplitView({
           >
             <FindingsPanel
               caseId={caseId}
+              files={files}
               findings={findings}
               onClose={onCloseFindings}
               onChanged={onArtifactsChanged}
@@ -209,6 +206,7 @@ export const SplitView = memo(function SplitView({
           >
             <TimelinePanel
               caseId={caseId}
+              files={files}
               events={timeline}
               onClose={onCloseTimeline}
               onChanged={onArtifactsChanged}
@@ -239,21 +237,6 @@ export const SplitView = memo(function SplitView({
         </>
       )}
 
-      {reportsVisible && (
-        <>
-          <ResizeHandle />
-          <Panel
-            id="reports"
-            order={5}
-            defaultSize={panelSizes.reportsPanelSize}
-            minSize={20}
-            maxSize={50}
-          >
-            <ReportsPanel caseId={caseId} onClose={onCloseReports} />
-          </Panel>
-        </>
-      )}
-
       {timeVisible && (
         <>
           <ResizeHandle />
@@ -264,7 +247,11 @@ export const SplitView = memo(function SplitView({
             minSize={20}
             maxSize={50}
           >
-            <TimePanel caseId={caseId} onClose={onCloseTime} />
+            <TimePanel
+              caseId={caseId}
+              onClose={onCloseTime}
+              onOpenManagement={onOpenTimeManagement}
+            />
           </Panel>
         </>
       )}

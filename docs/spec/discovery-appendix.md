@@ -4,7 +4,8 @@ Formal Q&A and decision records for Product Spec Bible. Each answer maps to requ
 
 ## Who is the product for?
 
-**Launch:** Solo private investigators and solo analysts (financial, defense, court-ordered).  
+**Launch:** **CFE / fraud examination** practitioners (primary paying client). Secondary: solo private investigators, litigation support.  
+**Not primary:** Financial analysts as product wedge (billing features remain for engagement admin).  
 **Not launch:** Teams, shared workspaces, enterprise RBAC.
 
 **Requirement:** REQ-CASE-001, REQ-INGEST-001  
@@ -60,6 +61,7 @@ Unified workspace, fast ingest, integrated review, defensible report outputs, bi
 | DR-005 | Defer PDF/Office rich viewers to P1 | Launch MVP: text/image + external open |
 | DR-AGENT-001 | LangGraph + CaseSpace MCP + optional Arcade; Agent mode for routine ops; destructive via interrupt | See [architecture-agents.md](../architecture-agents.md); v1 export port out of scope |
 | DR-AGENT-002 | Reports = generation (`generate_case_report`), not v1 export UX | Aligns with dead v1 export buttons |
+| DR-CFE-001 | CFE is primary launch persona | Paying client is fraud examination, not financial analysis ([cfe-workflows.md](cfe-workflows.md)) |
 
 ## Open items (resolve during CoreParity)
 

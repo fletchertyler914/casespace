@@ -2,13 +2,14 @@ import { describe, expect, it } from "vitest";
 import { screen } from "@testing-library/react";
 import { FindingsPanel } from "@/components/artifacts/findings-panel";
 import { renderWithProviders } from "@/test/test-utils";
-import { mockFindings, MOCK_CASE_ID } from "@/test/fixtures/mock-data";
+import { mockFiles, mockFindings, MOCK_CASE_ID } from "@/test/fixtures/mock-data";
 
 describe("FindingsPanel (FLOW-003)", () => {
   it("renders findings with severity", () => {
     renderWithProviders(
       <FindingsPanel
         caseId={MOCK_CASE_ID}
+        files={mockFiles}
         findings={mockFindings}
         onClose={() => {}}
         onChanged={() => {}}

@@ -1,6 +1,6 @@
 # User Flow Map
 
-End-to-end flows for solo investigator launch. Each step links to features and phase tags.
+End-to-end flows for **CFE / fraud examination** launch (primary client). See [cfe-workflows.md](cfe-workflows.md). Each step links to features and phase tags.
 
 ## FLOW-001: Case setup and ingest (P0-CoreParity)
 
@@ -61,11 +61,24 @@ Cmd/Ctrl+K → query → ranked results → navigate to entity.
 
 **AI:** none
 
-## FLOW-005: Report assembly (P0-CoreParity)
+## FLOW-005: Examination report (P0-CoreParity)
 
-Aggregate artifacts + file index → export 4 report types + evidence index.
+Aggregate findings, timeline, notes + evidence index → **generate_case_report** / reports workspace (CFE deliverable).
 
 **AI:** none at CoreParity (templates only)
+
+## FLOW-007: Duplicate / integrity review (P0-CoreParity, CFE)
+
+Post-ingest duplicate groups → set primary → merge metadata (relink notes/findings/timeline).
+
+| Step | Feature IDs | Commands |
+|------|-------------|----------|
+| Review groups | F-DUP-01 | `find_duplicate_files` |
+| Resolve | F-DUP-01 | `mark_duplicate_primary`, `merge_duplicate_metadata` |
+
+## FLOW-002b: Board evidence triage (P0-CoreParity, CFE)
+
+Swimlane status workflow for high-volume document review — see [native-e2e-checklist.md](native-e2e-checklist.md) FLOW-002b.
 
 ## FLOW-006: Time and billing (P0-CoreParity)
 

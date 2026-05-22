@@ -10,7 +10,6 @@ describe("useWorkspacePanels", () => {
         findingsVisible: false,
         timelineVisible: false,
         duplicatesVisible: true,
-        reportsVisible: false,
         timeVisible: false,
       }),
     );
@@ -25,7 +24,6 @@ describe("useWorkspacePanels", () => {
         findingsVisible: false,
         timelineVisible: false,
         duplicatesVisible: false,
-        reportsVisible: false,
         timeVisible: false,
       }),
     );
@@ -39,7 +37,6 @@ describe("useWorkspacePanels", () => {
         findingsVisible: true,
         timelineVisible: true,
         duplicatesVisible: false,
-        reportsVisible: false,
         timeVisible: false,
       }),
     );

@@ -1,5 +1,5 @@
 import { test, expect } from "./fixtures";
-import { E2E_CASE_URL, waitForCaseWorkspace } from "./helpers";
+import { E2E_CASE_URL, openWorkspacePanel, waitForCaseWorkspace } from "./helpers";
 
 test.describe("Artifacts panels (FLOW-003)", () => {
   test.beforeEach(async ({ page }) => {
@@ -8,18 +8,18 @@ test.describe("Artifacts panels (FLOW-003)", () => {
   });
 
   test("opens notes panel with mocked note content", async ({ page }) => {
-    await page.getByTitle("Notes panel").click();
+    await openWorkspacePanel(page, "Notes");
     await expect(page.getByText("E2E field note")).toBeVisible();
   });
 
   test("opens findings panel with severity", async ({ page }) => {
-    await page.getByTitle("Findings panel").click();
+    await openWorkspacePanel(page, "Findings");
     await expect(page.getByText("E2E finding")).toBeVisible();
     await expect(page.getByText("High")).toBeVisible();
   });
 
   test("opens timeline panel", async ({ page }) => {
-    await page.getByTitle("Timeline panel").click();
+    await openWorkspacePanel(page, "Timeline");
     await expect(page.getByText("E2E interview")).toBeVisible();
   });
 });

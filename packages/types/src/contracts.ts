@@ -49,7 +49,7 @@ export interface IngestResult {
 }
 
 export interface WorkspacePreferences {
-  viewMode?: "split" | "board";
+  viewMode?: "split" | "board" | "reports";
   navigatorOpen?: boolean;
   notesVisible?: boolean;
   findingsVisible?: boolean;
@@ -83,10 +83,21 @@ export interface SearchHit {
 export interface Note {
   id: string;
   caseId: string;
+  fileId?: string;
   content: string;
   pinned?: boolean;
   createdAt: string;
   updatedAt?: string;
+}
+
+export interface FileNoteCount {
+  fileId: string;
+  count: number;
+}
+
+export interface CaseFileMetadata {
+  fileId: string;
+  metadataJson: string;
 }
 
 export interface Finding {
@@ -95,6 +106,7 @@ export interface Finding {
   title: string;
   description: string;
   severity?: string;
+  linkedFiles?: string[];
   createdAt: string;
   updatedAt?: string;
 }
@@ -105,6 +117,7 @@ export interface TimelineEvent {
   description: string;
   occurredAt: string;
   eventType?: string;
+  sourceFileId?: string;
   createdAt?: string;
 }
 
@@ -113,6 +126,7 @@ export interface TimeSegment {
   entryId: string;
   startedAt: string;
   endedAt?: string;
+  durationSeconds: number;
   rateOverride?: number;
   discountPercent?: number;
   notes?: string;
@@ -121,11 +135,25 @@ export interface TimeSegment {
 export interface TimeEntry {
   id: string;
   caseId: string;
-  startedAt: string;
-  endedAt?: string;
-  billableMinutes: number;
+  entryDate: string;
+  totalSeconds: number;
   summary?: string;
+  createdAt: string;
+  updatedAt: string;
   segments?: TimeSegment[];
+}
+
+export interface TimeEntriesSummary {
+  caseId: string;
+  totalSeconds: number;
+  totalDays: number;
+}
+
+export interface CaseBillingTotal {
+  caseId: string;
+  totalAmount: number;
+  totalSeconds: number;
+  totalDays: number;
 }
 
 export interface ActiveTimer {
@@ -144,6 +172,7 @@ export interface CaseBillingConfig {
 
 export interface BillingSummary {
   caseId: string;
+  totalSeconds: number;
   totalMinutes: number;
   amount: number;
   billingType: string;

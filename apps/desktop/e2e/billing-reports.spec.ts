@@ -11,18 +11,31 @@ test.describe("Time and reports (FLOW-005/006)", () => {
     await expect(page.getByRole("button", { name: /^Start$/ })).toBeVisible();
   });
 
-  test("reports panel loads export history", async ({ page }) => {
-    await page.getByTitle("Reports panel").click();
-    await expect(page.getByText("Export history")).toBeVisible();
+  test("time management opens from case menu", async ({ page }) => {
+    await page.getByTitle("Case actions").click();
+    await page.getByRole("menuitem", { name: /Time management/i }).click();
     await expect(
-      page.getByRole("button", { name: /narrative/i }).filter({ hasText: "2026" }),
+      page.getByRole("heading", { name: "Time management" }),
+    ).toBeVisible();
+    await expect(page.getByText("Days tracked")).toBeVisible();
+  });
+
+  test("report mode shows generate action", async ({ page }) => {
+    await page.getByTitle("Examination report").click();
+    await expect(
+      page.getByRole("button", { name: /Generate report/i }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: /Findings/i }).first(),
     ).toBeVisible();
   });
 
-  test("exports narrative report from panel", async ({ page }) => {
-    await page.getByTitle("Reports panel").click();
-    await page.getByRole("button", { name: /Export Narrative/i }).click();
-    await expect(page.getByText("Open last export")).toBeVisible({
+  test("generates case report from report workspace", async ({ page }) => {
+    await page.getByTitle("Examination report").click();
+    await page.getByRole("button", { name: /Generate report/i }).click();
+    await expect(
+      page.getByRole("button", { name: /Findings/i }).first(),
+    ).toBeVisible({
       timeout: 10_000,
     });
   });

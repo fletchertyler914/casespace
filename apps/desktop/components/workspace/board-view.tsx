@@ -1,6 +1,15 @@
 "use client";
 
-import { memo, useCallback, useMemo, useState } from "react";
+import {
+  lazy,
+  memo,
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   DndContext,
   DragOverlay,
@@ -14,7 +23,7 @@ import {
 } from "@dnd-kit/core";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { LayoutGrid, PanelLeft } from "lucide-react";
+import { PanelLeft } from "lucide-react";
 import type { CaseFile } from "@repo/types";
 import { Button } from "@/components/ui/button";
 import { BOARD_STATUSES, normalizeBoardStatus } from "@/lib/board-status";
@@ -22,8 +31,19 @@ import {
   findGroupForFile,
   type DuplicateGroup,
 } from "@/lib/duplicate-utils";
+import { commandClient } from "@/lib/command-client";
+import { getKeyMappingFields } from "@/lib/mapping/display";
+import { parseMappingConfig, type FieldMapping } from "@/lib/mapping/types";
+import { useBoardFileChanges } from "@/hooks/use-board-file-changes";
+import { useCaseFileMetadata } from "@/hooks/use-case-file-metadata";
+import { useFileNoteCounts } from "@/hooks/use-file-note-counts";
 import { useSwimlaneFilter } from "@/hooks/use-swimlane-filter";
 import { useWorkflowSelection } from "@/hooks/use-workflow-selection";
+const LazyProgressDashboard = lazy(() =>
+  import("./progress-dashboard").then((m) => ({
+    default: m.ProgressDashboard,
+  })),
+);
 import {
   BoardSwimlaneColumn,
   BoardSwimlaneEmpty,
@@ -31,7 +51,9 @@ import {
 import { BoardWorkflowCard } from "./board-workflow-card";
 
 interface BoardViewProps {
+  caseId: string;
   files: CaseFile[];
+  totalFileCount?: number;
   viewingFile: CaseFile | null;
   navigatorOpen: boolean;
   selectedFolderPath?: string | null;
@@ -47,6 +69,9 @@ function SortableBoardCard({
   isDragging,
   isDuplicate,
   isPrimaryDuplicate,
+  fileChanged,
+  noteCount,
+  mappingFields,
   selectedFolderPath,
   onSelect,
   onFileOpen,
@@ -56,6 +81,9 @@ function SortableBoardCard({
   isDragging: boolean;
   isDuplicate: boolean;
   isPrimaryDuplicate: boolean;
+  fileChanged: boolean;
+  noteCount: number;
+  mappingFields: ReturnType<typeof getKeyMappingFields>;
   selectedFolderPath: string | null;
   onSelect: (event: React.MouseEvent) => void;
   onFileOpen: (file: CaseFile) => void;
@@ -82,6 +110,9 @@ function SortableBoardCard({
         isDragging={isDragging || isSortableDragging}
         isDuplicate={isDuplicate}
         isPrimaryDuplicate={isPrimaryDuplicate}
+        fileChanged={fileChanged}
+        noteCount={noteCount}
+        mappingFields={mappingFields}
         selectedFolderPath={selectedFolderPath}
         onSelect={onSelect}
         onFileOpen={onFileOpen}
@@ -102,7 +133,9 @@ function isMacOS(): boolean {
 }
 
 export const BoardView = memo(function BoardView({
+  caseId,
   files,
+  totalFileCount,
   viewingFile,
   navigatorOpen,
   selectedFolderPath = null,
@@ -111,7 +144,26 @@ export const BoardView = memo(function BoardView({
   onFileOpen,
   onStatusChange,
 }: BoardViewProps) {
+  const boardRef = useRef<HTMLDivElement>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [mappingRules, setMappingRules] = useState<FieldMapping[]>([]);
+
+  const { getCount: getNoteCount, refetch: refetchNoteCounts } =
+    useFileNoteCounts(caseId);
+  const { metadataByFileId } = useCaseFileMetadata(caseId);
+  const changedFileIds = useBoardFileChanges(caseId, files);
+
+  useEffect(() => {
+    void commandClient.getMappingConfigDb(caseId).then((res) => {
+      if (res.ok && res.data) {
+        setMappingRules(parseMappingConfig(res.data).mappings);
+      }
+    });
+  }, [caseId]);
+
+  useEffect(() => {
+    void refetchNoteCounts();
+  }, [files.length, refetchNoteCounts]);
   const [overId, setOverId] = useState<string | null>(null);
   const [selectedFileIds, setSelectedFileIds] = useState<string[]>([]);
   const [draggingSelectedFiles, setDraggingSelectedFiles] = useState<CaseFile[]>(
@@ -236,24 +288,63 @@ export const BoardView = memo(function BoardView({
 
   const isMultiDrag = draggingSelectedFiles.length > 1;
 
+  const folderName = selectedFolderPath
+    ? selectedFolderPath.split("/").pop() || selectedFolderPath
+    : null;
+  const allCount = totalFileCount ?? files.length;
+
+  useEffect(() => {
+    if (selectedCount === 0) return;
+
+    const handleClickOutside = (event: MouseEvent) => {
+      if (activeId) return;
+      const target = event.target as HTMLElement;
+      if (
+        target.closest("button") ||
+        target.closest("input") ||
+        target.closest("[role='dialog']")
+      ) {
+        return;
+      }
+      if (target.closest("[data-workflow-card]")) return;
+      if (boardRef.current?.contains(target)) {
+        setSelectedFileIds([]);
+      }
+    };
+
+    document.addEventListener("click", handleClickOutside);
+    return () => document.removeEventListener("click", handleClickOutside);
+  }, [selectedCount, activeId]);
+
   return (
-    <div className="flex h-full min-h-0 flex-col bg-background">
-      <div className="flex h-12 shrink-0 items-center gap-2 border-b border-border/40 px-3">
-        {!navigatorOpen && (
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8"
-            onClick={onExpandNavigator}
-          >
-            <PanelLeft className="h-4 w-4" />
-          </Button>
+    <div ref={boardRef} className="flex h-full min-h-0 flex-col bg-background">
+      <div className="shrink-0 border-b border-border/40 px-4 pt-3 pb-3">
+        <div className="mb-3 flex items-center gap-2">
+          {!navigatorOpen && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              onClick={onExpandNavigator}
+            >
+              <PanelLeft className="h-4 w-4" />
+            </Button>
+          )}
+          <div className="min-w-0 flex-1">
+            <h2 className="text-base font-semibold">Workflow board</h2>
+            {selectedFolderPath && (
+              <p className="text-xs text-muted-foreground">
+                Showing {files.length} of {allCount} files from &quot;{folderName}
+                &quot;
+              </p>
+            )}
+          </div>
+        </div>
+        {files.length > 0 && (
+          <Suspense fallback={<div className="h-8 animate-pulse rounded bg-muted/30" />}>
+            <LazyProgressDashboard files={files} />
+          </Suspense>
         )}
-        <LayoutGrid className="h-4 w-4 text-muted-foreground" />
-        <span className="text-sm font-medium">File board</span>
-        <span className="text-xs text-muted-foreground">
-          {files.length} files
-        </span>
       </div>
 
       <DndContext
@@ -313,6 +404,13 @@ export const BoardView = memo(function BoardView({
                       ) : (
                         laneFiles.map((file) => {
                           const meta = dup.get(file.id);
+                          const metaJson =
+                            metadataByFileId.get(file.id) ?? {};
+                          const mappingFields = getKeyMappingFields(
+                            metaJson,
+                            mappingRules,
+                            2,
+                          );
                           return (
                             <SortableBoardCard
                               key={file.id}
@@ -324,6 +422,9 @@ export const BoardView = memo(function BoardView({
                               isDragging={activeId === `file-${file.id}`}
                               isDuplicate={meta?.isDuplicate ?? false}
                               isPrimaryDuplicate={meta?.isPrimary ?? false}
+                              fileChanged={changedFileIds.has(file.id)}
+                              noteCount={getNoteCount(file.id)}
+                              mappingFields={mappingFields}
                               selectedFolderPath={selectedFolderPath}
                               onSelect={(event) =>
                                 handleSelect(file.id, event)

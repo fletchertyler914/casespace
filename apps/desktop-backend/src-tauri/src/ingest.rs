@@ -275,7 +275,44 @@ fn upsert_file(
         ],
     )
     .map_err(|e| e.to_string())?;
+    let _ = insert_timeline_hints_for_file(conn, case_id, &id, &scanned.file_name);
     Ok("insert")
+}
+
+fn insert_timeline_hints_for_file(
+    conn: &Connection,
+    case_id: &str,
+    file_id: &str,
+    file_name: &str,
+) -> Result<(), String> {
+    let dates = crate::field_extraction::extract_dates_from_text(file_name);
+    if dates.is_empty() {
+        return Ok(());
+    }
+    let created = chrono::Utc::now().to_rfc3339();
+    for date_label in dates {
+        let event_id = Uuid::new_v4().to_string();
+        let description = format!("Extracted date from file name: {file_name}");
+        let occurred_at = if date_label.contains('/') {
+            date_label.clone()
+        } else {
+            format!("{date_label}T12:00:00Z")
+        };
+        conn.execute(
+            "INSERT INTO timeline_events (id, case_id, description, occurred_at, source_file_id, event_type, created_at)
+             VALUES (?1, ?2, ?3, ?4, ?5, 'document', ?6)",
+            params![
+                event_id,
+                case_id,
+                description,
+                occurred_at,
+                file_id,
+                created
+            ],
+        )
+        .map_err(|e| e.to_string())?;
+    }
+    Ok(())
 }
 
 pub fn rebuild_duplicate_groups(conn: &Connection, case_id: &str) -> Result<u64, String> {

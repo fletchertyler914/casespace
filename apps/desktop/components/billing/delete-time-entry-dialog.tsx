@@ -12,12 +12,15 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { buttonVariants } from "@/components/ui/button";
+import { formatDurationShort, formatEntryDate } from "@/lib/time-format";
 import { cn } from "@/lib/utils";
 
 interface DeleteTimeEntryDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  entryLabel: string;
+  entryDate: string;
+  totalSeconds: number;
+  segmentCount: number;
   onConfirm: () => void | Promise<void>;
   loading?: boolean;
 }
@@ -25,10 +28,15 @@ interface DeleteTimeEntryDialogProps {
 export function DeleteTimeEntryDialog({
   open,
   onOpenChange,
-  entryLabel,
+  entryDate,
+  totalSeconds,
+  segmentCount,
   onConfirm,
   loading = false,
 }: DeleteTimeEntryDialogProps) {
+  const dateLabel = formatEntryDate(entryDate);
+  const timeLabel = formatDurationShort(totalSeconds);
+
   return (
     <AlertDialog open={open} onOpenChange={loading ? undefined : onOpenChange}>
       <AlertDialogContent>
@@ -40,14 +48,23 @@ export function DeleteTimeEntryDialog({
             <div>
               <AlertDialogTitle>Delete time entry</AlertDialogTitle>
               <AlertDialogDescription className="mt-1">
-                This removes the entry and all its segments.
+                This removes the day entry and all {segmentCount} segment
+                {segmentCount === 1 ? "" : "s"}.
               </AlertDialogDescription>
             </div>
           </div>
         </AlertDialogHeader>
-        <div className="py-4 text-sm text-foreground">
-          Delete time entry starting{" "}
-          <span className="font-semibold">{entryLabel}</span>?
+        <div className="space-y-1 py-2 text-sm text-foreground">
+          <p>
+            <span className="text-muted-foreground">Date:</span>{" "}
+            <span className="font-semibold">{dateLabel}</span>
+          </p>
+          <p>
+            <span className="text-muted-foreground">Total time:</span>{" "}
+            <span className="font-mono tabular-nums font-semibold">
+              {timeLabel}
+            </span>
+          </p>
         </div>
         <AlertDialogFooter>
           <AlertDialogCancel disabled={loading}>Cancel</AlertDialogCancel>

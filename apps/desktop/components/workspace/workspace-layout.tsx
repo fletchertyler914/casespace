@@ -2,12 +2,19 @@
 
 import { memo } from "react";
 import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
-import type { CaseFile, Finding, Note, TimelineEvent } from "@repo/types";
+import type { CaseFile, CaseSummary, Finding, Note, TimelineEvent } from "@repo/types";
 import { FileNavigator } from "./file-navigator";
 import { SplitView } from "./split-view";
 import { BoardView } from "./board-view";
+import { ReportSectionNavigator } from "@/components/artifacts/report-section-navigator";
+import { ReportsView } from "@/components/artifacts/reports-view";
 import { filterFilesByFolder } from "@/lib/file-tree-utils";
 import type { DuplicateGroup } from "@/lib/duplicate-utils";
+import {
+  REPORT_SECTION_DEFS,
+  type ReportSectionId,
+} from "@/lib/report-sections";
+import type { WorkspaceViewMode } from "@/lib/workspace-view";
 
 function ResizeHandle() {
   return (
@@ -18,16 +25,16 @@ function ResizeHandle() {
 }
 
 interface WorkspaceLayoutProps {
-  viewMode: "split" | "board";
+  viewMode: WorkspaceViewMode;
   navigatorOpen: boolean;
   files: CaseFile[];
   viewingFile: CaseFile | null;
   selectedFolderPath: string | null;
+  caseSummary: CaseSummary;
   notesVisible: boolean;
   findingsVisible: boolean;
   timelineVisible: boolean;
   duplicatesVisible: boolean;
-  reportsVisible: boolean;
   timeVisible: boolean;
   caseId: string;
   notes: Note[];
@@ -54,10 +61,12 @@ interface WorkspaceLayoutProps {
   onCloseFindings: () => void;
   onCloseTimeline: () => void;
   onCloseDuplicates: () => void;
-  onCloseReports: () => void;
   onCloseTime: () => void;
+  onOpenTimeManagement?: () => void;
   sourceRoots: string[];
   onArtifactsChanged: () => void;
+  reportSection: ReportSectionId;
+  onReportSectionChange: (section: ReportSectionId) => void;
 }
 
 export const WorkspaceLayout = memo(function WorkspaceLayout({
@@ -66,11 +75,11 @@ export const WorkspaceLayout = memo(function WorkspaceLayout({
   files,
   viewingFile,
   selectedFolderPath,
+  caseSummary,
   notesVisible,
   findingsVisible,
   timelineVisible,
   duplicatesVisible,
-  reportsVisible,
   timeVisible,
   caseId,
   notes,
@@ -97,12 +106,29 @@ export const WorkspaceLayout = memo(function WorkspaceLayout({
   onCloseFindings,
   onCloseTimeline,
   onCloseDuplicates,
-  onCloseReports,
   onCloseTime,
+  onOpenTimeManagement,
   sourceRoots,
   onArtifactsChanged,
+  reportSection,
+  onReportSectionChange,
 }: WorkspaceLayoutProps) {
-  const boardFiles = filterFilesByFolder(files, selectedFolderPath);
+  const scopedFiles = filterFilesByFolder(files, selectedFolderPath);
+
+  const reportSections = REPORT_SECTION_DEFS.map((s) => ({
+    id: s.id,
+    label: s.label,
+    count:
+      s.id === "findings"
+        ? findings.length
+        : s.id === "timeline"
+          ? timeline.length
+          : s.id === "inventory"
+            ? files.length
+            : s.id === "notes"
+              ? notes.length
+              : undefined,
+  }));
 
   return (
     <PanelGroup
@@ -120,19 +146,30 @@ export const WorkspaceLayout = memo(function WorkspaceLayout({
             maxSize={45}
             className="flex min-h-0 flex-col"
           >
-            <FileNavigator
-              caseId={caseId}
-              files={files}
-              currentFile={viewingFile}
-              duplicateGroups={duplicateGroups}
-              duplicateFileIds={duplicateFileIds}
-              onFileSelect={onFileSelect}
-              onStatusChange={onStatusChange}
-              onFilesChanged={onFilesChanged}
-              selectedFolderPath={selectedFolderPath}
-              onFolderSelect={onFolderSelect}
-              onToggleNavigator={onToggleNavigator}
-            />
+            {viewMode === "reports" ? (
+              <ReportSectionNavigator
+                sections={reportSections}
+                activeSectionId={reportSection}
+                onSectionSelect={(id) =>
+                  onReportSectionChange(id as ReportSectionId)
+                }
+                onToggleNavigator={onToggleNavigator}
+              />
+            ) : (
+              <FileNavigator
+                caseId={caseId}
+                files={files}
+                currentFile={viewingFile}
+                duplicateGroups={duplicateGroups}
+                duplicateFileIds={duplicateFileIds}
+                onFileSelect={onFileSelect}
+                onStatusChange={onStatusChange}
+                onFilesChanged={onFilesChanged}
+                selectedFolderPath={selectedFolderPath}
+                onFolderSelect={onFolderSelect}
+                onToggleNavigator={onToggleNavigator}
+              />
+            )}
           </Panel>
           <ResizeHandle />
         </>
@@ -151,7 +188,6 @@ export const WorkspaceLayout = memo(function WorkspaceLayout({
             findingsVisible={findingsVisible}
             timelineVisible={timelineVisible}
             duplicatesVisible={duplicatesVisible}
-            reportsVisible={reportsVisible}
             timeVisible={timeVisible}
             notes={notes}
             findings={findings}
@@ -174,15 +210,17 @@ export const WorkspaceLayout = memo(function WorkspaceLayout({
             onCloseFindings={onCloseFindings}
             onCloseTimeline={onCloseTimeline}
             onCloseDuplicates={onCloseDuplicates}
-            onCloseReports={onCloseReports}
             onCloseTime={onCloseTime}
+            onOpenTimeManagement={onOpenTimeManagement}
             sourceRoots={sourceRoots}
             onArtifactsChanged={onArtifactsChanged}
             onFileSelect={onFileSelect}
           />
-        ) : (
+        ) : viewMode === "board" ? (
           <BoardView
-            files={boardFiles}
+            caseId={caseId}
+            files={scopedFiles}
+            totalFileCount={files.length}
             viewingFile={viewingFile}
             navigatorOpen={navigatorOpen}
             selectedFolderPath={selectedFolderPath}
@@ -190,6 +228,18 @@ export const WorkspaceLayout = memo(function WorkspaceLayout({
             onExpandNavigator={onExpandNavigator}
             onFileOpen={onFileOpen}
             onStatusChange={onStatusChange}
+          />
+        ) : (
+          <ReportsView
+            caseId={caseId}
+            caseSummary={caseSummary}
+            activeSection={reportSection}
+            files={files}
+            notes={notes}
+            findings={findings}
+            timeline={timeline}
+            navigatorOpen={navigatorOpen}
+            onExpandNavigator={onExpandNavigator}
           />
         )}
       </Panel>

@@ -24,7 +24,6 @@ export function useWorkspacePanels(options: {
   findingsVisible: boolean;
   timelineVisible: boolean;
   duplicatesVisible: boolean;
-  reportsVisible: boolean;
   timeVisible: boolean;
 }) {
   const {
@@ -32,7 +31,6 @@ export function useWorkspacePanels(options: {
     findingsVisible,
     timelineVisible,
     duplicatesVisible,
-    reportsVisible,
     timeVisible,
   } = options;
 
@@ -42,7 +40,6 @@ export function useWorkspacePanels(options: {
       findingsVisible,
       timelineVisible,
       duplicatesVisible,
-      reportsVisible,
       timeVisible,
     ];
     const count = visibleCount(flags);
@@ -54,7 +51,6 @@ export function useWorkspacePanels(options: {
       findingsPanelSize: sidePanelSizeFor(count, 18, 22, 25),
       timelinePanelSize: sidePanelSizeFor(count, 20, 30, 35),
       duplicatesPanelSize: sidePanelSizeFor(count, 20, 30, 35),
-      reportsPanelSize: sidePanelSizeFor(count, 20, 28, 35),
       timePanelSize: sidePanelSizeFor(count, 20, 28, 35),
       /** @deprecated Use panel-specific sizes above */
       sidePanelSize: sidePanelSizeFor(count, 18, 22, 35),
@@ -65,7 +61,6 @@ export function useWorkspacePanels(options: {
     findingsVisible,
     timelineVisible,
     duplicatesVisible,
-    reportsVisible,
     timeVisible,
   ]);
 }

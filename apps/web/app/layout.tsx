@@ -14,7 +14,7 @@ export const metadata: Metadata = {
   ),
   title: 'CaseSpace — Investigative Case Intelligence',
   description:
-    'CaseSpace is a desktop-first case intelligence platform for investigators and analysts. Offline, secure, and built for high-throughput evidence workflows.',
+    'CaseSpace is a desktop-first fraud examination workspace for CFEs and investigative professionals. Offline, secure, and built for evidence review, findings, and defensible reports.',
   icons: {
     icon: '/favicon.ico',
     apple: '/apple-touch-icon.png',

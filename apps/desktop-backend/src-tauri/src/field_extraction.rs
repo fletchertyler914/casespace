@@ -371,7 +371,40 @@ mod tests {
 
     #[test]
     fn test_folder_name_from_path() {
-    assert_eq!(folder_name_from_path("a/b/c"), "c");
-    assert_eq!(folder_name_from_path(""), "");
-  }
+        assert_eq!(folder_name_from_path("a/b/c"), "c");
+        assert_eq!(folder_name_from_path(""), "");
+    }
+
+}
+
+/// Extract ISO-like date strings from file names or text (ingest timeline hints).
+pub fn extract_dates_from_text(text: &str) -> Vec<String> {
+    let mut dates = Vec::new();
+    let patterns = [
+        r"\d{4}-\d{2}-\d{2}",
+        r"\d{1,2}/\d{1,2}/\d{4}",
+        r"\d{1,2}-\d{1,2}-\d{4}",
+    ];
+    for pat in patterns {
+        if let Ok(re) = Regex::new(pat) {
+            for m in re.find_iter(text) {
+                let raw = m.as_str().to_string();
+                if !dates.contains(&raw) {
+                    dates.push(raw);
+                }
+            }
+        }
+    }
+    dates
+}
+
+#[cfg(test)]
+mod date_tests {
+    use super::extract_dates_from_text;
+
+    #[test]
+    fn test_extract_dates_from_text() {
+        let dates = extract_dates_from_text("report_2024-03-15_final.pdf");
+        assert!(dates.iter().any(|d| d.contains("2024")));
+    }
 }

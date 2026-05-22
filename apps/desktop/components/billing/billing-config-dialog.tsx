@@ -61,6 +61,19 @@ export function BillingConfigDialog({
   }
 
   async function handleSave() {
+    if (billingType === "fixed_price") {
+      const fp = Number.parseFloat(fixedPrice);
+      if (!fixedPrice.trim() || Number.isNaN(fp) || fp < 0) {
+        setError("Fixed price must be zero or greater");
+        return;
+      }
+    } else {
+      const rate = Number.parseFloat(payRate);
+      if (Number.isNaN(rate) || rate < 0) {
+        setError("Pay rate must be zero or greater");
+        return;
+      }
+    }
     setLoading(true);
     setError(null);
     const res = await commandClient.setCaseBillingConfig(caseId, {

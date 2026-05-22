@@ -117,6 +117,16 @@ export const INVOKE_CONTRACTS: Array<{
   },
   { label: "listNotes", run: () => commandClient.listNotes("c1"), command: "list_notes" },
   {
+    label: "getFileNoteCounts",
+    run: () => commandClient.getFileNoteCounts("c1"),
+    command: "get_file_note_counts",
+  },
+  {
+    label: "listCaseFileMetadata",
+    run: () => commandClient.listCaseFileMetadata("c1"),
+    command: "list_case_file_metadata",
+  },
+  {
     label: "updateNote",
     run: () => commandClient.updateNote("n1", "<p>y</p>"),
     command: "update_note",
@@ -190,7 +200,7 @@ export const INVOKE_CONTRACTS: Array<{
   },
   {
     label: "stopTimer",
-    run: () => commandClient.stopTimer("e1", "done"),
+    run: () => commandClient.stopTimer("c1", "done"),
     command: "stop_timer",
   },
   {
@@ -205,8 +215,23 @@ export const INVOKE_CONTRACTS: Array<{
   },
   {
     label: "getTimeEntries",
-    run: () => commandClient.getTimeEntries("c1"),
+    run: () => commandClient.getTimeEntries("c1", 50, 0),
     command: "get_time_entries",
+  },
+  {
+    label: "getTimeEntry",
+    run: () => commandClient.getTimeEntry("c1", "2026-01-01"),
+    command: "get_time_entry",
+  },
+  {
+    label: "getTimeEntriesSummary",
+    run: () => commandClient.getTimeEntriesSummary("c1"),
+    command: "get_time_entries_summary",
+  },
+  {
+    label: "calculateCaseTotal",
+    run: () => commandClient.calculateCaseTotal("c1"),
+    command: "calculate_case_total",
   },
   {
     label: "getActiveTimer",

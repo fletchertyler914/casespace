@@ -12,9 +12,23 @@ import type {
   WorkspacePreferences,
 } from "@repo/types";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
+import { BillingConfigDialog } from "@/components/billing/billing-config-dialog";
+import { TimeManagementPage } from "@/components/billing/time-management/time-management-page";
 import { useWorkspaceAutoSync } from "@/hooks/use-workspace-auto-sync";
 import { useToast } from "@/hooks/use-toast";
 import { commandClient } from "@/lib/command-client";
+import { notifyTimerChanged } from "@/lib/timer-sync";
 import { relativizeCaseFiles } from "@/lib/case-path-utils";
 import { formatIngestSummary, ingestHadChanges } from "@/lib/ingest-utils";
 import {
@@ -23,11 +37,17 @@ import {
   type DuplicateGroup,
 } from "@/lib/duplicate-utils";
 import { DuplicateIngestionNotification } from "@/components/ingestion/duplicate-ingestion-notification";
+import { SyncProgressBanner } from "@/components/ingestion/sync-progress-banner";
 import { getFlattenedFileList } from "@/lib/file-tree-utils";
 import {
   loadWorkspacePreferences,
   saveWorkspacePreferences,
 } from "@/lib/workspace-preferences";
+import {
+  normalizeWorkspaceViewMode,
+  type WorkspaceViewMode,
+} from "@/lib/workspace-view";
+import type { ReportSectionId } from "@/lib/report-sections";
 import { AddSourcesDialog } from "./add-sources-dialog";
 import { CaseHeader } from "./case-header";
 import { SettingsDialog } from "./settings-dialog";
@@ -54,7 +74,8 @@ export function CaseWorkspaceShell({ caseId }: CaseWorkspaceShellProps) {
   const [timeline, setTimeline] = useState<TimelineEvent[]>([]);
   const [addSourcesOpen, setAddSourcesOpen] = useState(false);
 
-  const [viewMode, setViewMode] = useState<"split" | "board">("split");
+  const [viewMode, setViewMode] = useState<WorkspaceViewMode>("split");
+  const [reportSection, setReportSection] = useState<ReportSectionId>("findings");
   const [navigatorOpen, setNavigatorOpen] = useState(true);
   const [viewingFile, setViewingFile] = useState<CaseFile | null>(null);
   const [selectedFolderPath, setSelectedFolderPath] = useState<string | null>(
@@ -64,13 +85,19 @@ export function CaseWorkspaceShell({ caseId }: CaseWorkspaceShellProps) {
   const [findingsVisible, setFindingsVisible] = useState(false);
   const [timelineVisible, setTimelineVisible] = useState(false);
   const [duplicatesVisible, setDuplicatesVisible] = useState(false);
-  const [reportsVisible, setReportsVisible] = useState(false);
   const [timeVisible, setTimeVisible] = useState(false);
   const [sourceRoots, setSourceRoots] = useState<string[]>([]);
   const [searchOpen, setSearchOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [appSettingsOpen, setAppSettingsOpen] = useState(false);
   const [columnsMappingOpen, setColumnsMappingOpen] = useState(false);
+  const [timeManagementOpen, setTimeManagementOpen] = useState(false);
+  const [billingConfigOpen, setBillingConfigOpen] = useState(false);
+  const [startTimerPromptOpen, setStartTimerPromptOpen] = useState(false);
+  const [closeTimerPromptOpen, setCloseTimerPromptOpen] = useState(false);
+  const [closeTimerLoading, setCloseTimerLoading] = useState(false);
+  const [startTimerLoading, setStartTimerLoading] = useState(false);
+  const startTimerPromptChecked = useRef(false);
   const [duplicateGroups, setDuplicateGroups] = useState<DuplicateGroup[]>([]);
   const [duplicateIngestNotice, setDuplicateIngestNotice] = useState<{
     groupCount: number;
@@ -173,18 +200,49 @@ export function CaseWorkspaceShell({ caseId }: CaseWorkspaceShellProps) {
 
   const applyPrefs = useCallback(
     async (next: WorkspacePreferences) => {
-      setViewMode(next.viewMode ?? "split");
+      setViewMode(normalizeWorkspaceViewMode(next));
       setNavigatorOpen(next.navigatorOpen ?? true);
       setNotesVisible(next.notesVisible ?? false);
       setFindingsVisible(next.findingsVisible ?? false);
       setTimelineVisible(next.timelineVisible ?? false);
       setDuplicatesVisible(next.duplicatesVisible ?? false);
-      setReportsVisible(next.reportsVisible ?? false);
       setTimeVisible(next.timeVisible ?? false);
       await persistPrefs(next);
     },
     [persistPrefs],
   );
+
+  const SKIP_START_TIMER_KEY = "casespace.skipStartTimerPrompt";
+
+  useEffect(() => {
+    startTimerPromptChecked.current = false;
+  }, [caseId]);
+
+  useEffect(() => {
+    if (!prefsLoaded || loading || startTimerPromptChecked.current) return;
+    startTimerPromptChecked.current = true;
+    if (typeof window !== "undefined" && localStorage.getItem(SKIP_START_TIMER_KEY)) {
+      return;
+    }
+    void (async () => {
+      const [timerRes, entryRes] = await Promise.all([
+        commandClient.getActiveTimer(caseId),
+        commandClient.getTimeEntry(caseId, new Date().toISOString().slice(0, 10)),
+      ]);
+      if (timerRes.ok && timerRes.data) return;
+      if (entryRes.ok && entryRes.data) return;
+      setStartTimerPromptOpen(true);
+    })();
+  }, [caseId, loading, prefsLoaded]);
+
+  const handleCloseCase = useCallback(async () => {
+    const timerRes = await commandClient.getActiveTimer(caseId);
+    if (timerRes.ok && timerRes.data) {
+      setCloseTimerPromptOpen(true);
+      return;
+    }
+    router.push("/");
+  }, [caseId, router]);
 
   const loadCase = useCallback(async () => {
     setLoading(true);
@@ -205,13 +263,12 @@ export function CaseWorkspaceShell({ caseId }: CaseWorkspaceShellProps) {
     const loadedPrefs = await loadWorkspacePreferences(caseId);
     setPrefs(loadedPrefs);
     setPrefsLoaded(true);
-    setViewMode(loadedPrefs.viewMode ?? "split");
+    setViewMode(normalizeWorkspaceViewMode(loadedPrefs));
     setNavigatorOpen(loadedPrefs.navigatorOpen ?? true);
     setNotesVisible(loadedPrefs.notesVisible ?? false);
     setFindingsVisible(loadedPrefs.findingsVisible ?? false);
     setTimelineVisible(loadedPrefs.timelineVisible ?? false);
     setDuplicatesVisible(loadedPrefs.duplicatesVisible ?? false);
-    setReportsVisible(loadedPrefs.reportsVisible ?? false);
     setTimeVisible(loadedPrefs.timeVisible ?? false);
 
     const syncRes = await commandClient.syncCaseAllSources(caseId, true);
@@ -266,7 +323,6 @@ export function CaseWorkspaceShell({ caseId }: CaseWorkspaceShellProps) {
       findingsVisible,
       timelineVisible,
       duplicatesVisible,
-      reportsVisible,
       timeVisible,
       autoSyncEnabled: prefs.autoSyncEnabled,
       autoSyncIntervalMinutes: prefs.autoSyncIntervalMinutes,
@@ -280,7 +336,6 @@ export function CaseWorkspaceShell({ caseId }: CaseWorkspaceShellProps) {
     findingsVisible,
     timelineVisible,
     duplicatesVisible,
-    reportsVisible,
     timeVisible,
     prefs.autoSyncEnabled,
     prefs.autoSyncIntervalMinutes,
@@ -363,24 +418,22 @@ export function CaseWorkspaceShell({ caseId }: CaseWorkspaceShellProps) {
 
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-background">
+      <SyncProgressBanner visible={isSyncing} />
       <CaseHeader
         caseId={caseId}
         caseSummary={caseSummary}
         fileCount={files.length}
-        sourceCount={sourceRoots.length}
         viewMode={viewMode}
         onViewModeChange={setViewMode}
         notesVisible={notesVisible}
         findingsVisible={findingsVisible}
         timelineVisible={timelineVisible}
         duplicatesVisible={duplicatesVisible}
-        reportsVisible={reportsVisible}
         timeVisible={timeVisible}
         onToggleNotes={() => setNotesVisible((v) => !v)}
         onToggleFindings={() => setFindingsVisible((v) => !v)}
         onToggleTimeline={() => setTimelineVisible((v) => !v)}
         onToggleDuplicates={() => setDuplicatesVisible((v) => !v)}
-        onToggleReports={() => setReportsVisible((v) => !v)}
         onToggleTime={() => setTimeVisible((v) => !v)}
         onSyncFiles={() => void syncNow()}
         isSyncing={isSyncing}
@@ -406,7 +459,9 @@ export function CaseWorkspaceShell({ caseId }: CaseWorkspaceShellProps) {
         onOpenSettings={() => setSettingsOpen(true)}
         onOpenAppSettings={() => setAppSettingsOpen(true)}
         onOpenColumnsMapping={() => setColumnsMappingOpen(true)}
-        onClose={() => router.push("/")}
+        onOpenTimeManagement={() => setTimeManagementOpen(true)}
+        onOpenBillingConfig={() => setBillingConfigOpen(true)}
+        onClose={() => void handleCloseCase()}
       />
       {duplicateIngestNotice && (
         <DuplicateIngestionNotification
@@ -425,11 +480,11 @@ export function CaseWorkspaceShell({ caseId }: CaseWorkspaceShellProps) {
         files={files}
         viewingFile={viewingFile}
         selectedFolderPath={selectedFolderPath}
+        caseSummary={caseSummary}
         notesVisible={notesVisible}
         findingsVisible={findingsVisible}
         timelineVisible={timelineVisible}
         duplicatesVisible={duplicatesVisible}
-        reportsVisible={reportsVisible}
         timeVisible={timeVisible}
         caseId={caseId}
         notes={notes}
@@ -467,12 +522,14 @@ export function CaseWorkspaceShell({ caseId }: CaseWorkspaceShellProps) {
         onCloseFindings={() => setFindingsVisible(false)}
         onCloseTimeline={() => setTimelineVisible(false)}
         onCloseDuplicates={() => setDuplicatesVisible(false)}
-        onCloseReports={() => setReportsVisible(false)}
         onCloseTime={() => setTimeVisible(false)}
+        onOpenTimeManagement={() => setTimeManagementOpen(true)}
         onArtifactsChanged={() => {
           void refreshArtifacts(caseId);
           void refreshDuplicateGroups(caseId);
         }}
+        reportSection={reportSection}
+        onReportSectionChange={setReportSection}
       />
       <AddSourcesDialog
         open={addSourcesOpen}
@@ -493,7 +550,12 @@ export function CaseWorkspaceShell({ caseId }: CaseWorkspaceShellProps) {
           if (normalized.includes("finding")) setFindingsVisible(true);
           if (normalized.includes("timeline")) setTimelineVisible(true);
           if (normalized.includes("duplicate")) setDuplicatesVisible(true);
-          if (normalized.includes("report")) setReportsVisible(true);
+          if (normalized.includes("report")) {
+            setViewMode("reports");
+            if (normalized.includes("finding")) setReportSection("findings");
+            else if (normalized.includes("timeline")) setReportSection("timeline");
+            else if (normalized.includes("note")) setReportSection("notes");
+          }
           if (normalized.includes("time")) setTimeVisible(true);
         }}
       />
@@ -508,7 +570,6 @@ export function CaseWorkspaceShell({ caseId }: CaseWorkspaceShellProps) {
           findingsVisible,
           timelineVisible,
           duplicatesVisible,
-          reportsVisible,
           timeVisible,
         }}
         onSave={(next) => {
@@ -525,6 +586,110 @@ export function CaseWorkspaceShell({ caseId }: CaseWorkspaceShellProps) {
         caseId={caseId}
         onSaved={() => void refreshFiles(caseId, sourceRoots)}
       />
+      <TimeManagementPage
+        open={timeManagementOpen}
+        onOpenChange={setTimeManagementOpen}
+        caseId={caseId}
+      />
+      <BillingConfigDialog
+        open={billingConfigOpen}
+        onOpenChange={setBillingConfigOpen}
+        caseId={caseId}
+      />
+      <AlertDialog
+        open={startTimerPromptOpen}
+        onOpenChange={setStartTimerPromptOpen}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Start timer for this case?</AlertDialogTitle>
+            <AlertDialogDescription>
+              No time has been recorded today. Start tracking now?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              onClick={() => {
+                if (typeof window !== "undefined") {
+                  localStorage.setItem(SKIP_START_TIMER_KEY, "1");
+                }
+              }}
+            >
+              Don&apos;t ask again
+            </AlertDialogCancel>
+            <AlertDialogCancel>Not now</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={startTimerLoading}
+              onClick={(e) => {
+                e.preventDefault();
+                void (async () => {
+                  setStartTimerLoading(true);
+                  const res = await commandClient.startTimer(caseId);
+                  setStartTimerLoading(false);
+                  if (!res.ok) {
+                    toast({
+                      title: "Could not start timer",
+                      description:
+                        res.error?.message ?? "Start timer failed",
+                      variant: "destructive",
+                    });
+                    return;
+                  }
+                  notifyTimerChanged(caseId);
+                  setStartTimerPromptOpen(false);
+                  toast({ title: "Timer started" });
+                })();
+              }}
+            >
+              {startTimerLoading ? "Starting…" : "Start timer"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      <AlertDialog
+        open={closeTimerPromptOpen}
+        onOpenChange={setCloseTimerPromptOpen}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Timer is running</AlertDialogTitle>
+            <AlertDialogDescription>
+              Stop the timer and close this case, or keep it running in the
+              background.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-col gap-2 sm:flex-row">
+            <AlertDialogCancel disabled={closeTimerLoading}>
+              Cancel
+            </AlertDialogCancel>
+            <Button
+              variant="outline"
+              disabled={closeTimerLoading}
+              onClick={() => {
+                setCloseTimerPromptOpen(false);
+                router.push("/");
+              }}
+            >
+              Keep running
+            </Button>
+            <AlertDialogAction
+              disabled={closeTimerLoading}
+              onClick={() => {
+                void (async () => {
+                  setCloseTimerLoading(true);
+                  const res = await commandClient.stopTimer(caseId);
+                  setCloseTimerLoading(false);
+                  if (res.ok) notifyTimerChanged(caseId);
+                  setCloseTimerPromptOpen(false);
+                  router.push("/");
+                })();
+              }}
+            >
+              {closeTimerLoading ? "Stopping…" : "Stop & close"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

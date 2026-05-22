@@ -89,11 +89,21 @@ const mockTimeEntries: TimeEntry[] = [
   {
     id: "entry-1",
     caseId: E2E_CASE_ID,
-    startedAt: "2026-01-01T09:00:00Z",
-    endedAt: "2026-01-01T10:00:00Z",
-    billableMinutes: 60,
+    entryDate: "2026-01-01T00:00:00+00:00",
+    totalSeconds: 3600,
     summary: "Review",
-    segments: [],
+    createdAt: "2026-01-01T09:00:00Z",
+    updatedAt: "2026-01-01T10:00:00Z",
+    segments: [
+      {
+        id: "seg-1",
+        entryId: "entry-1",
+        startedAt: "2026-01-01T09:00:00Z",
+        endedAt: "2026-01-01T10:00:00Z",
+        durationSeconds: 3600,
+        discountPercent: 0,
+      },
+    ],
   },
 ];
 
@@ -147,20 +157,61 @@ export const e2eMockInvoke = (async (command, args = {}) => {
       return mockDuplicateGroups;
     case "list_notes":
       return mockNotes;
+    case "get_file_note_counts":
+      return [{ fileId: "file-1", count: 1 }];
+    case "list_case_file_metadata":
+      return [{ fileId: "file-1", metadataJson: "{\"title\":\"report\"}" }];
+    case "get_system_file_filter_config":
+      return ".DS_Store,Thumbs.db";
+    case "save_system_file_filter_config":
+      return null;
     case "list_findings":
       return mockFindings;
     case "list_timeline_events":
       return mockTimeline;
     case "get_time_entries":
       return mockTimeEntries;
+    case "get_time_entry": {
+      const date = String(args.date ?? "").slice(0, 10);
+      const match = mockTimeEntries.find(
+        (e) => e.entryDate.slice(0, 10) === date,
+      );
+      return match ?? null;
+    }
+    case "get_time_entries_summary":
+      return {
+        caseId: E2E_CASE_ID,
+        totalSeconds: 3600,
+        totalDays: 1,
+      };
+    case "calculate_case_total":
+      return {
+        caseId: E2E_CASE_ID,
+        totalAmount: 100,
+        totalSeconds: 3600,
+        totalDays: 1,
+      };
     case "get_active_timer":
       return null;
     case "start_timer":
+    case "pause_timer":
+    case "resume_timer":
       return {
         id: "entry-open",
         caseId: E2E_CASE_ID,
-        startedAt: new Date().toISOString(),
-        billableMinutes: 0,
+        entryDate: new Date().toISOString().slice(0, 10) + "T00:00:00+00:00",
+        totalSeconds: 0,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        segments: [
+          {
+            id: "seg-open",
+            entryId: "entry-open",
+            startedAt: new Date().toISOString(),
+            durationSeconds: 0,
+            discountPercent: 0,
+          },
+        ],
       };
     case "stop_timer":
       return mockTimeEntries[0];

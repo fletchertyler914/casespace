@@ -1,4 +1,4 @@
-/** v1-style status colors (solid dot, not text badge). */
+/** Case file review status colors (solid dot, not text badge). */
 const STATUS_DOT_CLASS = {
   unreviewed: "bg-amber-500 dark:bg-amber-400",
   in_review: "bg-blue-500 dark:bg-blue-400",

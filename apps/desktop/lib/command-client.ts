@@ -6,7 +6,9 @@ import type {
   BillingSummary,
   CaseBillingConfig,
   CaseFile,
+  CaseFileMetadata,
   CaseSummary,
+  FileNoteCount,
   CommandResponse,
   CreateCasePayload,
   IngestResult,
@@ -16,6 +18,8 @@ import type {
   ReportExportHistoryEntry,
   SearchHit,
   TimelineEvent,
+  CaseBillingTotal,
+  TimeEntriesSummary,
   TimeEntry,
   TimeSegment,
 } from "@repo/types";
@@ -156,11 +160,23 @@ export const commandClient = {
       targetFileId,
     });
   },
-  createNote(caseId: string, content: string) {
-    return safeInvoke<Note>("create_note", { caseId, content });
+  createNote(caseId: string, content: string, fileId?: string) {
+    return safeInvoke<Note>("create_note", { caseId, content, fileId: fileId ?? null });
   },
   listNotes(caseId: string) {
     return safeInvoke<Note[]>("list_notes", { caseId });
+  },
+  getFileNoteCounts(caseId: string) {
+    return safeInvoke<FileNoteCount[]>("get_file_note_counts", { caseId });
+  },
+  listCaseFileMetadata(caseId: string) {
+    return safeInvoke<CaseFileMetadata[]>("list_case_file_metadata", { caseId });
+  },
+  getSystemFileFilterConfig() {
+    return safeInvoke<string | null>("get_system_file_filter_config", {});
+  },
+  saveSystemFileFilterConfig(patterns: string) {
+    return safeInvoke<void>("save_system_file_filter_config", { patterns });
   },
   updateNote(noteId: string, content: string) {
     return safeInvoke<Note>("update_note", { noteId, content });
@@ -176,12 +192,14 @@ export const commandClient = {
     title: string,
     description: string,
     severity = "medium",
+    linkedFiles?: string[],
   ) {
     return safeInvoke<Finding>("create_finding", {
       caseId,
       title,
       description,
       severity,
+      linkedFiles: linkedFiles ?? null,
     });
   },
   listFindings(caseId: string) {
@@ -192,12 +210,14 @@ export const commandClient = {
     title: string,
     description: string,
     severity?: string,
+    linkedFiles?: string[],
   ) {
     return safeInvoke<Finding>("update_finding", {
       findingId,
       title,
       description,
       severity,
+      linkedFiles: linkedFiles ?? null,
     });
   },
   deleteFinding(findingId: string) {
@@ -208,12 +228,14 @@ export const commandClient = {
     description: string,
     occurredAt?: string,
     eventType = "manual",
+    sourceFileId?: string,
   ) {
     return safeInvoke<TimelineEvent>("create_timeline_event", {
       caseId,
       description,
       occurredAt,
       eventType,
+      sourceFileId: sourceFileId ?? null,
     });
   },
   listTimelineEvents(caseId: string) {
@@ -224,12 +246,14 @@ export const commandClient = {
     description: string,
     occurredAt?: string,
     eventType?: string,
+    sourceFileId?: string,
   ) {
     return safeInvoke<TimelineEvent>("update_timeline_event", {
       eventId,
       description,
       occurredAt,
       eventType,
+      sourceFileId: sourceFileId ?? null,
     });
   },
   deleteTimelineEvent(eventId: string) {
@@ -244,8 +268,8 @@ export const commandClient = {
   startTimer(caseId: string) {
     return safeInvoke<TimeEntry>("start_timer", { caseId });
   },
-  stopTimer(entryId: string, summary?: string) {
-    return safeInvoke<TimeEntry>("stop_timer", { entryId, summary });
+  stopTimer(caseId: string, summary?: string) {
+    return safeInvoke<TimeEntry>("stop_timer", { caseId, summary });
   },
   pauseTimer(caseId: string) {
     return safeInvoke<TimeEntry>("pause_timer", { caseId });
@@ -253,8 +277,17 @@ export const commandClient = {
   resumeTimer(caseId: string) {
     return safeInvoke<TimeEntry>("resume_timer", { caseId });
   },
-  getTimeEntries(caseId: string) {
-    return safeInvoke<TimeEntry[]>("get_time_entries", { caseId });
+  getTimeEntries(caseId: string, limit?: number, offset?: number) {
+    return safeInvoke<TimeEntry[]>("get_time_entries", { caseId, limit, offset });
+  },
+  getTimeEntry(caseId: string, date: string) {
+    return safeInvoke<TimeEntry | null>("get_time_entry", { caseId, date });
+  },
+  getTimeEntriesSummary(caseId: string) {
+    return safeInvoke<TimeEntriesSummary>("get_time_entries_summary", { caseId });
+  },
+  calculateCaseTotal(caseId: string) {
+    return safeInvoke<CaseBillingTotal>("calculate_case_total", { caseId });
   },
   getActiveTimer(caseId: string) {
     return safeInvoke<ActiveTimer | null>("get_active_timer", { caseId });
@@ -262,15 +295,13 @@ export const commandClient = {
   updateTimeEntry(
     entryId: string,
     updates: {
-      startedAt?: string;
-      endedAt?: string;
+      entryDate?: string;
       summary?: string;
     },
   ) {
     return safeInvoke<TimeEntry>("update_time_entry", {
       entryId,
-      startedAt: updates.startedAt,
-      endedAt: updates.endedAt,
+      entryDate: updates.entryDate,
       summary: updates.summary,
     });
   },

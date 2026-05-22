@@ -1,75 +1,197 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { RotateDirection } from "@react-pdf-viewer/core";
+import {
+  ChevronLeft,
+  ChevronRight,
+  Download,
+  Minus,
+  Plus,
+  Printer,
+  Search,
+} from "lucide-react";
 import type { ToolbarProps, ToolbarSlot } from "@react-pdf-viewer/default-layout";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { ViewerChromeDivider } from "@/components/viewer/viewer-chrome";
+import { cn } from "@/lib/utils";
 
-function ToolbarGroup({
+const ZOOM_PRESETS = [50, 75, 100, 125, 150, 200] as const;
+
+function PdfIconButton({
+  label,
+  disabled,
+  onClick,
   children,
-  className,
 }: {
+  label: string;
+  disabled?: boolean;
+  onClick?: () => void;
   children: ReactNode;
-  className?: string;
 }) {
   return (
-    <div
-      className={`flex items-center gap-0.5 [&_.rpv-core__minimal-button]:!m-0 ${className ?? ""}`}
+    <Button
+      type="button"
+      variant="ghost"
+      size="icon-sm"
+      className="shrink-0 text-muted-foreground hover:text-foreground"
+      title={label}
+      aria-label={label}
+      disabled={disabled}
+      onClick={onClick}
     >
       {children}
-    </div>
+    </Button>
   );
 }
 
 function CaseSpacePdfToolbar({ slots }: { slots: ToolbarSlot }) {
   const {
-    CurrentPageInput,
+    CurrentPageLabel,
+    Download: DownloadSlot,
     GoToNextPage,
     GoToPreviousPage,
-    NumberOfPages,
+    Print,
+    ShowSearchPopover,
     Zoom,
     ZoomIn,
     ZoomOut,
-    ShowSearchPopover,
-    Download,
-    Print,
-    Rotate,
   } = slots;
 
   return (
     <div
-      className="rpv-toolbar grid h-9 w-full grid-cols-[auto_1fr_auto] items-center gap-1 border-b border-border/40 px-2"
+      className={cn(
+        "casespace-pdf-toolbar grid h-9 w-full shrink-0 items-center",
+        "grid-cols-3 gap-2 border-b border-border/40 bg-background px-3",
+      )}
       role="toolbar"
       aria-label="PDF controls"
+      data-testid="pdf-toolbar"
     >
-      <ToolbarGroup className="justify-start">
-        <ShowSearchPopover />
-        <ZoomOut />
-        <Zoom />
-        <ZoomIn />
-      </ToolbarGroup>
+      <div className="flex items-center gap-0.5 justify-self-start">
+        <ShowSearchPopover>
+          {({ onClick }) => (
+            <PdfIconButton label="Search document" onClick={onClick}>
+              <Search className="h-4 w-4" />
+            </PdfIconButton>
+          )}
+        </ShowSearchPopover>
 
-      <ToolbarGroup className="justify-center">
-        <GoToPreviousPage />
-        <span className="inline-flex h-8 items-center gap-1 px-1 text-xs tabular-nums text-muted-foreground">
-          <CurrentPageInput />
-          <span className="select-none" aria-hidden>
-            /
-          </span>
-          <NumberOfPages />
-        </span>
-        <GoToNextPage />
-      </ToolbarGroup>
+        <ViewerChromeDivider />
 
-      <ToolbarGroup className="justify-end">
-        <Rotate direction={RotateDirection.Forward} />
-        <Download />
-        <Print />
-      </ToolbarGroup>
+        <GoToPreviousPage>
+          {({ isDisabled, onClick }) => (
+            <PdfIconButton
+              label="Previous page"
+              disabled={isDisabled}
+              onClick={onClick}
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </PdfIconButton>
+          )}
+        </GoToPreviousPage>
+
+        <CurrentPageLabel>
+          {({ currentPage, numberOfPages }) => {
+            const displayPage =
+              numberOfPages > 0 ? Math.max(1, currentPage) : currentPage;
+            return (
+              <span
+                className="min-w-[3rem] select-none text-center text-xs tabular-nums text-muted-foreground"
+                aria-live="polite"
+              >
+                {displayPage} / {Math.max(numberOfPages, 0)}
+              </span>
+            );
+          }}
+        </CurrentPageLabel>
+
+        <GoToNextPage>
+          {({ isDisabled, onClick }) => (
+            <PdfIconButton
+              label="Next page"
+              disabled={isDisabled}
+              onClick={onClick}
+            >
+              <ChevronRight className="h-4 w-4" />
+            </PdfIconButton>
+          )}
+        </GoToNextPage>
+      </div>
+
+      <div className="flex items-center gap-0.5 justify-self-center">
+        <ZoomOut>
+          {({ onClick }) => (
+            <PdfIconButton label="Zoom out" onClick={onClick}>
+              <Minus className="h-4 w-4" />
+            </PdfIconButton>
+          )}
+        </ZoomOut>
+
+        <Zoom>
+          {({ scale, onZoom }) => (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 min-w-[3.5rem] shrink-0 px-2 tabular-nums text-xs font-medium text-muted-foreground hover:text-foreground"
+                  aria-label="Zoom level"
+                >
+                  {Math.round(scale * 100)}%
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="center" className="min-w-[5rem]">
+                {ZOOM_PRESETS.map((pct) => (
+                  <DropdownMenuItem
+                    key={pct}
+                    className="tabular-nums"
+                    onClick={() => onZoom(pct / 100)}
+                  >
+                    {pct}%
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+        </Zoom>
+
+        <ZoomIn>
+          {({ onClick }) => (
+            <PdfIconButton label="Zoom in" onClick={onClick}>
+              <Plus className="h-4 w-4" />
+            </PdfIconButton>
+          )}
+        </ZoomIn>
+      </div>
+
+      <div className="flex items-center gap-0.5 justify-self-end">
+        <Print>
+          {({ onClick }) => (
+            <PdfIconButton label="Print" onClick={onClick}>
+              <Printer className="h-4 w-4" />
+            </PdfIconButton>
+          )}
+        </Print>
+
+        <DownloadSlot>
+          {({ onClick }) => (
+            <PdfIconButton label="Download" onClick={onClick}>
+              <Download className="h-4 w-4" />
+            </PdfIconButton>
+          )}
+        </DownloadSlot>
+      </div>
     </div>
   );
 }
 
-/** Toolbar without open/fullscreen/theme — app theme drives the reader chrome. */
 export function renderCaseSpacePdfToolbar(
   Toolbar: (props: ToolbarProps) => React.ReactElement,
 ) {
