@@ -34,11 +34,11 @@ Tracks implemented scope, validated scope, and gates required before production 
 |------|-----------|---------------|
 | Monorepo foundation | pnpm + Turbo + arch guard; catalog-pinned Next | Remote CI green on Node 24 after next push |
 | Desktop backend | Full non-AI command matrix + SQLite/FTS + ingest v2 | AI-native commands; `commands/*` module split |
-| Desktop UI | Case CRUD (create/list/open/delete), workspace shell, file navigator (folder tree), in-app viewer **routing** for 15 file categories with v1 extension parity, plain-text notes/findings/timeline CRUD, board with status DnD, workspace prefs dialog, MVP timer widget + time panel, MVP duplicates panel (list + set primary), MVP reports panel (markdown exports) | Inventory data grid; viewer metadata panel + rename/delete/file-change UI + fullscreen + keyboard nav; Tiptap rich-text artifact editors; deep duplicates resolution (comparison UI, decision dialog, badges, ingestion notification, fix merge-doesn't-relink-artifacts bug); time segment model + billing config UI; structured reports + PDF/DOCX; column/mapping config UI + Rust extraction engine; EditCaseDialog; ingest progress + cancellation; theme + system-file-filter settings UI; syntax-highlighted code viewer; image zoom/rotate/fullscreen; XLSX sheet tabs + header detection; markdown rendered (not raw); **search dialog runtime fix** (broken now: `search_all` shape mismatch) |
+| Desktop UI | V1 parity closure: inventory table, viewer actions, Tiptap artifacts, duplicates depth, time/billing, reports workspace, mapping UI, settings, structured search | Board multi-select/filters; PDF/DOCX reports; **UX gate** manual E2E ([native-e2e-checklist](spec/native-e2e-checklist.md)) |
 | Web surface | Marketing + download page | Content polish only |
-| Shared packages | `@repo/types` contracts (partial) | Full DTO parity + adapter envelopes |
-| Documentation | Spec pack + port plan synced to code | Feature catalog row-by-row as U7–U10 land |
-| Quality system | `ops:validate:local`, parity, hardening | UX E2E oracles ([test-oracle-matrix](spec/test-oracle-matrix.md)) |
+| Shared packages | `@repo/types` contracts for P0 commands | Full DTO audit vs Rust payloads |
+| Documentation | Spec pack + [v1-parity-closeout](spec/v1-parity-closeout.md) | UX gate sign-off row in readiness |
+| Quality system | `ops:validate:local`, parity (16), hardening, desktop (146), e2e (11) | Native Tauri UI automation on macOS (manual checklist) |
 | Toolchain | Node 24, Next 16.2.6 pin, lockfile + frozen CI install | Live release multi-arch proof |
 
 ## Gates
@@ -73,30 +73,25 @@ Tracks implemented scope, validated scope, and gates required before production 
 
 | Run | Date | Command | Result |
 |-----|------|---------|--------|
-| Parity integration | 2026-05-21 | `pnpm test:parity` | **pass** |
+| Parity integration | 2026-05-21 | `pnpm test:parity` | **pass** (16 flows: parity + command-path) |
 | Hardening suite | 2026-05-21 | `pnpm test:hardening` | **pass** |
 | Local validate stack | 2026-05-21 | `pnpm ops:validate:local` | **pass** (v0.1.7 pre-release) |
 | Parity (search + merge) | 2026-05-21 | `pnpm test:parity` (flows 8–9) | **pass** |
-| Desktop vitest | 2026-05-21 | `pnpm --filter desktop test` | **pass** (28 tests) |
+| Desktop unit + component | 2026-05-21 | `pnpm test:desktop` | **pass** (146 tests) |
+| Desktop UI E2E (mocked) | 2026-05-21 | `pnpm test:e2e` | **pass** (11 tests, port 3099) |
 | Desktop UI lint/types/build | 2026-05-21 | `pnpm --filter desktop lint/check-types/build` | **pass** |
 
 *Update this table after each validation run.*
 
-## Immediate next execution (re-prioritized from honest audit)
+## Immediate next execution
 
-Listed in dependency order. See [spec/gap-analysis-master.md](spec/gap-analysis-master.md) "Launch critical path (rewritten)" for full detail and rough sizings.
+See [spec/v1-parity-closeout.md](spec/v1-parity-closeout.md).
 
-1. **Fix broken global search** — `search_all` Rust shape vs UI contract (half-day)
-2. **Fix `merge_duplicate_metadata`** — actually relink notes/findings/timeline to primary (half-day)
-3. **Viewer header parity** — RenameFileDialog, DeleteFileDialog, MetadataPanel, FileChangeWarning (wire to existing backend commands) (1–2 days)
-4. **Inventory data grid** — the single biggest UX gap; full columns/sort/filter/bulk/multi-select/inline edit (4–6 days)
-5. **Tiptap rich notes / findings / timeline** — replace plain textareas; add CreateNoteDialog/CreateFindingDialog/CreateTimelineEventDialog with date picker + event types + severity + linked files (3–4 days)
-6. **Duplicates depth** — DuplicateManagementPanel, DuplicateDecisionDialog, badges across navigator+viewer (3 days)
-7. **Time / billing depth** — segment model in Rust + SegmentEditDialog/DailySummaryDialog/BillingConfigDialog/DeleteTimeEntryDialog + list/calendar views + batch update (5–7 days)
-8. **Reports depth** — structured section model + preview + PDF/DOCX exports + persistent history (3–4 days)
-9. **Column / mapping config** — port ColumnManager + FieldMapperStepper + implement Rust extraction engine (5–8 days)
-10. **EditCaseDialog** + rename in case list (half-day)
-11. **App SettingsDialog** — theme + system-file-filter (1 day; add the missing Rust commands too)
+1. **UX Parity Build Gate** — `pnpm dev` + [native-e2e-checklist.md](spec/native-e2e-checklist.md)
+2. **Board depth** (optional before AINative)
+3. **Report PDF/DOCX** (deferred)
+4. **AINative** — blocked until UX gate
+5. **Production signing / updater** — `pnpm release:validate`
 12. **Ingest UX** — progress bar, cancellation, LargeFolderWarningDialog, DuplicateIngestionNotification (2–3 days)
 13. **Frontend unit tests** — vitest setup; start with command-client + file-preview + viewer routing (ongoing)
 14. **Updater + production signing** — distinct workstream once paid Apple/Windows certs are in place

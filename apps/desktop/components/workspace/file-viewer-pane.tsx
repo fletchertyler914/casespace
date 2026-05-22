@@ -42,6 +42,7 @@ import { DeleteFileDialog } from "@/components/ui/delete-file-dialog";
 import { RenameFileDialog } from "@/components/ui/rename-file-dialog";
 import { FileViewer } from "@/components/viewer/file-viewer";
 import { FileChangeWarning } from "@/components/viewer/file-change-warning";
+import { ViewerChromeDivider } from "@/components/viewer/viewer-chrome";
 import { DuplicateFileDialog } from "@/components/viewer/duplicate-file-dialog";
 import { DuplicateBadge } from "@/components/artifacts/duplicate-badge";
 import { MetadataPanel } from "@/components/viewer/metadata-panel";
@@ -58,6 +59,13 @@ const FILE_STATUSES = [
   "flagged",
   "excluded",
 ] as const;
+
+function formatFileStatus(status: string): string {
+  return status
+    .split("_")
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(" ");
+}
 
 interface FileViewerPaneProps {
   file: CaseFile;
@@ -103,6 +111,8 @@ export const FileViewerPane = memo(function FileViewerPane({
   const previewKind = getFilePreviewKind(file.fileName);
   const showOpenExternal = isUnsupportedPreview(previewKind);
   const fillsPane = previewKind === "pdf";
+  const pathLabel = displayFilePath(file, sourceRoots);
+  const showPathSubtitle = pathLabel !== file.fileName;
   const isDuplicate = duplicateFileIds.has(file.id);
   const duplicateGroup = isDuplicate ? findGroupForFile(duplicateGroups, file.id) : undefined;
 
@@ -175,131 +185,168 @@ export const FileViewerPane = memo(function FileViewerPane({
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-background">
-      <div className="flex h-12 shrink-0 items-center gap-2 border-b border-border/40 px-3">
-        {!navigatorOpen && (
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8"
-            title="Show navigator"
-            onClick={onExpandNavigator}
-          >
-            <PanelLeft className="h-4 w-4" />
-          </Button>
-        )}
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
-            <p className="truncate text-sm font-medium">{file.fileName}</p>
-            {isDuplicate && (
-              <DuplicateBadge
-                isPrimary={duplicateGroup?.primaryFileId === file.id}
-              />
-            )}
-          </div>
-          <p className="truncate text-xs text-muted-foreground">
-            {displayFilePath(file, sourceRoots)}
-          </p>
-        </div>
-        {isDuplicate && (
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-8 gap-1 px-2 text-xs"
-            onClick={() => setDuplicateDialogOpen(true)}
-          >
-            <Copy className="h-3.5 w-3.5" />
-            Duplicates
-          </Button>
-        )}
-        <Select
-          value={file.status}
-          onValueChange={(v) => onStatusChange(file.id, v)}
-        >
-          <SelectTrigger className="h-8 w-[130px] text-xs">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {FILE_STATUSES.map((s) => (
-              <SelectItem key={s} value={s}>
-                {s.replace("_", " ")}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        {showOpenExternal && (
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-8 gap-1 px-2 text-xs"
-            onClick={() => void openCaseFile(caseId, file.filePath)}
-          >
-            <ExternalLink className="h-3.5 w-3.5" />
-            Open
-          </Button>
-        )}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-8 w-8">
-              <MoreVertical className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => setMetadataOpen(true)}>
-              <Hash className="mr-2 h-4 w-4" />
-              Metadata
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setRenameOpen(true)}>
-              <Pencil className="mr-2 h-4 w-4" />
-              Rename
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              className="text-destructive focus:text-destructive"
-              onClick={() => setDeleteOpen(true)}
+      <header className="flex h-11 shrink-0 items-center gap-2 border-b border-border/40 px-2">
+        <div className="flex min-w-0 flex-1 items-center gap-2">
+          {!navigatorOpen && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 shrink-0"
+              title="Show navigator"
+              onClick={onExpandNavigator}
             >
-              <Trash2 className="mr-2 h-4 w-4" />
-              Remove from case
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-8 w-8"
-          title={fullscreen ? "Exit fullscreen" : "Fullscreen preview"}
-          onClick={() => void toggleFullscreen()}
-        >
-          {fullscreen ? (
-            <Minimize2 className="h-4 w-4" />
-          ) : (
-            <Maximize2 className="h-4 w-4" />
+              <PanelLeft className="h-4 w-4" />
+            </Button>
           )}
-        </Button>
-        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onRefresh}>
-          <RefreshCw className="h-4 w-4" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-8 w-8"
-          disabled={!hasPrevious}
-          onClick={onPrevious}
-        >
-          <ChevronLeft className="h-4 w-4" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-8 w-8"
-          disabled={!hasNext}
-          onClick={onNext}
-        >
-          <ChevronRight className="h-4 w-4" />
-        </Button>
-        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onClose}>
-          <X className="h-4 w-4" />
-        </Button>
-      </div>
+          <div className="min-w-0 flex-1 leading-tight">
+            <div className="flex min-w-0 items-center gap-2">
+              <p className="truncate text-sm font-medium">{file.fileName}</p>
+              {isDuplicate && (
+                <DuplicateBadge
+                  isPrimary={duplicateGroup?.primaryFileId === file.id}
+                />
+              )}
+            </div>
+            {showPathSubtitle ? (
+              <p className="truncate text-[11px] text-muted-foreground">
+                {pathLabel}
+              </p>
+            ) : null}
+          </div>
+        </div>
+
+        <div className="flex shrink-0 items-center">
+          <Select
+            value={file.status}
+            onValueChange={(v) => onStatusChange(file.id, v)}
+          >
+            <SelectTrigger className="h-8 w-[7.5rem] shrink-0 text-xs capitalize">
+              <SelectValue>{formatFileStatus(file.status)}</SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              {FILE_STATUSES.map((s) => (
+                <SelectItem key={s} value={s} className="capitalize">
+                  {formatFileStatus(s)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          {(isDuplicate || showOpenExternal) && <ViewerChromeDivider />}
+
+          {isDuplicate && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 shrink-0 gap-1 px-2 text-xs"
+              onClick={() => setDuplicateDialogOpen(true)}
+            >
+              <Copy className="h-3.5 w-3.5" />
+              Duplicates
+            </Button>
+          )}
+          {showOpenExternal && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 shrink-0 gap-1 px-2 text-xs"
+              onClick={() => void openCaseFile(caseId, file.filePath)}
+            >
+              <ExternalLink className="h-3.5 w-3.5" />
+              Open
+            </Button>
+          )}
+
+          <ViewerChromeDivider />
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 shrink-0"
+                title="File actions"
+              >
+                <MoreVertical className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => setMetadataOpen(true)}>
+                <Hash className="mr-2 h-4 w-4" />
+                Metadata
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setRenameOpen(true)}>
+                <Pencil className="mr-2 h-4 w-4" />
+                Rename
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                className="text-destructive focus:text-destructive"
+                onClick={() => setDeleteOpen(true)}
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Remove from case
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          <ViewerChromeDivider />
+
+          <div className="flex items-center gap-0.5">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 shrink-0"
+              title={fullscreen ? "Exit fullscreen" : "Fullscreen preview"}
+              onClick={() => void toggleFullscreen()}
+            >
+              {fullscreen ? (
+                <Minimize2 className="h-4 w-4" />
+              ) : (
+                <Maximize2 className="h-4 w-4" />
+              )}
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 shrink-0"
+              title="Refresh file"
+              onClick={onRefresh}
+            >
+              <RefreshCw className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 shrink-0"
+              title="Previous file"
+              disabled={!hasPrevious}
+              onClick={onPrevious}
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 shrink-0"
+              title="Next file"
+              disabled={!hasNext}
+              onClick={onNext}
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 shrink-0"
+              title="Close preview"
+              onClick={onClose}
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      </header>
 
       {!changeDismissed && fileChanged ? (
         <FileChangeWarning

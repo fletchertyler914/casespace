@@ -1,6 +1,6 @@
 "use client";
 
-import { invoke } from "@tauri-apps/api/core";
+import { invoke } from "@/lib/invoke-bridge";
 import type {
   ActiveTimer,
   BillingSummary,

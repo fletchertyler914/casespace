@@ -12,7 +12,11 @@ function ToolbarGroup({
   className?: string;
 }) {
   return (
-    <div className={`flex items-center gap-0.5 ${className ?? ""}`}>{children}</div>
+    <div
+      className={`flex items-center gap-0.5 [&_.rpv-core__minimal-button]:!m-0 ${className ?? ""}`}
+    >
+      {children}
+    </div>
   );
 }
 
@@ -33,29 +37,30 @@ function CaseSpacePdfToolbar({ slots }: { slots: ToolbarSlot }) {
 
   return (
     <div
-      className="rpv-toolbar flex h-10 w-full items-center gap-1 px-2"
+      className="rpv-toolbar grid h-9 w-full grid-cols-[auto_1fr_auto] items-center gap-1 border-b border-border/40 px-2"
       role="toolbar"
       aria-label="PDF controls"
     >
-      <ToolbarGroup className="shrink-0">
+      <ToolbarGroup className="justify-start">
         <ShowSearchPopover />
-      </ToolbarGroup>
-
-      <ToolbarGroup className="min-w-0 flex-1 justify-center">
         <ZoomOut />
         <Zoom />
         <ZoomIn />
       </ToolbarGroup>
 
-      <ToolbarGroup className="shrink-0">
+      <ToolbarGroup className="justify-center">
         <GoToPreviousPage />
-        <span className="flex items-center gap-1 px-1 text-xs tabular-nums text-muted-foreground">
+        <span className="inline-flex h-8 items-center gap-1 px-1 text-xs tabular-nums text-muted-foreground">
           <CurrentPageInput />
-          <span aria-hidden>/</span>
+          <span className="select-none" aria-hidden>
+            /
+          </span>
           <NumberOfPages />
         </span>
         <GoToNextPage />
-        <span className="mx-1 h-5 w-px bg-border/50" aria-hidden />
+      </ToolbarGroup>
+
+      <ToolbarGroup className="justify-end">
         <Rotate direction={RotateDirection.Forward} />
         <Download />
         <Print />

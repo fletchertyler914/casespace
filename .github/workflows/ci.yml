@@ -42,8 +42,22 @@ jobs:
       - name: Type check
         run: pnpm check-types
 
+      - name: Desktop unit and component tests
+        run: pnpm test:desktop
+
+      - name: Parity integration tests
+        run: pnpm test:parity
+
       - name: Build apps and packages
         run: pnpm turbo run build --filter=!desktop-backend
+
+      - name: Install Playwright Chromium
+        run: pnpm exec playwright install chromium --with-deps
+        working-directory: apps/desktop
+
+      - name: Desktop UI E2E (mocked Tauri)
+        run: pnpm test:e2e
+        working-directory: apps/desktop
 
   desktop-auto-build:
     name: Desktop Auto Build (${{ matrix.os }})

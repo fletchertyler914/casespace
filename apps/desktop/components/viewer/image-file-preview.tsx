@@ -46,7 +46,7 @@ export function ImageFilePreview({ src, alt }: ImageFilePreviewProps) {
       ref={containerRef}
       className="relative flex min-h-[280px] flex-col bg-muted/20"
     >
-      <div className="flex shrink-0 items-center justify-end gap-1 border-b border-border/40 px-2 py-1">
+      <div className="flex h-9 shrink-0 items-center justify-end gap-0.5 border-b border-border/40 px-2">
         <Button
           variant="ghost"
           size="icon"

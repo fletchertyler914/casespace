@@ -2458,7 +2458,8 @@ fn export_dir(app: &AppHandle, case_id: &str) -> Result<PathBuf, String> {
     Ok(dir)
 }
 
-fn build_report_body(case_id: &str, conn: &rusqlite::Connection, kind: &str) -> Result<String, String> {
+/// Used by Tauri commands and integration tests (`tests/command_parity.rs`).
+pub fn build_report_body(case_id: &str, conn: &rusqlite::Connection, kind: &str) -> Result<String, String> {
     let case_name: String = conn
         .query_row(
             "SELECT name FROM cases WHERE id = ?1",

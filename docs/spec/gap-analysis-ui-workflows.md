@@ -132,7 +132,8 @@ Every dialog in v1 that has **no v2 counterpart**:
 | Backend unit (repositories) | ✅ `src-tauri/src/repositories/tests*.rs`, `commands/tests*.rs` | 🟡 inline `parity_flows.rs` + `hardening_pass.rs` — many tests insert directly into SQLite rather than calling commands |
 | Backend critical features | ✅ `commands/tests_critical_features.rs` | 🟠 partial — covered by `parity_flows.rs` |
 | Backend performance | ✅ `commands/tests_performance.rs` | 🟠 10k-file insert in `hardening_pass.rs` only |
-| Frontend unit (vitest) | ✅ inventory, duplicate, hook, debounce, error-handler | 🔴 missing — no vitest setup in any app |
+| Frontend unit + component (vitest) | ✅ 146 tests — contract (65 commands), artifacts/billing panels, path/tree utils, viewer dialogs | 🟡 file-table component + workspace-preferences hooks |
+| Frontend UI E2E (Playwright) | ✅ case hub, workspace, search (mocked invoke) | 🟡 native Tauri E2E still manual; expand flow coverage |
 | E2E | scripts/test-built-app.sh | 🔴 missing |
 
 ## Updater & code signing

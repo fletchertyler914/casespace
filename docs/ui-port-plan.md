@@ -23,7 +23,7 @@ Continuation plan after **Core Parity backend gate** passed locally. Backend com
 | Reports (U9) | **implemented (local)** — structured workspace + export history; markdown export; PDF/DOCX deferred |
 | Search / settings (U10) | **implemented (local)** — structured `search_all` + grouped dialog; app settings (theme/system-file-filter) |
 | Mapping / column config | **implemented (local)** — `ColumnManager`, `FieldMapperStepper`, Rust `field_extraction`, columns/mapping dialog |
-| UX gate + legacy cleanup (U11) | **not earned** — code present; needs manual E2E + board depth before **validated** |
+| UX gate + legacy cleanup (U11) | **not earned** — automated gates pass; needs [native-e2e-checklist.md](spec/native-e2e-checklist.md) in `pnpm dev` + board depth before **validated** |
 | AINative | **blocked** — until UX Parity Build Gate |
 | Updater + production signing | **placeholder wired** — `tauri-plugin-updater` + conf placeholders; Developer ID / Windows signing / notarization still **blocked** |
 | Toolchain | Next **16.2.6** pinned via pnpm catalog — see [Supply chain](#supply-chain) |
@@ -164,7 +164,7 @@ This list **supersedes** the previous "U7/U8/U9/U10 continuation" sections. Numb
 10. **EditCaseDialog** + rename in case list (half-day)
 11. **App SettingsDialog** — theme + system-file-filter + missing Rust commands (1 day)
 12. **Ingest UX** — progress + cancellation + LargeFolderWarningDialog + DuplicateIngestionNotification (2–3 days)
-13. **Frontend unit tests** — vitest setup; cover command-client, file-preview, viewer routing (ongoing)
+13. **Frontend tests** — ✅ vitest (61) + Playwright E2E (3); expand Tiptap/file-table/billing + native Tauri smoke
 14. **Updater + production signing** — `tauri-plugin-updater`, Developer ID, Windows signing, notarization (distinct workstream, needs paid certs)
 
 ### Phase U9 — Reports 🟡 MVP only

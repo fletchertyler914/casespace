@@ -48,9 +48,19 @@ The updater plugin is wired with placeholder config in `tauri.conf.json` (`plugi
 
 Until those are configured, `check_for_update` returns `null` (no update available).
 
+## Tests (native engine)
+
+```bash
+pnpm test:parity      # from repo root — parity_flows + command_parity (ingest/FTS/reports)
+pnpm test:hardening   # security, 10k ingest, seed corpus
+```
+
+`tests/command_parity.rs` exercises the same Rust modules as Tauri commands (`ingest`, `fts_search`, `build_report_body`) against `fixtures/mini-case/`.
+
 ## Implementation notes
 
 - Command-risk and hardening requirements are defined in `docs/migrating-from-v1.md`.
 - Readiness/blockers: `docs/readiness.md`
+- V1 closeout: `docs/spec/v1-parity-closeout.md`
 - Desktop UX port (separate app): `docs/ui-port-plan.md`
 - v1 command and capability reference is documented in `docs/v1-reference.md`.

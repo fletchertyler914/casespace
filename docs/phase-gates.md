@@ -53,7 +53,7 @@ v1 parity closure landed in `apps/desktop` for v0.1.7 (2026-05-21). Automated lo
 
 ### Next (post v0.1.7)
 
-- [ ] **U11** UX gate — manual E2E on [spec/user-flow-map.md](spec/user-flow-map.md)
+- [ ] **U11** UX gate — [spec/native-e2e-checklist.md](spec/native-e2e-checklist.md) in `pnpm dev` (see [spec/v1-parity-closeout.md](spec/v1-parity-closeout.md))
 - [ ] Board multi-select / lane filters / rich cards (optional depth)
 - [ ] Report PDF/DOCX exports (deferred)
 - [ ] Production signing + live updater keys

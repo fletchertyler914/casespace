@@ -44,6 +44,10 @@ pnpm dev:ui
 ```bash
 pnpm --filter desktop lint
 pnpm --filter desktop check-types
-pnpm --filter desktop test
-pnpm ops:validate:local   # from repo root
+pnpm test:desktop          # Vitest: unit + component (146 tests)
+pnpm test:e2e              # Playwright: mocked Tauri (11 tests, port 3099)
+pnpm test:e2e              # Playwright: browser E2E with mocked Tauri invoke
+pnpm ops:validate:local    # from repo root (includes parity + desktop tests + e2e)
 ```
+
+E2E runs `next dev` with `window.__CASESPACE_MOCK_INVOKE__` — not the full Tauri shell. Use `pnpm dev` for native smoke.

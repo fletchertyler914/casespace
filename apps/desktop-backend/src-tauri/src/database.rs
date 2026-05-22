@@ -452,6 +452,14 @@ impl Database {
         f(&conn)
     }
 
+    pub fn with_connection_mut<T, F>(&self, f: F) -> Result<T, String>
+    where
+        F: FnOnce(&mut Connection) -> Result<T, String>,
+    {
+        let mut conn = self.conn.lock().map_err(|_| "db lock poisoned")?;
+        f(&mut conn)
+    }
+
     pub fn list_case_roots(&self, case_id: Option<&str>) -> Result<Vec<String>, String> {
         let conn = self.conn.lock().map_err(|_| "db lock poisoned")?;
         if let Some(id) = case_id {
