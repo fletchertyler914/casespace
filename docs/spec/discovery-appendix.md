@@ -58,6 +58,8 @@ Unified workspace, fast ingest, integrated review, defensible report outputs, bi
 | DR-003 | Redacted-cloud PII default | Trust + performance balance |
 | DR-004 | SQLite + FTS for v2 | v1-proven; JSON store is scaffold only |
 | DR-005 | Defer PDF/Office rich viewers to P1 | Launch MVP: text/image + external open |
+| DR-AGENT-001 | LangGraph + CaseSpace MCP + optional Arcade; Agent mode for routine ops; destructive via interrupt | See [architecture-agents.md](../architecture-agents.md); v1 export port out of scope |
+| DR-AGENT-002 | Reports = generation (`generate_case_report`), not v1 export UX | Aligns with dead v1 export buttons |
 
 ## Open items (resolve during CoreParity)
 

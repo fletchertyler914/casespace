@@ -64,9 +64,12 @@ Detail: [ui-port-plan.md](ui-port-plan.md).
 
 ## Phase 3: AINative (blocked)
 
-Blocked until **UX Parity Build Gate** passes ([ui-port-plan.md](ui-port-plan.md)).
+Blocked until **UX Parity Build Gate** passes ([ui-port-plan.md](ui-port-plan.md)). Architecture: [architecture-agents.md](architecture-agents.md).
 
-- [ ] AI capability matrix implemented
+- [x] Agent stack ADR (LangGraph + CaseSpace MCP + Arcade boundary)
+- [ ] C0 LangGraph spike on Tauri desktop
+- [ ] `packages/agents` + CaseSpace MCP tool server
+- [ ] AI capability matrix implemented in product
 - [ ] PII policy enforced per case
 - [ ] No regression on CoreParity backend metrics
 

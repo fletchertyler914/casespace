@@ -18,13 +18,13 @@ Continuation plan after **Core Parity backend gate** passed locally. Backend com
 | Workspace shell (U4) | **implemented** — layout, folder tree + **inventory table** toggle, header, ingest UX hooks |
 | Viewers (U5) | **implemented (local)** — metadata/rename/delete/file-change/keyboard/fullscreen; markdown render; syntax-highlighted code; image zoom/rotate/fullscreen; XLSX multi-sheet tabs. PDF annotations/OCR still out of scope |
 | Artifact panels (U6) | **implemented (local)** — Tiptap notes/findings; timeline date/type/source; create dialogs |
-| Duplicates + board (U7) | **implemented (local)** — management panel, badges, decision dialog, ingestion notification; merge relinks artifacts (parity test). Board still MVP (no multi-select/filters) |
+| Duplicates + board (U7) | **implemented (local)** — management panel, badges, decision dialog, ingestion notification; merge relinks artifacts (parity test). Board: @dnd-kit DnD, multi-select/multi-drag, per-lane filters, rich cards (no status dropdown) |
 | Time (U8) | **implemented (local)** — segments, billing config, daily summary, entry CRUD, pause/resume same entry |
-| Reports (U9) | **implemented (local)** — structured workspace + export history; markdown export; PDF/DOCX deferred |
+| Reports (U9) | **implemented (local)** — structured workspace + `generate_case_report`; v1 export UX not ported (dead in v1) |
 | Search / settings (U10) | **implemented (local)** — structured `search_all` + grouped dialog; app settings (theme/system-file-filter) |
 | Mapping / column config | **implemented (local)** — `ColumnManager`, `FieldMapperStepper`, Rust `field_extraction`, columns/mapping dialog |
 | UX gate + legacy cleanup (U11) | **not earned** — automated gates pass; needs [native-e2e-checklist.md](spec/native-e2e-checklist.md) in `pnpm dev` + board depth before **validated** |
-| AINative | **blocked** — until UX Parity Build Gate |
+| AINative | **blocked** until UX gate — design: [architecture-agents.md](architecture-agents.md) (LangGraph + CaseSpace MCP) |
 | Updater + production signing | **placeholder wired** — `tauri-plugin-updater` + conf placeholders; Developer ID / Windows signing / notarization still **blocked** |
 | Toolchain | Next **16.2.6** pinned via pnpm catalog — see [Supply chain](#supply-chain) |
 
@@ -139,7 +139,7 @@ The PDF viewer is wrapped in a local `ErrorBoundary` with a fallback that offers
 - Duplicates panel implemented in split view (`components/artifacts/duplicates-panel.tsx`) — list groups + set primary + "merge metadata"
 - **Known bug:** `merge_duplicate_metadata` marks primary as reviewed + soft-deletes other rows but **does not** move notes / finding `linked_files` / timeline `source_file_id` like v1 does. Needs fix.
 - **Missing vs v1:** `DuplicateManagementPanel` (case-level stats), `DuplicateGroupView`, `DuplicateFileCard` (primary/recommended/viewing badges), `DuplicateDecisionDialog` (delete-or-merge confirm), `DuplicateBadge` (across navigator + viewer rows), `DuplicateIngestionNotification`
-- Board has 5 status lanes + DnD; **missing**: multi-select (`Cmd/Ctrl+Click`, `Shift+Click`), per-swimlane filters, folder-filtered board, rich card content (note count, dup badge, change indicator, tags, mapping fields), `ProgressDashboard`
+- Board has 5 lanes, @dnd-kit DnD, multi-select/multi-drag, per-lane filters, folder-scoped files, dup badges on cards; **missing**: note counts, change indicator, tags/mapping fields on cards, `ProgressDashboard`
 
 ### Phase U8 — Time management 🟡 MVP only
 

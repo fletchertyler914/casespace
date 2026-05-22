@@ -1,6 +1,6 @@
 # AI Capability Matrix
 
-**Phase:** All rows are `AI-Phase` — blocked until Core Parity Build Gate passes.
+**Phase:** All rows are `AI-Phase` — blocked until **UX Parity Build Gate** passes. Orchestration design: [architecture-agents.md](../architecture-agents.md).
 
 Default PII policy: **redacted-cloud** per case; raw-cloud opt-in with consent.
 
@@ -22,7 +22,7 @@ Default PII policy: **redacted-cloud** per case; raw-cloud opt-in with consent.
 | none | No AI in this step (CoreParity) |
 | assist | AI generates side-panel content; user copies or applies |
 | suggest | AI proposes action; one-click apply for low risk |
-| auto-execute | Not used for launch (high-risk blocked) |
+| auto-execute | Routine case tools in **Agent mode** only; destructive tier blocked |
 
 ## Runtime tiers
 
@@ -36,9 +36,9 @@ Default PII policy: **redacted-cloud** per case; raw-cloud opt-in with consent.
 ## Human vs agent mode (post-parity)
 
 - **Human mode:** user drives every step; AI panels optional
-- **Agent mode:** background jobs run suggest/assist tasks on queue; high-risk still requires approval
+- **Agent mode:** LangGraph supervisor runs subgraphs (`triage`, `artifacts`, `report_generation`) via CaseSpace MCP → `command-client`; **confirm_required** tools use LangGraph `interrupt()` + desktop approval UI
 
-Agent orchestration design deferred to AINative implementation phase.
+Implementation: [architecture-agents.md](../architecture-agents.md), `packages/agents` (planned).
 
 ## Feature mapping
 

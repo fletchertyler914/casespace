@@ -12,7 +12,7 @@ Tracks implemented scope, validated scope, and gates required before production 
 | Core Parity **backend** | **Complete (local)** — SQLite, FTS, P0 commands, parity + hardening suites |
 | Core Parity **UX** (v1 port) | **Implemented (local), not gate-validated** — inventory table, viewer actions, structured search, Tiptap artifacts, duplicates depth, time/billing, reports workspace, mapping UI, settings dialogs. Remaining: board multi-select/filters, PDF/DOCX reports, manual E2E. See [spec/gap-analysis-ui-workflows.md](spec/gap-analysis-ui-workflows.md) |
 | Toolchain | Next **16.2.6** catalog-pinned; `minimumReleaseAge` 48h |
-| AINative phase | **Blocked** — until UX Parity Build Gate (not yet earned) |
+| AINative phase | **Blocked** until UX gate; stack ADR: [architecture-agents.md](architecture-agents.md) |
 | Production distribution | **Blocked** — updater plugin wired with placeholder pubkey/endpoints; no Developer ID / Windows signing / notarization. macOS ad-hoc signing only |
 | Remote CI evidence | Partial — push for fresh CI on Node 24 |
 
@@ -66,7 +66,7 @@ Tracks implemented scope, validated scope, and gates required before production 
 
 1. Finish **UX port** U7–U11 on elite architecture
 2. Pass **UX Parity Build Gate** + manual E2E on [spec/user-flow-map.md](spec/user-flow-map.md)
-3. **AINative** per [spec/ai-capability-matrix.md](spec/ai-capability-matrix.md)
+3. **AINative** per [architecture-agents.md](architecture-agents.md) + [ai-capability-matrix.md](spec/ai-capability-matrix.md)
 4. Release/prod proof via `pnpm release:validate` when cutting release
 
 ## Validation evidence

@@ -98,12 +98,23 @@ See [spec/perf-security-reliability-gates.md](spec/perf-security-reliability-gat
 
 1. **Core Parity backend** — complete (local gate)
 2. **Core Parity UX port** — U1–U6 done/MVP; U7–U11 next ([ui-port-plan.md](ui-port-plan.md))
-3. **AINative** — blocked until UX Parity Build Gate
+3. **AINative** — blocked until UX Parity Build Gate; design locked in [architecture-agents.md](architecture-agents.md) (LangGraph + CaseSpace MCP + optional Arcade)
 
 See [product-spec-bible.md](product-spec-bible.md).
 
+## Agent runtime (AINative target)
+
+| Component | Location |
+|-----------|----------|
+| LangGraph orchestration | `packages/agents` → `apps/desktop` |
+| CaseSpace MCP tools | wraps `apps/desktop/lib/command-client.ts` |
+| Domain / persistence | `apps/desktop-backend` (unchanged) |
+
+Full ADR: [architecture-agents.md](architecture-agents.md).
+
 ## Related docs
 
+- [architecture-agents.md](architecture-agents.md)
 - [readiness.md](readiness.md)
 - [ui-port-plan.md](ui-port-plan.md)
 - [implementation-readiness-gate.md](implementation-readiness-gate.md)

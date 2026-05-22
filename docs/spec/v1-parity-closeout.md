@@ -30,8 +30,9 @@ Full Tauri shell      →  pnpm dev + native checklist (macOS; WebDriver N/A on 
 ## Remaining UX depth (post-closeout, not blockers for backend gate)
 
 1. **Board** — multi-select, lane filters, rich cards ([ui-port-plan.md](../ui-port-plan.md) U7 tail)
-2. **Reports** — PDF/DOCX export (markdown done)
-3. **Native smoke** — PDF/DOCX preview, timer on case switch, dialog flows ([native-e2e-checklist.md](native-e2e-checklist.md) when added)
+2. **Reports** — generation via `generate_case_report` + reports workspace (v1 export UX not ported — dead in v1)
+3. **Agents** — [architecture-agents.md](../architecture-agents.md) (Track C after UX gate)
+4. **Native smoke** — board + report generation + dialog flows ([native-e2e-checklist.md](native-e2e-checklist.md))
 
 ## Next phases (locked order)
 
