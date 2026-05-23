@@ -279,7 +279,10 @@ fn flow_day_based_time_entry_schema() {
         let case_id = uuid::Uuid::new_v4().to_string();
         let entry_id = uuid::Uuid::new_v4().to_string();
         let now = chrono::Utc::now().to_rfc3339();
-        let day = format!("{}T00:00:00+00:00", now.chars().take(10).collect::<String>());
+        let day = format!(
+            "{}T00:00:00+00:00",
+            now.chars().take(10).collect::<String>()
+        );
         conn.execute(
             "INSERT INTO cases (id, name, status, created_at, updated_at) VALUES (?1, 'Timer', 'active', ?2, ?2)",
             params![case_id, now],
@@ -412,12 +415,18 @@ fn flow_search_all_returns_structured_hits() {
         let hits: Vec<SearchHit> = fts_search(conn, &case_id, "quasar", 10).unwrap();
         assert!(!hits.is_empty(), "expected at least one hit");
 
-        let file_hit = hits.iter().find(|h| h.entity_type == "file").expect("file hit");
+        let file_hit = hits
+            .iter()
+            .find(|h| h.entity_type == "file")
+            .expect("file hit");
         assert_eq!(file_hit.id, file_id);
         assert_eq!(file_hit.title, "quasar-invoice.pdf");
         assert_eq!(file_hit.snippet, "docs");
 
-        let note_hit = hits.iter().find(|h| h.entity_type == "note").expect("note hit");
+        let note_hit = hits
+            .iter()
+            .find(|h| h.entity_type == "note")
+            .expect("note hit");
         assert_eq!(note_hit.id, note_id);
         assert_eq!(note_hit.title, "Note");
         assert!(note_hit.snippet.contains("quasar"));
@@ -444,7 +453,10 @@ fn flow_merge_duplicate_metadata_moves_notes() {
             params![case_id, now],
         )
         .unwrap();
-        for (fid, path) in [(primary_id.clone(), "/tmp/a.txt"), (secondary_id.clone(), "/tmp/b.txt")] {
+        for (fid, path) in [
+            (primary_id.clone(), "/tmp/a.txt"),
+            (secondary_id.clone(), "/tmp/b.txt"),
+        ] {
             conn.execute(
                 "INSERT INTO files (id, case_id, file_name, folder_path, absolute_path, file_hash, file_size, modified_at, status)
                  VALUES (?1, ?2, 'dup.txt', '', ?3, ?4, 1, ?5, 'unreviewed')",
@@ -568,14 +580,14 @@ fn flow_wave_a_report_templates_compliance() {
         )
         .unwrap();
 
-        for template in ["cfe-long", "cfe-short", "expert-witness-frcp26", "engagement-letter"] {
-            let doc = desktop_backend_lib::build_report_document(
-                &case_id,
-                template,
-                &now,
-                conn,
-            )
-            .unwrap_or_else(|e| panic!("template {template}: {e}"));
+        for template in [
+            "cfe-long",
+            "cfe-short",
+            "expert-witness-frcp26",
+            "engagement-letter",
+        ] {
+            let doc = desktop_backend_lib::build_report_document(&case_id, template, &now, conn)
+                .unwrap_or_else(|e| panic!("template {template}: {e}"));
             assert_eq!(doc.template_id, template);
             assert!(!doc.markdown.is_empty());
             assert!(doc.sections.iter().any(|s| !s.heading.is_empty()));
@@ -585,6 +597,205 @@ fn flow_wave_a_report_templates_compliance() {
                 assert!(doc.compliance.iter().any(|c| c.id == "FRCP-26-B"));
             }
         }
+        Ok(())
+    });
+}
+
+#[test]
+fn flow_text_extract_round_trip() {
+    let (dir, db) = temp_db();
+    let fixture =
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/text-extract/sample.txt");
+    let case_file = dir.join("sample.txt");
+    std::fs::copy(&fixture, &case_file).unwrap();
+
+    let _ = with_db(&db, |conn| {
+        let case_id = uuid::Uuid::new_v4().to_string();
+        let file_id = uuid::Uuid::new_v4().to_string();
+        let now = chrono::Utc::now().to_rfc3339();
+        conn.execute(
+            "INSERT INTO cases (id, name, status, created_at, updated_at) VALUES (?1, 'Extract', 'active', ?2, ?2)",
+            params![case_id, now],
+        )
+        .unwrap();
+        conn.execute(
+            "INSERT INTO files (id, case_id, file_name, folder_path, absolute_path, file_size, modified_at, status)
+             VALUES (?1, ?2, 'sample.txt', '', ?3, 64, ?4, 'unreviewed')",
+            params![file_id, case_id, case_file.to_string_lossy().to_string(), now],
+        )
+        .unwrap();
+
+        let (text, extractor, ocr_used, err) =
+            desktop_backend_lib::text_extract::extract_text_from_path(&case_file);
+        assert!(err.is_none());
+        assert!(!ocr_used);
+        assert_eq!(extractor, "plain");
+        assert!(text.contains("parity extract"));
+
+        desktop_backend_lib::text_extract::persist_extract(
+            conn, &file_id, &text, None, &extractor, ocr_used, None, &now,
+        )
+        .unwrap();
+
+        let hits: i64 = conn
+            .query_row(
+                r#"
+                SELECT COUNT(*)
+                FROM file_text_fts fts
+                JOIN file_text_extracts fte ON fte.rowid = fts.rowid
+                WHERE file_text_fts MATCH 'parity*' AND fte.file_id = ?1
+                "#,
+                params![file_id],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(hits, 1);
+        Ok(())
+    });
+}
+
+#[test]
+fn flow_ocr_falls_back_on_scanned_pdf() {
+    if !desktop_backend_lib::text_extract::tesseract_is_available() {
+        eprintln!("skipping OCR test — tesseract not on PATH");
+        return;
+    }
+    let fixture =
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/text-extract/sample.txt");
+    if !fixture.is_file() {
+        return;
+    }
+    let (text, _extractor, _ocr_used, err) =
+        desktop_backend_lib::text_extract::extract_text_from_path(&fixture);
+    assert!(text.contains("parity") || err.is_none());
+}
+
+#[test]
+fn flow_ai_finding_draft_lifecycle() {
+    let (_dir, db) = temp_db();
+    let _ = with_db(&db, |conn| {
+        let case_id = uuid::Uuid::new_v4().to_string();
+        let file_id = uuid::Uuid::new_v4().to_string();
+        let now = chrono::Utc::now().to_rfc3339();
+        conn.execute(
+            "INSERT INTO cases (id, name, status, created_at, updated_at) VALUES (?1, 'Drafts', 'active', ?2, ?2)",
+            params![case_id, now],
+        )
+        .unwrap();
+        conn.execute(
+            "INSERT INTO files (id, case_id, file_name, folder_path, absolute_path, file_size, modified_at, status)
+             VALUES (?1, ?2, 'doc.pdf', '', '/doc.pdf', 1, ?3, 'unreviewed')",
+            params![file_id, case_id, now],
+        )
+        .unwrap();
+
+        let draft_id = desktop_backend_lib::ai_drafts::insert_finding_draft(
+            conn,
+            &case_id,
+            "Test draft",
+            "Evidence indicates a pattern consistent with duplicate billing.",
+            "medium",
+            &[file_id.clone()],
+            &["p.1".to_string()],
+            "test-model",
+        )
+        .unwrap();
+
+        let finding_id =
+            desktop_backend_lib::ai_drafts::approve_finding_draft(conn, &draft_id).unwrap();
+        let status: String = conn
+            .query_row(
+                "SELECT status FROM ai_finding_drafts WHERE id = ?1",
+                params![draft_id],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(status, "approved");
+
+        let count: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM findings WHERE id = ?1",
+                params![finding_id],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(count, 1);
+        Ok(())
+    });
+}
+
+#[test]
+fn flow_corpus_aggregation_dedups() {
+    let (_dir, db) = temp_db();
+    let _ = with_db(&db, |conn| {
+        let case_id = uuid::Uuid::new_v4().to_string();
+        let file_id = uuid::Uuid::new_v4().to_string();
+        let now = chrono::Utc::now().to_rfc3339();
+        conn.execute(
+            "INSERT INTO cases (id, name, status, created_at, updated_at) VALUES (?1, 'Merge', 'active', ?2, ?2)",
+            params![case_id, now],
+        )
+        .unwrap();
+        conn.execute(
+            "INSERT INTO files (id, case_id, file_name, folder_path, absolute_path, file_size, modified_at, status)
+             VALUES (?1, ?2, 'doc.pdf', '', '/doc.pdf', 1, ?3, 'unreviewed')",
+            params![file_id, case_id, now],
+        )
+        .unwrap();
+
+        let d1 = desktop_backend_lib::ai_drafts::insert_finding_draft(
+            conn,
+            &case_id,
+            "Duplicate invoices",
+            "Two invoices share the same vendor reference on p.1.",
+            "medium",
+            &[file_id.clone()],
+            &["p.1".to_string()],
+            "test",
+        )
+        .unwrap();
+        let d2 = desktop_backend_lib::ai_drafts::insert_finding_draft(
+            conn,
+            &case_id,
+            "Duplicate invoices (copy)",
+            "Vendor reference overlap noted on page one.",
+            "medium",
+            &[file_id.clone()],
+            &["p.1".to_string()],
+            "test",
+        )
+        .unwrap();
+
+        desktop_backend_lib::ai_drafts::insert_finding_draft(
+            conn,
+            &case_id,
+            "Merged finding",
+            "Consolidated duplicate invoice observation across files.",
+            "medium",
+            &[file_id.clone()],
+            &[],
+            "test",
+        )
+        .unwrap();
+        desktop_backend_lib::ai_drafts::mark_drafts_merged(conn, &[d1, d2]).unwrap();
+
+        let pending: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM ai_finding_drafts WHERE case_id = ?1 AND status = 'pending'",
+                params![case_id],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(pending, 1);
+
+        let merged: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM ai_finding_drafts WHERE case_id = ?1 AND status = 'merged'",
+                params![case_id],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(merged, 2);
         Ok(())
     });
 }

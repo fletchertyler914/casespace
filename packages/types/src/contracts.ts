@@ -95,6 +95,21 @@ export interface FileNoteCount {
   count: number;
 }
 
+export type ApiKeySource = "keychain" | "env" | "none";
+
+export interface AiSettings {
+  apiKeySet: boolean;
+  apiKeySource: ApiKeySource;
+  model: string;
+  baseUrl: string;
+}
+
+export interface AiConnectionTestResult {
+  ok: boolean;
+  message: string;
+  latencyMs: number;
+}
+
 export interface CaseFileMetadata {
   fileId: string;
   metadataJson: string;
@@ -303,4 +318,73 @@ export interface CaseReport {
   caseId: string;
   summary: string;
   generatedAt: string;
+}
+
+/** Result of batch text extraction across a case corpus. */
+export interface ExtractCaseTextSummary {
+  processed: number;
+  succeeded: number;
+  failed: number;
+}
+
+/** Per-file text extraction progress event payload. */
+export interface TextExtractProgress {
+  fileId: string;
+  ok: boolean;
+  ocrUsed: boolean;
+  charCount: number;
+  error?: string;
+}
+
+export interface FileTextExtractResult {
+  fileId: string;
+  charCount: number;
+  extractor: string;
+  ocrUsed: boolean;
+  extractedAt: string;
+  extractError?: string;
+}
+
+export interface AiFindingDraft {
+  id: string;
+  caseId: string;
+  title: string;
+  description: string;
+  severity: string;
+  linkedFileIds?: string[];
+  pageAnchors?: string[];
+  model?: string;
+  status: string;
+  createdAt: string;
+}
+
+export interface AiTimelineDraft {
+  id: string;
+  caseId: string;
+  description: string;
+  occurredAt: string;
+  sourceFileId?: string;
+  pageAnchor?: string;
+  model?: string;
+  status: string;
+  createdAt: string;
+}
+
+export interface AiEntityDraft {
+  id: string;
+  caseId: string;
+  kind: string;
+  value: string;
+  sourceFileId?: string;
+  pageAnchor?: string;
+  count: number;
+  model?: string;
+  status: string;
+  createdAt: string;
+}
+
+export interface AiDraftsBundle {
+  findingDrafts: AiFindingDraft[];
+  timelineDrafts: AiTimelineDraft[];
+  entityDrafts: AiEntityDraft[];
 }

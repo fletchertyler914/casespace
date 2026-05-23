@@ -199,6 +199,22 @@ export const e2eMockInvoke = (async (command, args = {}) => {
       return ".DS_Store,Thumbs.db";
     case "save_system_file_filter_config":
       return null;
+    case "get_ai_settings":
+      return {
+        apiKeySet: true,
+        apiKeySource: "keychain",
+        model: "gpt-4o-mini",
+        baseUrl: "https://api.openai.com/v1/chat/completions",
+      };
+    case "save_ai_settings":
+    case "clear_ai_api_key":
+      return null;
+    case "test_ai_connection":
+      return {
+        ok: true,
+        message: "Connected to https://api.openai.com/v1/chat/completions with gpt-4o-mini",
+        latencyMs: 12,
+      };
     case "list_findings":
       return mockFindings;
     case "list_timeline_events":
@@ -270,6 +286,52 @@ export const e2eMockInvoke = (async (command, args = {}) => {
       };
     case "generate_case_report":
       return mockReportDocument(String(args.templateId ?? "cfe-long"));
+    case "generate_ai_case_report":
+      return mockReportDocument(String(args.templateId ?? "cfe-long"));
+    case "extract_case_text":
+      return { processed: 2, succeeded: 2, failed: 0 };
+    case "extract_file_text":
+      return {
+        fileId: String(args.fileId ?? "file-1"),
+        charCount: 1200,
+        extractor: "plain",
+        ocrUsed: false,
+        extractedAt: new Date().toISOString(),
+      };
+    case "analyze_file_with_ai":
+      return 1;
+    case "analyze_case_with_ai":
+      return 0;
+    case "list_ai_drafts":
+      return {
+        findingDrafts: [
+          {
+            id: "draft-1",
+            caseId: E2E_CASE_ID,
+            title: "Mock AI finding",
+            description: "E2E mock finding from evidence on p.1.",
+            severity: "medium",
+            linkedFileIds: ["file-1"],
+            pageAnchors: ["p.1"],
+            status: "pending",
+            createdAt: new Date().toISOString(),
+          },
+        ],
+        timelineDrafts: [],
+        entityDrafts: [],
+      };
+    case "approve_ai_finding_draft":
+    case "approve_ai_timeline_draft":
+    case "approve_ai_entity_draft":
+      return "approved-id";
+    case "reject_ai_finding_draft":
+    case "reject_ai_timeline_draft":
+    case "reject_ai_entity_draft":
+      return null;
+    case "count_approved_ai_findings":
+      return 1;
+    case "get_tesseract_available":
+      return true;
     case "seed_sample_fraud_case":
       return {
         id: "sample-fraud-examination",

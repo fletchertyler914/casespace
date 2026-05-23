@@ -120,6 +120,8 @@ Per [ai-capability-matrix.md](spec/ai-capability-matrix.md): default **redacted-
 |------|-----------|--------|-------|
 | 2026-05-21 | pass (scaffold) | — | `@repo/agents` package: tool policy, report/supervisor graphs, MCP tool defs; desktop `AgentPanel` + approvals queue |
 | 2026-05-22 | pass (Wave A + C1/C2 local) | — | v0.1.9: report template library + `ReportDocument` citations; MCP server stub + redaction + report graph wired in AgentPanel with approval queue |
+| 2026-05-22 | pass (AI report drafting) | — | v0.1.10 local: `generate_ai_case_report` provider call from Tauri, section-text merge, citation/compliance preservation |
+| 2026-05-22 | pass (evidence-to-report) | — | v0.1.11 local: extract → per-file AI analyze → corpus dedupe → ApprovalsQueue → AI report draft |
 
 ## Implementation phases
 
@@ -127,21 +129,28 @@ Per [ai-capability-matrix.md](spec/ai-capability-matrix.md): default **redacted-
 |-------|-------|--------|
 | **C0** Scaffold + spike | `packages/agents` skeleton, policy table, graph stubs, `AgentPanel`/`ApprovalsQueue` | **Done (0.1.8)** |
 | **C1** MCP server + native bridge | `packages/agents/src/mcp/server.ts` + memory checkpointer stub | **Done (0.1.9 local)** — native Sqlite `agent_runs` deferred |
-| **C2** Graphs + UI wiring | `report_generation` graph → AgentPanel → ApprovalsQueue approve/reject | **Done (0.1.9 local)** — deterministic compose via native command; LLM stream deferred |
+| **C2** Graphs + UI wiring | `report_generation` graph → extract/analyze/aggregate → ApprovalsQueue → AI report draft | **Implemented locally (0.1.11)** — full evidence-to-report pipeline |
 | **C3** Arcade external | Optional Gmail/Slack via Arcade MCP gateway | post-UX gate |
 | **C4** Validation + AINative GA | E2E agent round-trip + PMF gate | blocked on [pmf-gate-eval.md](spec/pmf-gate-eval.md) |
 
 Template library (Wave A) is the anchoring contract for C2 — see [spec/report-library-research.md](spec/report-library-research.md) and [spec/pmf-thesis-cfe.md](spec/pmf-thesis-cfe.md).
 
-## Report generation integration (updated 0.1.9)
+## Report generation integration (updated 2026-05-22)
 
 Native command: `generate_case_report(caseId, templateId?)` returns JSON `ReportDocument` with `sections[].citations[]` and `compliance[]` footer. Composer: `apps/desktop-backend/src-tauri/src/reports.rs`.
 
-Agent overlay (shipped locally):
+AI command: `generate_ai_case_report(caseId, templateId?)` uses the user-configured AI provider settings, sends redacted/source-grounded section packets to the configured OpenAI-compatible model, and merges model-written section prose back into the citation/compliance-checked `ReportDocument`.
 
-1. `AgentPanel` → `createReportGenerationGraph({ loadArtifacts, composeReport })`
-2. `load` node aggregates artifacts via `command-client` (redacted via `redactForLlm`)
-3. `draft` node calls `generate_case_report` (deterministic; LLM overlay later)
-4. `review` → `ApprovalsQueue` → `onReportDraft` pushes draft to reports workspace
+Credential storage: CaseSpace uses a bring-your-own-key model for distributed builds. The API key is stored via the OS keychain (`keyring` crate) under the app service name, while non-secret model/base URL settings live in the local `app_settings` SQLite table. `OPENAI_API_KEY` / `CASESPACE_OPENAI_API_KEY` remain development and CI fallbacks only; UI-facing AI features are gated until a key is available from keychain or env.
+
+Agent overlay (v0.1.11):
+
+1. `AgentPanel` / reports workspace → `createReportGenerationGraph({ extractCaseText, analyzeFileWithAi, analyzeCaseWithAi, listAiDrafts, loadArtifacts, draftReport, composeFallbackReport })`
+2. `extract` → `analyzeFiles` (per-file) → `aggregate` (corpus dedupe) → `review` interrupt with AI finding/timeline/entity drafts in `ApprovalsQueue`
+3. After approval, `load` aggregates approved artifacts via `command-client` (redacted via `redactForLlm`)
+4. `draft` node calls `generate_ai_case_report`; deterministic `generate_case_report` remains fallback
+5. Report draft approval → reports workspace; approved finding drafts persist to `findings` with linked files + page anchors
+
+Legacy two-node path (load → draft) is superseded by the full pipeline above.
 
 Out of scope until UX gate clears: ML-driven duplicate auto-merge, auto-summarize on ingest, Arcade SaaS connectors.

@@ -25,7 +25,7 @@ fn segment_duration_seconds(started_at: &str, ended_at: Option<&str>) -> Result<
     Ok((end_ts - start.timestamp()).max(0))
 }
 
-const SCHEMA_VERSION: i32 = 7;
+const SCHEMA_VERSION: i32 = 8;
 
 fn table_has_column(conn: &Connection, table: &str, column: &str) -> Result<bool, String> {
     let mut stmt = conn
@@ -81,6 +81,105 @@ CREATE INDEX IF NOT EXISTS idx_report_export_history_case_id ON report_export_hi
 const MIGRATION_V7: &str = r#"
 ALTER TABLE report_export_history ADD COLUMN template_id TEXT;
 ALTER TABLE report_export_history ADD COLUMN citations_json TEXT;
+"#;
+
+const MIGRATION_V8: &str = r#"
+CREATE TABLE IF NOT EXISTS file_text_extracts (
+    file_id TEXT PRIMARY KEY,
+    text TEXT NOT NULL DEFAULT '',
+    page_offsets TEXT,
+    char_count INTEGER NOT NULL DEFAULT 0,
+    extractor TEXT NOT NULL DEFAULT 'unknown',
+    ocr_used INTEGER NOT NULL DEFAULT 0,
+    extracted_at TEXT NOT NULL,
+    extract_error TEXT,
+    FOREIGN KEY (file_id) REFERENCES files(id) ON DELETE CASCADE
+);
+
+CREATE VIRTUAL TABLE IF NOT EXISTS file_text_fts USING fts5(
+    text,
+    content='file_text_extracts',
+    content_rowid='rowid',
+    tokenize='porter unicode61'
+);
+
+CREATE TRIGGER IF NOT EXISTS file_text_fts_insert AFTER INSERT ON file_text_extracts BEGIN
+    INSERT INTO file_text_fts(rowid, text) VALUES (new.rowid, new.text);
+END;
+CREATE TRIGGER IF NOT EXISTS file_text_fts_delete AFTER DELETE ON file_text_extracts BEGIN
+    INSERT INTO file_text_fts(file_text_fts, rowid, text) VALUES('delete', old.rowid, old.text);
+END;
+CREATE TRIGGER IF NOT EXISTS file_text_fts_update AFTER UPDATE ON file_text_extracts BEGIN
+    INSERT INTO file_text_fts(file_text_fts, rowid, text) VALUES('delete', old.rowid, old.text);
+    INSERT INTO file_text_fts(rowid, text) VALUES (new.rowid, new.text);
+END;
+
+CREATE TABLE IF NOT EXISTS ai_finding_drafts (
+    id TEXT PRIMARY KEY,
+    case_id TEXT NOT NULL,
+    title TEXT NOT NULL,
+    description TEXT NOT NULL,
+    severity TEXT NOT NULL DEFAULT 'medium',
+    linked_file_ids TEXT,
+    page_anchors TEXT,
+    model TEXT,
+    prompt_hash TEXT,
+    status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','approved','rejected','merged')),
+    created_at TEXT NOT NULL,
+    decided_at TEXT,
+    decided_by_finding_id TEXT,
+    FOREIGN KEY (case_id) REFERENCES cases(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS ai_timeline_drafts (
+    id TEXT PRIMARY KEY,
+    case_id TEXT NOT NULL,
+    description TEXT NOT NULL,
+    occurred_at TEXT NOT NULL,
+    source_file_id TEXT,
+    page_anchor TEXT,
+    model TEXT,
+    status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','approved','rejected','merged')),
+    created_at TEXT NOT NULL,
+    decided_at TEXT,
+    decided_by_event_id TEXT,
+    FOREIGN KEY (case_id) REFERENCES cases(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS ai_entity_drafts (
+    id TEXT PRIMARY KEY,
+    case_id TEXT NOT NULL,
+    kind TEXT NOT NULL,
+    value TEXT NOT NULL,
+    source_file_id TEXT,
+    page_anchor TEXT,
+    count INTEGER NOT NULL DEFAULT 1,
+    model TEXT,
+    status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','approved','rejected','merged')),
+    created_at TEXT NOT NULL,
+    decided_at TEXT,
+    FOREIGN KEY (case_id) REFERENCES cases(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS ai_run_log (
+    id TEXT PRIMARY KEY,
+    case_id TEXT NOT NULL,
+    command TEXT NOT NULL,
+    model TEXT,
+    prompt_chars INTEGER NOT NULL DEFAULT 0,
+    response_chars INTEGER NOT NULL DEFAULT 0,
+    started_at TEXT NOT NULL,
+    ended_at TEXT,
+    status TEXT NOT NULL DEFAULT 'running',
+    error TEXT,
+    FOREIGN KEY (case_id) REFERENCES cases(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_file_text_extracts_file ON file_text_extracts(file_id);
+CREATE INDEX IF NOT EXISTS idx_ai_finding_drafts_case ON ai_finding_drafts(case_id, status);
+CREATE INDEX IF NOT EXISTS idx_ai_timeline_drafts_case ON ai_timeline_drafts(case_id, status);
+CREATE INDEX IF NOT EXISTS idx_ai_entity_drafts_case ON ai_entity_drafts(case_id, status);
+CREATE INDEX IF NOT EXISTS idx_ai_run_log_case ON ai_run_log(case_id, started_at);
 "#;
 
 const MIGRATION_V1: &str = r#"
@@ -339,9 +438,7 @@ impl Database {
         if table_has_column(conn, "time_entries", "entry_date")? {
             return Ok(());
         }
-        eprintln!(
-            "casespace: repairing time_entries schema (day-based v6 migration required)"
-        );
+        eprintln!("casespace: repairing time_entries schema (day-based v6 migration required)");
         self.migrate_v6_day_based_entries(conn)
     }
 
@@ -373,9 +470,7 @@ impl Database {
                 )
                 .map_err(|e| format!("migration v4 backfill prepare: {e}"))?;
             let rows: Vec<(String, String, Option<String>)> = stmt
-                .query_map([], |row| {
-                    Ok((row.get(0)?, row.get(1)?, row.get(2)?))
-                })
+                .query_map([], |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)))
                 .map_err(|e| format!("migration v4 backfill query: {e}"))?
                 .filter_map(Result::ok)
                 .collect();
@@ -401,6 +496,10 @@ impl Database {
                 conn.execute_batch(MIGRATION_V7)
                     .map_err(|e| format!("migration v7 failed: {e}"))?;
             }
+        }
+        if version == 8 {
+            conn.execute_batch(MIGRATION_V8)
+                .map_err(|e| format!("migration v8 failed: {e}"))?;
         }
         let now = chrono::Utc::now().to_rfc3339();
         conn.execute(
@@ -537,22 +636,29 @@ impl Database {
                  FROM time_segments",
             )
             .map_err(|e| format!("migration v6 read segments: {e}"))?;
-        let seg_rows: Vec<(String, String, String, Option<String>, Option<f64>, i64, Option<String>)> =
-            seg_stmt
-                .query_map([], |row| {
-                    Ok((
-                        row.get(0)?,
-                        row.get(1)?,
-                        row.get(2)?,
-                        row.get(3)?,
-                        row.get(4)?,
-                        row.get(5)?,
-                        row.get(6)?,
-                    ))
-                })
-                .map_err(|e| format!("migration v6 query segments: {e}"))?
-                .filter_map(Result::ok)
-                .collect();
+        let seg_rows: Vec<(
+            String,
+            String,
+            String,
+            Option<String>,
+            Option<f64>,
+            i64,
+            Option<String>,
+        )> = seg_stmt
+            .query_map([], |row| {
+                Ok((
+                    row.get(0)?,
+                    row.get(1)?,
+                    row.get(2)?,
+                    row.get(3)?,
+                    row.get(4)?,
+                    row.get(5)?,
+                    row.get(6)?,
+                ))
+            })
+            .map_err(|e| format!("migration v6 query segments: {e}"))?
+            .filter_map(Result::ok)
+            .collect();
 
         let timer_rows: Vec<(String, String)> = conn
             .prepare("SELECT case_id, entry_id FROM active_timers")
@@ -575,8 +681,15 @@ impl Database {
             conn.execute("DELETE FROM time_segments", [])
                 .map_err(|e| format!("migration v6 clear segments: {e}"))?;
 
-            for (seg_id, old_entry_id, started_at, ended_at, rate_override, discount_percent, notes) in
-                seg_rows
+            for (
+                seg_id,
+                old_entry_id,
+                started_at,
+                ended_at,
+                rate_override,
+                discount_percent,
+                notes,
+            ) in seg_rows
             {
                 let Some(new_entry_id) = entry_id_map.get(&old_entry_id).cloned() else {
                     continue;
@@ -620,9 +733,7 @@ impl Database {
             .map_err(|e| format!("migration v6 fk on: {e}"))?;
 
         if !table_has_column(conn, "time_entries", "entry_date")? {
-            return Err(
-                "migration v6 failed: time_entries still missing entry_date column".into(),
-            );
+            return Err("migration v6 failed: time_entries still missing entry_date column".into());
         }
         eprintln!("casespace: time_entries schema upgraded to day-based v6");
 

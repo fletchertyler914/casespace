@@ -23,7 +23,7 @@ test.describe("Time and reports (FLOW-005/006)", () => {
   test("report mode shows generate action", async ({ page }) => {
     await page.getByTitle("Examination report").click();
     await expect(
-      page.getByRole("button", { name: /Generate report/i }),
+      page.getByRole("button", { name: /Generate AI report/i }),
     ).toBeVisible();
     await expect(
       page.getByRole("button", { name: /Findings/i }).first(),
@@ -32,11 +32,22 @@ test.describe("Time and reports (FLOW-005/006)", () => {
 
   test("generates case report from report workspace", async ({ page }) => {
     await page.getByTitle("Examination report").click();
-    await page.getByRole("button", { name: /Generate report/i }).click();
+    await page.getByRole("button", { name: /Generate AI report/i }).click();
     await expect(
       page.getByRole("button", { name: /Findings/i }).first(),
     ).toBeVisible({
       timeout: 10_000,
     });
+  });
+
+  test("analyze case button runs mocked extract pipeline", async ({ page }) => {
+    await page.getByTitle("Examination report").click();
+    await expect(
+      page.getByRole("button", { name: /Analyze case/i }),
+    ).toBeVisible();
+    await page.getByRole("button", { name: /Analyze case/i }).click();
+    await expect(
+      page.getByRole("button", { name: /Analyzing|Starting analysis/i }),
+    ).toBeVisible({ timeout: 5000 });
   });
 });

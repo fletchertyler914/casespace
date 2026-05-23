@@ -69,8 +69,26 @@ Native Tauri commands exposed to `apps/desktop` via `lib/command-client.ts`.
 | `calculate_billing_amount` | billing | implemented | REQ-TIME-001 — fixed/daily/weekly/monthly + segment overrides |
 | `extract_file_metadata` | ingest | implemented | REQ-INGEST-001 |
 | `generate_case_report` | reports | implemented | REQ-REPORT-001 — accepts optional `templateId`; returns JSON `ReportDocument` |
+| `generate_ai_case_report` | reports / agents | implemented locally | REQ-REPORT-001 / Agent C2 — accepts optional `templateId`; requires user AI provider key from OS keychain or env fallback; returns citation-backed JSON `ReportDocument` |
+| `extract_file_text` | ai / ingest | implemented locally | Schema v8 — per-file text extraction with OCR fallback |
+| `extract_case_text` | ai / ingest | implemented locally | Batch extract; emits `text-extract-progress` events |
+| `get_ai_settings` | ai / settings | implemented locally | Returns AI key availability/source plus model and base URL; never returns the API key |
+| `save_ai_settings` | ai / settings | implemented locally | Saves API key to OS keychain and model/base URL to `app_settings` |
+| `clear_ai_api_key` | ai / settings | implemented locally | Removes the keychain-stored AI provider key |
+| `test_ai_connection` | ai / settings | implemented locally | Tests the configured OpenAI-compatible endpoint and returns status/latency |
+| `analyze_file_with_ai` | ai | implemented locally | Per-file finding/timeline/entity draft generation |
+| `analyze_case_with_ai` | ai | implemented locally | Corpus dedupe/merge pass over pending finding drafts |
+| `list_ai_drafts` | ai | implemented locally | Returns pending finding/timeline/entity drafts |
+| `approve_ai_finding_draft` | ai | implemented locally | Persists approved draft → `findings` row |
+| `reject_ai_finding_draft` | ai | implemented locally | Marks draft rejected |
+| `approve_ai_timeline_draft` | ai | implemented locally | Persists approved draft → `timeline_events` row |
+| `reject_ai_timeline_draft` | ai | implemented locally | Marks draft rejected |
+| `approve_ai_entity_draft` | ai | implemented locally | Marks entity draft approved (audit trail) |
+| `reject_ai_entity_draft` | ai | implemented locally | Marks draft rejected |
+| `count_approved_ai_findings` | ai | implemented locally | Badge count for reports workspace |
+| `get_tesseract_available` | ai | implemented locally | OCR capability probe |
 | `seed_sample_fraud_case` | cases | implemented | PMF demo — seeds sample fraud examination case |
 | `export_case_report` | reports | implemented | REQ-REPORT-001 |
-| `run_ocr_preview` | ai | stub | REQ-AI-001 |
+| `run_ocr_preview` | ai | implemented locally | REQ-AI-001 — delegates to text extractor (preview capped at 4k chars) |
 
 See [spec/commands-and-contracts.md](spec/commands-and-contracts.md).

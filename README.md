@@ -2,7 +2,7 @@
 
 CaseSpace is a desktop-first investigative case workspace for CFE and fraud examination practitioners. The product ships as a **3-app monorepo**: native engine, desktop UX, and marketing/download web surface.
 
-**Current release line:** `0.1.9` (see [GitHub Releases](https://github.com/fletchertyler914/casespace/releases))  
+**Current release line:** `0.1.11` local (evidence-to-report pipeline — extract, AI analysis, draft approval; see [GitHub Releases](https://github.com/fletchertyler914/casespace/releases))  
 **Status:** Core backend and desktop UX are **implemented locally**; production release validation and native E2E sign-off are the remaining gates before calling the product **release-validated**. Details: [`docs/readiness.md`](docs/readiness.md), [`docs/product-roadmap.md`](docs/product-roadmap.md).
 
 ## Repository layout
@@ -44,6 +44,16 @@ pnpm dev:web      # marketing :3001
 ```bash
 pnpm ops:validate:local   # lint, types, tests, build, parity
 ```
+
+AI features use a bring-your-own-key provider model. In the desktop app, open Settings -> AI provider and add an OpenAI-compatible API key; CaseSpace stores the secret in the OS keychain and keeps model/base URL in local app settings. Developers can still set `OPENAI_API_KEY` or `CASESPACE_OPENAI_API_KEY` in `.env` for local `pnpm dev`; optional env overrides include `CASESPACE_OPENAI_MODEL` / `OPENAI_MODEL` and `CASESPACE_OPENAI_API_URL`.
+
+**OCR (scanned PDFs / images):** install [Tesseract](https://github.com/tesseract-ocr/tesseract) on your PATH:
+
+- macOS: `brew install tesseract`
+- Linux: `apt install tesseract-ocr`
+- Windows: [UB Mannheim installer](https://github.com/UB-Mannheim/tesseract/wiki)
+
+Optional env overrides for the analysis pipeline: `CASESPACE_ANALYSIS_MODEL`, `CASESPACE_ANALYSIS_MAX_CHARS` (default 60k), `CASESPACE_ANALYSIS_TOKEN_CEILING` (default 1M).
 
 Next.js is catalog-pinned in `pnpm-workspace.yaml` (**16.2.6**). Do not float framework versions in app `package.json`.
 

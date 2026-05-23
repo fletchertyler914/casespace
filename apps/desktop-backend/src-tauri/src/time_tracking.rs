@@ -220,12 +220,17 @@ fn get_or_create_day_entry(conn: &Connection, case_id: &str, day: &str) -> Resul
     Ok(id)
 }
 
-fn stop_other_active_timers(conn: &Connection, except_case_id: &str) -> Result<Vec<String>, String> {
+fn stop_other_active_timers(
+    conn: &Connection,
+    except_case_id: &str,
+) -> Result<Vec<String>, String> {
     let mut stmt = conn
         .prepare("SELECT case_id, entry_id FROM active_timers WHERE case_id != ?1")
         .map_err(|e| e.to_string())?;
     let rows: Vec<(String, String)> = stmt
-        .query_map(params![except_case_id], |row| Ok((row.get(0)?, row.get(1)?)))
+        .query_map(params![except_case_id], |row| {
+            Ok((row.get(0)?, row.get(1)?))
+        })
         .map_err(|e| e.to_string())?
         .filter_map(Result::ok)
         .collect();
@@ -272,10 +277,7 @@ pub fn load_billing_config(conn: &Connection, case_id: &str) -> Result<CaseBilli
     }
 }
 
-fn segment_billable_amount(
-    seg: &TimeSegment,
-    config: &CaseBillingConfig,
-) -> f64 {
+fn segment_billable_amount(seg: &TimeSegment, config: &CaseBillingConfig) -> f64 {
     let seconds = if seg.duration_seconds > 0 {
         seg.duration_seconds
     } else {
@@ -501,9 +503,7 @@ pub fn get_time_entries(
             .map_err(|e| e.to_string())?
             .filter_map(Result::ok)
             .collect();
-        ids.iter()
-            .map(|id| load_time_entry(conn, id))
-            .collect()
+        ids.iter().map(|id| load_time_entry(conn, id)).collect()
     })
 }
 
@@ -562,7 +562,10 @@ pub fn get_time_entries_summary(
 }
 
 #[tauri::command]
-pub fn get_active_timer(case_id: String, state: State<AppState>) -> Result<Option<ActiveTimer>, String> {
+pub fn get_active_timer(
+    case_id: String,
+    state: State<AppState>,
+) -> Result<Option<ActiveTimer>, String> {
     with_conn(&state, |conn| {
         let row = conn.query_row(
             "SELECT case_id, entry_id, started_at FROM active_timers WHERE case_id = ?1",
@@ -712,11 +715,13 @@ pub fn update_time_segment(
             )
             .map_err(|e| e.to_string())?;
         }
-        let (s, e): (String, Option<String>) = conn.query_row(
-            "SELECT started_at, ended_at FROM time_segments WHERE id = ?1",
-            params![segment_id],
-            |row| Ok((row.get(0)?, row.get(1)?)),
-        ).map_err(|e| e.to_string())?;
+        let (s, e): (String, Option<String>) = conn
+            .query_row(
+                "SELECT started_at, ended_at FROM time_segments WHERE id = ?1",
+                params![segment_id],
+                |row| Ok((row.get(0)?, row.get(1)?)),
+            )
+            .map_err(|e| e.to_string())?;
         if let Some(end) = e.as_deref() {
             if parse_iso(end)? < parse_iso(&s)? {
                 return Err("segment end must be after start".into());
@@ -747,8 +752,11 @@ pub fn delete_time_segment(segment_id: String, state: State<AppState>) -> Result
                 |row| row.get(0),
             )
             .map_err(|_| "time segment not found".to_string())?;
-        conn.execute("DELETE FROM time_segments WHERE id = ?1", params![segment_id])
-            .map_err(|e| e.to_string())?;
+        conn.execute(
+            "DELETE FROM time_segments WHERE id = ?1",
+            params![segment_id],
+        )
+        .map_err(|e| e.to_string())?;
         recalc_entry_total_seconds(conn, &entry_id)?;
         Ok(())
     })
@@ -764,10 +772,16 @@ pub fn delete_time_entry(entry_id: String, state: State<AppState>) -> Result<(),
                 |row| row.get(0),
             )
             .map_err(|_| "time entry not found".to_string())?;
-        conn.execute("DELETE FROM active_timers WHERE case_id = ?1", params![case_id])
-            .ok();
-        conn.execute("DELETE FROM time_segments WHERE entry_id = ?1", params![entry_id])
-            .map_err(|e| e.to_string())?;
+        conn.execute(
+            "DELETE FROM active_timers WHERE case_id = ?1",
+            params![case_id],
+        )
+        .ok();
+        conn.execute(
+            "DELETE FROM time_segments WHERE entry_id = ?1",
+            params![entry_id],
+        )
+        .map_err(|e| e.to_string())?;
         conn.execute("DELETE FROM time_entries WHERE id = ?1", params![entry_id])
             .map_err(|e| e.to_string())?;
         Ok(())
@@ -775,7 +789,10 @@ pub fn delete_time_entry(entry_id: String, state: State<AppState>) -> Result<(),
 }
 
 #[tauri::command]
-pub fn get_case_billing_config(case_id: String, state: State<AppState>) -> Result<CaseBillingConfig, String> {
+pub fn get_case_billing_config(
+    case_id: String,
+    state: State<AppState>,
+) -> Result<CaseBillingConfig, String> {
     with_conn(&state, |conn| load_billing_config(conn, &case_id))
 }
 
@@ -818,7 +835,10 @@ pub fn set_case_billing_config(
 }
 
 #[tauri::command]
-pub fn calculate_billing_amount(case_id: String, state: State<AppState>) -> Result<BillingSummary, String> {
+pub fn calculate_billing_amount(
+    case_id: String,
+    state: State<AppState>,
+) -> Result<BillingSummary, String> {
     with_conn(&state, |conn| {
         let config = load_billing_config(conn, &case_id)?;
         let (total_seconds, amount, _) = compute_case_billing_totals(conn, &case_id)?;
@@ -833,9 +853,13 @@ pub fn calculate_billing_amount(case_id: String, state: State<AppState>) -> Resu
 }
 
 #[tauri::command]
-pub fn calculate_case_total(case_id: String, state: State<AppState>) -> Result<CaseBillingTotal, String> {
+pub fn calculate_case_total(
+    case_id: String,
+    state: State<AppState>,
+) -> Result<CaseBillingTotal, String> {
     with_conn(&state, |conn| {
-        let (total_seconds, total_amount, total_days) = compute_case_billing_totals(conn, &case_id)?;
+        let (total_seconds, total_amount, total_days) =
+            compute_case_billing_totals(conn, &case_id)?;
         Ok(CaseBillingTotal {
             case_id,
             total_amount,

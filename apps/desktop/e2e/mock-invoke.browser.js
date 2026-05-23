@@ -149,6 +149,22 @@
         return ".DS_Store,Thumbs.db";
       case "save_system_file_filter_config":
         return null;
+      case "get_ai_settings":
+        return {
+          apiKeySet: true,
+          apiKeySource: "keychain",
+          model: "gpt-4o-mini",
+          baseUrl: "https://api.openai.com/v1/chat/completions",
+        };
+      case "save_ai_settings":
+      case "clear_ai_api_key":
+        return null;
+      case "test_ai_connection":
+        return {
+          ok: true,
+          message: "Connected to https://api.openai.com/v1/chat/completions with gpt-4o-mini",
+          latencyMs: 12,
+        };
       case "get_mapping_config_db":
         return null;
       case "list_findings":
@@ -194,6 +210,7 @@
           generatedAt: new Date().toISOString(),
         };
       case "generate_case_report":
+      case "generate_ai_case_report":
         return JSON.stringify({
           templateId: args.templateId || "cfe-long",
           caseId: "e2e-case-1",

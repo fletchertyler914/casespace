@@ -33,6 +33,10 @@ export class CaseSpaceMcpServer {
   }
 
   async generateReport(caseId: string, templateId: ReportTemplateId) {
+    return this.invoke("generate_ai_case_report", { caseId, templateId });
+  }
+
+  async generateDeterministicReport(caseId: string, templateId: ReportTemplateId) {
     return this.invoke("generate_case_report", { caseId, templateId });
   }
 }

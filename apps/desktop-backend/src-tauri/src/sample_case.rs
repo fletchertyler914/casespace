@@ -105,16 +105,56 @@ pub fn seed_sample_fraud_case(conn: &Connection) -> Result<CaseSummary, String> 
     }
 
     let timeline_specs = [
-        ("2023-01-15T09:00:00Z", "Initial complaint received from controller", None),
-        ("2023-01-20T14:00:00Z", "Bank statements obtained for Q1-Q2", Some(file_ids[0].clone())),
-        ("2023-02-01T10:30:00Z", "Interview with accounts payable clerk", Some(file_ids[7].clone())),
-        ("2023-02-10T16:00:00Z", "Duplicate invoice identified in AP system", Some(file_ids[2].clone())),
-        ("2023-02-15T11:00:00Z", "Wire transfer to Vendor X confirmed", Some(file_ids[6].clone())),
-        ("2023-03-01T09:00:00Z", "Site visit — document collection", Some(file_ids[11].clone())),
-        ("2023-03-10T13:00:00Z", "Ledger extract analyzed", Some(file_ids[9].clone())),
-        ("2023-03-20T15:00:00Z", "Email approval thread reviewed", Some(file_ids[3].clone())),
-        ("2023-04-01T10:00:00Z", "Draft findings circulated internally", None),
-        ("2023-04-15T14:00:00Z", "Management response meeting scheduled", None),
+        (
+            "2023-01-15T09:00:00Z",
+            "Initial complaint received from controller",
+            None,
+        ),
+        (
+            "2023-01-20T14:00:00Z",
+            "Bank statements obtained for Q1-Q2",
+            Some(file_ids[0].clone()),
+        ),
+        (
+            "2023-02-01T10:30:00Z",
+            "Interview with accounts payable clerk",
+            Some(file_ids[7].clone()),
+        ),
+        (
+            "2023-02-10T16:00:00Z",
+            "Duplicate invoice identified in AP system",
+            Some(file_ids[2].clone()),
+        ),
+        (
+            "2023-02-15T11:00:00Z",
+            "Wire transfer to Vendor X confirmed",
+            Some(file_ids[6].clone()),
+        ),
+        (
+            "2023-03-01T09:00:00Z",
+            "Site visit — document collection",
+            Some(file_ids[11].clone()),
+        ),
+        (
+            "2023-03-10T13:00:00Z",
+            "Ledger extract analyzed",
+            Some(file_ids[9].clone()),
+        ),
+        (
+            "2023-03-20T15:00:00Z",
+            "Email approval thread reviewed",
+            Some(file_ids[3].clone()),
+        ),
+        (
+            "2023-04-01T10:00:00Z",
+            "Draft findings circulated internally",
+            None,
+        ),
+        (
+            "2023-04-15T14:00:00Z",
+            "Management response meeting scheduled",
+            None,
+        ),
     ];
 
     for (occurred, desc, source) in timeline_specs {

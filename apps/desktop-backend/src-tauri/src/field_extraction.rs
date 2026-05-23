@@ -267,7 +267,10 @@ pub fn parse_pattern_config(value: &serde_json::Value) -> Option<ExtractionPatte
             .and_then(|f| f.as_str())
             .filter(|s| !s.is_empty())
             .map(str::to_string),
-        group: value.get("group").and_then(|g| g.as_u64()).map(|g| g as usize),
+        group: value
+            .get("group")
+            .and_then(|g| g.as_u64())
+            .map(|g| g as usize),
         format: value
             .get("format")
             .and_then(|f| f.as_str())
@@ -280,7 +283,10 @@ pub fn parse_pattern_config(value: &serde_json::Value) -> Option<ExtractionPatte
 }
 
 pub fn parse_mapping_rule(mapping: &serde_json::Value) -> Option<FieldMappingRule> {
-    let enabled = mapping.get("enabled").and_then(|e| e.as_bool()).unwrap_or(true);
+    let enabled = mapping
+        .get("enabled")
+        .and_then(|e| e.as_bool())
+        .unwrap_or(true);
     if !enabled {
         return None;
     }
@@ -293,9 +299,7 @@ pub fn parse_mapping_rule(mapping: &serde_json::Value) -> Option<FieldMappingRul
         .map(ExtractionMethod::from_str)
         .unwrap_or(ExtractionMethod::Direct);
 
-    let pattern = mapping
-        .get("patternConfig")
-        .and_then(parse_pattern_config);
+    let pattern = mapping.get("patternConfig").and_then(parse_pattern_config);
 
     Some(FieldMappingRule {
         source_type: source_type.to_string(),
@@ -374,7 +378,6 @@ mod tests {
         assert_eq!(folder_name_from_path("a/b/c"), "c");
         assert_eq!(folder_name_from_path(""), "");
     }
-
 }
 
 /// Extract ISO-like date strings from file names or text (ingest timeline hints).

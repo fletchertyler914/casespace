@@ -9,6 +9,7 @@ describe("tool-policy", () => {
 
   it("marks routine commands as autonomous", () => {
     expect(isAutonomous("generate_case_report")).toBe(true);
+    expect(isAutonomous("generate_ai_case_report")).toBe(true);
     expect(isAutonomous("search_all")).toBe(true);
   });
 });

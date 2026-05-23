@@ -5,6 +5,7 @@ export const TOOL_POLICY: Record<string, ToolPolicyTier> = {
   load_case_files: "autonomous",
   search_all: "autonomous",
   generate_case_report: "autonomous",
+  generate_ai_case_report: "autonomous",
   create_note: "autonomous",
   update_file_status: "autonomous",
   create_finding: "autonomous",

@@ -22,6 +22,11 @@ import type {
   TimeEntriesSummary,
   TimeEntry,
   TimeSegment,
+  ExtractCaseTextSummary,
+  FileTextExtractResult,
+  AiDraftsBundle,
+  AiConnectionTestResult,
+  AiSettings,
 } from "@repo/types";
 
 function toResponse<T>(data: T): CommandResponse<T> {
@@ -177,6 +182,26 @@ export const commandClient = {
   },
   saveSystemFileFilterConfig(patterns: string) {
     return safeInvoke<void>("save_system_file_filter_config", { patterns });
+  },
+  getAiSettings() {
+    return safeInvoke<AiSettings>("get_ai_settings", {});
+  },
+  saveAiSettings(payload: {
+    apiKey?: string;
+    model: string;
+    baseUrl: string;
+  }) {
+    return safeInvoke<void>("save_ai_settings", {
+      apiKey: payload.apiKey ?? null,
+      model: payload.model,
+      baseUrl: payload.baseUrl,
+    });
+  },
+  clearAiApiKey() {
+    return safeInvoke<void>("clear_ai_api_key", {});
+  },
+  testAiConnection() {
+    return safeInvoke<AiConnectionTestResult>("test_ai_connection", {});
   },
   updateNote(noteId: string, content: string) {
     return safeInvoke<Note>("update_note", { noteId, content });
@@ -418,6 +443,57 @@ export const commandClient = {
   },
   generateCaseReport(caseId: string, templateId?: string) {
     return safeInvoke<string>("generate_case_report", { caseId, templateId });
+  },
+  generateAiCaseReport(caseId: string, templateId?: string) {
+    return safeInvoke<string>("generate_ai_case_report", { caseId, templateId });
+  },
+  extractFileText(caseId: string, fileId: string, force?: boolean) {
+    return safeInvoke<FileTextExtractResult>("extract_file_text", {
+      caseId,
+      fileId,
+      force,
+    });
+  },
+  extractCaseText(caseId: string, force?: boolean) {
+    return safeInvoke<ExtractCaseTextSummary>("extract_case_text", {
+      caseId,
+      force,
+    });
+  },
+  analyzeFileWithAi(caseId: string, fileId: string) {
+    return safeInvoke<number>("analyze_file_with_ai", { caseId, fileId });
+  },
+  analyzeCaseWithAi(caseId: string) {
+    return safeInvoke<number>("analyze_case_with_ai", { caseId });
+  },
+  listAiDrafts(caseId: string) {
+    return safeInvoke<AiDraftsBundle>("list_ai_drafts", {
+      caseId,
+    });
+  },
+  approveAiFindingDraft(draftId: string) {
+    return safeInvoke<string>("approve_ai_finding_draft", { draftId });
+  },
+  rejectAiFindingDraft(draftId: string, reason?: string) {
+    return safeInvoke<void>("reject_ai_finding_draft", { draftId, reason });
+  },
+  approveAiTimelineDraft(draftId: string) {
+    return safeInvoke<string>("approve_ai_timeline_draft", { draftId });
+  },
+  rejectAiTimelineDraft(draftId: string, reason?: string) {
+    return safeInvoke<void>("reject_ai_timeline_draft", { draftId, reason });
+  },
+  approveAiEntityDraft(draftId: string) {
+    return safeInvoke<void>("approve_ai_entity_draft", { draftId });
+  },
+  rejectAiEntityDraft(draftId: string, reason?: string) {
+    return safeInvoke<void>("reject_ai_entity_draft", { draftId, reason });
+  },
+  countApprovedAiFindings(caseId: string) {
+    return safeInvoke<number>("count_approved_ai_findings", { caseId });
+  },
+  getTesseractAvailable() {
+    return safeInvoke<boolean>("get_tesseract_available", {});
   },
   seedSampleFraudCase() {
     return safeInvoke<CaseSummary>("seed_sample_fraud_case", {});

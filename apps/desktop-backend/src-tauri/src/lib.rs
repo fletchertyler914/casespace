@@ -1,3 +1,8 @@
+mod ai_analysis;
+pub mod ai_drafts;
+mod ai_provider;
+mod ai_reports;
+mod ai_settings;
 pub mod database;
 pub mod field_extraction;
 pub mod ingest;
@@ -7,6 +12,7 @@ mod report_templates_generated;
 mod reports;
 mod sample_case;
 mod search;
+pub mod text_extract;
 mod time_tracking;
 
 pub use reports::{build_report_body, build_report_document};
@@ -21,7 +27,7 @@ use std::{
     fs,
     path::{Path, PathBuf},
 };
-use tauri::{AppHandle, Manager, State};
+use tauri::{AppHandle, Emitter, Manager, State};
 use uuid::Uuid;
 use walkdir::WalkDir;
 
@@ -215,7 +221,10 @@ where
     f(&mut db)
 }
 
-fn list_sources_for_case(conn: &rusqlite::Connection, case_id: &str) -> Result<Vec<String>, String> {
+fn list_sources_for_case(
+    conn: &rusqlite::Connection,
+    case_id: &str,
+) -> Result<Vec<String>, String> {
     let mut stmt = conn
         .prepare("SELECT source_path FROM case_sources WHERE case_id = ?1 ORDER BY added_at")
         .map_err(|e| e.to_string())?;
@@ -259,7 +268,8 @@ fn folder_path_for_file_under_roots(file: &Path, roots: &[String]) -> Option<Str
             return Some(rel);
         }
     }
-    file.parent().map(|p| p.to_string_lossy().replace('\\', "/"))
+    file.parent()
+        .map(|p| p.to_string_lossy().replace('\\', "/"))
 }
 
 fn scan_files_under(
@@ -277,7 +287,11 @@ fn scan_files_under(
     String,
 )> {
     let mut out = Vec::new();
-    for entry in WalkDir::new(root).into_iter().filter_map(Result::ok).take(limit) {
+    for entry in WalkDir::new(root)
+        .into_iter()
+        .filter_map(Result::ok)
+        .take(limit)
+    {
         let Ok(metadata) = entry.metadata() else {
             continue;
         };
@@ -553,7 +567,8 @@ fn ingest_files_to_case(
         if !case_exists(conn, &case_id)? {
             return Err("case not found".into());
         }
-        let sources: Vec<String> = if let Some(path) = source_path.filter(|p| !p.trim().is_empty()) {
+        let sources: Vec<String> = if let Some(path) = source_path.filter(|p| !p.trim().is_empty())
+        {
             vec![path]
         } else {
             list_sources_for_case(conn, &case_id)?
@@ -767,10 +782,7 @@ fn check_file_changed(
         let path = PathBuf::from(&row.0);
         let current_hash = hash_file(&path);
         let changed = current_hash != row.1;
-        Ok(FileChangeCheck {
-            file_id,
-            changed,
-        })
+        Ok(FileChangeCheck { file_id, changed })
     })
 }
 
@@ -852,7 +864,10 @@ fn remove_file_from_case(
 }
 
 #[tauri::command]
-fn find_duplicate_files(case_id: String, state: State<AppState>) -> Result<Vec<DuplicateGroup>, String> {
+fn find_duplicate_files(
+    case_id: String,
+    state: State<AppState>,
+) -> Result<Vec<DuplicateGroup>, String> {
     with_conn(&state, |conn| {
         let mut stmt = conn
             .prepare(
@@ -901,8 +916,11 @@ fn mark_duplicate_primary(
         if file_ids.len() < 2 {
             return Err("duplicate group not found".into());
         }
-        conn.execute("DELETE FROM duplicate_groups WHERE group_id = ?1", params![group_id])
-            .map_err(|e| e.to_string())?;
+        conn.execute(
+            "DELETE FROM duplicate_groups WHERE group_id = ?1",
+            params![group_id],
+        )
+        .map_err(|e| e.to_string())?;
         for file_id in &file_ids {
             conn.execute(
                 "INSERT INTO duplicate_groups (group_id, file_id, is_primary, created_at) VALUES (?1, ?2, ?3, ?4)",
@@ -1115,11 +1133,7 @@ fn list_case_file_metadata(
 }
 
 #[tauri::command]
-fn update_note(
-    note_id: String,
-    content: String,
-    state: State<AppState>,
-) -> Result<Note, String> {
+fn update_note(note_id: String, content: String, state: State<AppState>) -> Result<Note, String> {
     let now = now_iso();
     with_conn(&state, |conn| {
         conn.execute(
@@ -1436,6 +1450,61 @@ fn update_timeline_event(
 const SYSTEM_FILE_FILTER_KEY: &str = "system_file_filter";
 
 #[tauri::command]
+fn get_ai_settings(state: State<AppState>) -> Result<ai_settings::AiSettings, String> {
+    with_conn(&state, ai_settings::load)
+}
+
+#[tauri::command]
+fn save_ai_settings(
+    api_key: Option<String>,
+    model: String,
+    base_url: String,
+    state: State<AppState>,
+) -> Result<(), String> {
+    with_conn(&state, |conn| {
+        ai_settings::save(conn, api_key, model, base_url)
+    })
+}
+
+#[tauri::command]
+fn clear_ai_api_key() -> Result<(), String> {
+    ai_settings::clear_api_key()
+}
+
+#[tauri::command]
+async fn test_ai_connection(
+    state: State<'_, AppState>,
+) -> Result<ai_settings::AiConnectionTestResult, String> {
+    let settings = {
+        let conn = state.db.conn.lock().map_err(|_| "db lock poisoned")?;
+        ai_settings::load(&conn)?
+    };
+    let started = std::time::Instant::now();
+    let result = ai_provider::call_openai_json_with_timeout_and_settings(
+        "Return JSON only.",
+        "{\"ping\":true}".to_string(),
+        30,
+        settings.model.clone(),
+        settings.base_url.clone(),
+    )
+    .await;
+    let latency_ms = started.elapsed().as_millis();
+
+    Ok(match result {
+        Ok(_) => ai_settings::AiConnectionTestResult {
+            ok: true,
+            message: format!("Connected to {} with {}", settings.base_url, settings.model),
+            latency_ms,
+        },
+        Err(e) => ai_settings::AiConnectionTestResult {
+            ok: false,
+            message: e,
+            latency_ms,
+        },
+    })
+}
+
+#[tauri::command]
 fn get_system_file_filter_config(state: State<AppState>) -> Result<Option<String>, String> {
     with_conn(&state, |conn| {
         conn.query_row(
@@ -1464,8 +1533,11 @@ fn save_system_file_filter_config(patterns: String, state: State<AppState>) -> R
 #[tauri::command]
 fn delete_timeline_event(event_id: String, state: State<AppState>) -> Result<(), String> {
     with_conn(&state, |conn| {
-        conn.execute("DELETE FROM timeline_events WHERE id = ?1", params![event_id])
-            .map_err(|e| e.to_string())?;
+        conn.execute(
+            "DELETE FROM timeline_events WHERE id = ?1",
+            params![event_id],
+        )
+        .map_err(|e| e.to_string())?;
         Ok(())
     })
 }
@@ -1485,7 +1557,11 @@ fn get_column_config_db(case_id: String, state: State<AppState>) -> Result<Optio
 }
 
 #[tauri::command]
-fn save_column_config_db(case_id: String, config_data: String, state: State<AppState>) -> Result<(), String> {
+fn save_column_config_db(
+    case_id: String,
+    config_data: String,
+    state: State<AppState>,
+) -> Result<(), String> {
     with_conn(&state, |conn| {
         conn.execute(
             "INSERT INTO column_configs (case_id, config_data, updated_at) VALUES (?1, ?2, ?3)
@@ -1498,7 +1574,10 @@ fn save_column_config_db(case_id: String, config_data: String, state: State<AppS
 }
 
 #[tauri::command]
-fn get_mapping_config_db(case_id: String, state: State<AppState>) -> Result<Option<String>, String> {
+fn get_mapping_config_db(
+    case_id: String,
+    state: State<AppState>,
+) -> Result<Option<String>, String> {
     with_conn(&state, |conn| {
         let config = conn
             .query_row(
@@ -1512,7 +1591,11 @@ fn get_mapping_config_db(case_id: String, state: State<AppState>) -> Result<Opti
 }
 
 #[tauri::command]
-fn save_mapping_config_db(case_id: String, config_data: String, state: State<AppState>) -> Result<(), String> {
+fn save_mapping_config_db(
+    case_id: String,
+    config_data: String,
+    state: State<AppState>,
+) -> Result<(), String> {
     with_conn(&state, |conn| {
         conn.execute(
             "INSERT INTO mapping_configs (case_id, config_data, updated_at) VALUES (?1, ?2, ?3)
@@ -1524,11 +1607,10 @@ fn save_mapping_config_db(case_id: String, config_data: String, state: State<App
     })
 }
 
-fn reapply_mappings_inner(
-    conn: &rusqlite::Connection,
-    case_id: &str,
-) -> Result<u32, String> {
-    use field_extraction::{apply_mapping_rule, folder_name_from_path, parse_mapping_rule, RegexCache};
+fn reapply_mappings_inner(conn: &rusqlite::Connection, case_id: &str) -> Result<u32, String> {
+    use field_extraction::{
+        apply_mapping_rule, folder_name_from_path, parse_mapping_rule, RegexCache,
+    };
     use std::collections::HashMap;
 
     let mapping_config_json: Option<String> = conn
@@ -1556,10 +1638,7 @@ fn reapply_mappings_inner(
         return Ok(0);
     }
 
-    let rules: Vec<_> = mappings
-        .iter()
-        .filter_map(parse_mapping_rule)
-        .collect();
+    let rules: Vec<_> = mappings.iter().filter_map(parse_mapping_rule).collect();
 
     if rules.is_empty() {
         return Ok(0);
@@ -1773,6 +1852,30 @@ pub fn fts_search(
         .map_err(|e| e.to_string())?;
     hits.extend(file_rows.filter_map(Result::ok));
 
+    let mut file_text_stmt = conn
+        .prepare(
+            r#"
+            SELECT f.id, f.file_name, substr(fte.text, 1, 120)
+            FROM file_text_fts fts
+            JOIN file_text_extracts fte ON fte.rowid = fts.rowid
+            JOIN files f ON f.id = fte.file_id
+            WHERE file_text_fts MATCH ?1 AND f.case_id = ?2 AND f.deleted_at IS NULL
+            LIMIT ?3
+            "#,
+        )
+        .map_err(|e| e.to_string())?;
+    let file_text_rows = file_text_stmt
+        .query_map(params![term, case_id, lim], |row| {
+            Ok(SearchHit {
+                id: row.get(0)?,
+                entity_type: "file_content".to_string(),
+                title: row.get(1)?,
+                snippet: row.get(2)?,
+            })
+        })
+        .map_err(|e| e.to_string())?;
+    hits.extend(file_text_rows.filter_map(Result::ok));
+
     let mut note_stmt = conn
         .prepare(
             r#"
@@ -1852,7 +1955,9 @@ fn search_files(
     limit: Option<u32>,
     state: State<AppState>,
 ) -> Result<Vec<SearchHit>, String> {
-    with_conn(&state, |conn| fts_search(conn, &case_id, &query, limit.unwrap_or(50)))
+    with_conn(&state, |conn| {
+        fts_search(conn, &case_id, &query, limit.unwrap_or(50))
+    })
 }
 
 #[tauri::command]
@@ -1900,7 +2005,9 @@ fn search_all(
     limit: Option<u32>,
     state: State<AppState>,
 ) -> Result<Vec<SearchHit>, String> {
-    with_conn(&state, |conn| fts_search(conn, &case_id, &query, limit.unwrap_or(50)))
+    with_conn(&state, |conn| {
+        fts_search(conn, &case_id, &query, limit.unwrap_or(50))
+    })
 }
 
 #[tauri::command]
@@ -1930,11 +2037,7 @@ async fn check_for_update(app: AppHandle) -> Result<Option<UpdateCheckResult>, S
 }
 
 #[tauri::command]
-fn read_file_text(
-    case_id: String,
-    path: String,
-    state: State<AppState>,
-) -> Result<String, String> {
+fn read_file_text(case_id: String, path: String, state: State<AppState>) -> Result<String, String> {
     let roots = state.db.list_case_roots(Some(&case_id))?;
     let safe = path::validate_safe_path(&path, &roots)?;
     fs::read_to_string(safe).map_err(|e| format!("failed to read file: {e}"))
@@ -1979,10 +2082,266 @@ fn run_ocr_preview(
 ) -> Result<String, String> {
     let roots = state.db.list_case_roots(Some(&case_id))?;
     let safe = path::validate_safe_path(&file_path, &roots)?;
-    Ok(format!(
-        "OCR fallback preview for {}. AI phase required for full extraction.",
-        safe.display()
-    ))
+    let (text, _, _, err) = text_extract::extract_text_from_path(&safe);
+    if let Some(e) = err {
+        return Err(e);
+    }
+    Ok(text.chars().take(4000).collect())
+}
+
+#[tauri::command]
+fn get_tesseract_available() -> bool {
+    text_extract::tesseract_is_available()
+}
+
+#[tauri::command]
+fn extract_file_text(
+    case_id: String,
+    file_id: String,
+    force: Option<bool>,
+    state: State<AppState>,
+) -> Result<text_extract::FileTextExtractResult, String> {
+    let extracted_at = now_iso();
+    with_conn(&state, |conn| {
+        if !case_exists(conn, &case_id)? {
+            return Err("case not found".into());
+        }
+        ai_analysis::extract_and_store_file(
+            conn,
+            &case_id,
+            &file_id,
+            force.unwrap_or(false),
+            &extracted_at,
+        )
+    })
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct ExtractCaseTextSummary {
+    processed: u32,
+    succeeded: u32,
+    failed: u32,
+}
+
+#[tauri::command]
+async fn extract_case_text(
+    case_id: String,
+    force: Option<bool>,
+    app: AppHandle,
+    state: State<'_, AppState>,
+) -> Result<ExtractCaseTextSummary, String> {
+    let file_ids: Vec<String> = with_conn(&state, |conn| {
+        if !case_exists(conn, &case_id)? {
+            return Err("case not found".into());
+        }
+        let mut stmt = conn
+            .prepare(
+                "SELECT id FROM files WHERE case_id = ?1 AND deleted_at IS NULL ORDER BY file_name",
+            )
+            .map_err(|e| e.to_string())?;
+        let rows = stmt
+            .query_map(params![case_id], |row| row.get(0))
+            .map_err(|e| e.to_string())?;
+        Ok(rows.filter_map(Result::ok).collect())
+    })?;
+
+    let extracted_at = now_iso();
+    let force = force.unwrap_or(false);
+    let mut succeeded = 0u32;
+    let mut failed = 0u32;
+
+    for file_id in &file_ids {
+        let result = with_conn(&state, |conn| {
+            ai_analysis::extract_and_store_file(conn, &case_id, file_id, force, &extracted_at)
+        });
+        match result {
+            Ok(r) => {
+                if r.extract_error.is_some() && r.char_count == 0 {
+                    failed += 1;
+                } else {
+                    succeeded += 1;
+                }
+                let _ = app.emit(
+                    "text-extract-progress",
+                    text_extract::TextExtractProgress {
+                        file_id: file_id.clone(),
+                        ok: r.extract_error.is_none() || r.char_count > 0,
+                        ocr_used: r.ocr_used,
+                        char_count: r.char_count,
+                        error: r.extract_error,
+                    },
+                );
+            }
+            Err(e) => {
+                failed += 1;
+                let _ = app.emit(
+                    "text-extract-progress",
+                    text_extract::TextExtractProgress {
+                        file_id: file_id.clone(),
+                        ok: false,
+                        ocr_used: false,
+                        char_count: 0,
+                        error: Some(e),
+                    },
+                );
+            }
+        }
+    }
+
+    Ok(ExtractCaseTextSummary {
+        processed: file_ids.len() as u32,
+        succeeded,
+        failed,
+    })
+}
+
+#[tauri::command]
+async fn analyze_file_with_ai(
+    case_id: String,
+    file_id: String,
+    state: State<'_, AppState>,
+) -> Result<u32, String> {
+    let (prepared, model, base_url) = {
+        let conn = state.db.conn.lock().map_err(|_| "db lock poisoned")?;
+        if !case_exists(&conn, &case_id)? {
+            return Err("case not found".into());
+        }
+        let model = ai_settings::model_name(Some(&conn));
+        (
+            ai_analysis::prepare_file_analysis(&conn, &case_id, &file_id, &model)?,
+            model,
+            ai_settings::base_url(Some(&conn)),
+        )
+    };
+    let raw = match ai_provider::call_openai_json_file_with_settings(
+        "You are a CFE evidence analyst. Return strict JSON only.",
+        prepared.prompt.clone(),
+        model,
+        base_url,
+    )
+    .await
+    {
+        Ok(r) => r,
+        Err(e) => {
+            let conn = state.db.conn.lock().map_err(|_| "db lock poisoned")?;
+            ai_analysis::fail_file_analysis(&conn, &prepared, &e);
+            return Err(e);
+        }
+    };
+    let count = {
+        let conn = state.db.conn.lock().map_err(|_| "db lock poisoned")?;
+        ai_analysis::persist_file_analysis(&conn, &prepared, &raw)?
+    };
+    Ok(count as u32)
+}
+
+#[tauri::command]
+async fn analyze_case_with_ai(case_id: String, state: State<'_, AppState>) -> Result<u32, String> {
+    let (prepared, model, base_url) = {
+        let conn = state.db.conn.lock().map_err(|_| "db lock poisoned")?;
+        if !case_exists(&conn, &case_id)? {
+            return Err("case not found".into());
+        }
+        let model = ai_settings::model_name(Some(&conn));
+        (
+            ai_analysis::prepare_corpus_analysis(&conn, &case_id, &model)?,
+            model,
+            ai_settings::base_url(Some(&conn)),
+        )
+    };
+    let Some(prepared) = prepared else {
+        return Ok(0);
+    };
+    let raw = match ai_provider::call_openai_json_corpus_with_settings(
+        "You deduplicate CFE finding drafts. Return strict JSON only.",
+        prepared.prompt.clone(),
+        model,
+        base_url,
+    )
+    .await
+    {
+        Ok(r) => r,
+        Err(e) => {
+            let conn = state.db.conn.lock().map_err(|_| "db lock poisoned")?;
+            ai_analysis::fail_corpus_analysis(&conn, &prepared, &e);
+            return Err(e);
+        }
+    };
+    let count = {
+        let conn = state.db.conn.lock().map_err(|_| "db lock poisoned")?;
+        ai_analysis::persist_corpus_analysis(&conn, &prepared, &raw)?
+    };
+    Ok(count as u32)
+}
+
+#[tauri::command]
+fn list_ai_drafts(
+    case_id: String,
+    state: State<AppState>,
+) -> Result<ai_drafts::AiDraftsBundle, String> {
+    with_conn(&state, |conn| ai_drafts::list_ai_drafts(conn, &case_id))
+}
+
+#[tauri::command]
+fn approve_ai_finding_draft(draft_id: String, state: State<AppState>) -> Result<String, String> {
+    with_conn(&state, |conn| {
+        ai_drafts::approve_finding_draft(conn, &draft_id)
+    })
+}
+
+#[tauri::command]
+fn reject_ai_finding_draft(
+    draft_id: String,
+    _reason: Option<String>,
+    state: State<AppState>,
+) -> Result<(), String> {
+    with_conn(&state, |conn| {
+        ai_drafts::reject_finding_draft(conn, &draft_id)
+    })
+}
+
+#[tauri::command]
+fn approve_ai_timeline_draft(draft_id: String, state: State<AppState>) -> Result<String, String> {
+    with_conn(&state, |conn| {
+        ai_drafts::approve_timeline_draft(conn, &draft_id)
+    })
+}
+
+#[tauri::command]
+fn reject_ai_timeline_draft(
+    draft_id: String,
+    _reason: Option<String>,
+    state: State<AppState>,
+) -> Result<(), String> {
+    with_conn(&state, |conn| {
+        ai_drafts::reject_timeline_draft(conn, &draft_id)
+    })
+}
+
+#[tauri::command]
+fn approve_ai_entity_draft(draft_id: String, state: State<AppState>) -> Result<(), String> {
+    with_conn(&state, |conn| {
+        ai_drafts::approve_entity_draft(conn, &draft_id)
+    })
+}
+
+#[tauri::command]
+fn reject_ai_entity_draft(
+    draft_id: String,
+    _reason: Option<String>,
+    state: State<AppState>,
+) -> Result<(), String> {
+    with_conn(&state, |conn| {
+        ai_drafts::reject_entity_draft(conn, &draft_id)
+    })
+}
+
+#[tauri::command]
+fn count_approved_ai_findings(case_id: String, state: State<AppState>) -> Result<i64, String> {
+    with_conn(&state, |conn| {
+        ai_drafts::count_approved_finding_drafts(conn, &case_id)
+    })
 }
 
 fn export_dir(app: &AppHandle, case_id: &str) -> Result<PathBuf, String> {
@@ -2012,8 +2371,8 @@ fn export_case_report(
     let file_name = format!("{}-{}-{}.md", case_id, report_type, unix_now());
     let file_path = dir.join(&file_name);
     fs::write(&file_path, &doc.markdown).map_err(|e| e.to_string())?;
-    let citations_json = serde_json::to_string(&reports::all_citations(&doc.sections))
-        .map_err(|e| e.to_string())?;
+    let citations_json =
+        serde_json::to_string(&reports::all_citations(&doc.sections)).map_err(|e| e.to_string())?;
     let export = ReportExport {
         report_type: report_type.clone(),
         file_path: file_path.to_string_lossy().to_string(),
@@ -2087,12 +2446,50 @@ fn generate_case_report(
 }
 
 #[tauri::command]
+async fn generate_ai_case_report(
+    case_id: String,
+    template_id: Option<String>,
+    state: State<'_, AppState>,
+) -> Result<String, String> {
+    let tid = template_id.unwrap_or_else(|| "cfe-long".to_string());
+    if !report_templates_generated::is_known_template(&tid) {
+        return Err(format!("unknown report template: {tid}"));
+    }
+    let generated_at = now_iso();
+    let prepared = {
+        let conn = state.db.conn.lock().map_err(|_| "db lock poisoned")?;
+        ai_reports::prepare_ai_report_document(&case_id, &tid, &generated_at, &conn)?
+    };
+    let doc = ai_reports::generate_ai_report_document(prepared).await?;
+    serde_json::to_string(&doc).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
 fn seed_sample_fraud_case(state: State<AppState>) -> Result<CaseSummary, String> {
     with_conn(&state, |conn| sample_case::seed_sample_fraud_case(conn))
 }
 
+/// Load `.env` from the closest ancestor of the binary's cwd (dev only).
+/// Packaged builds will not find one — that is expected; in production users
+/// supply env vars via their OS keychain or shell.
+fn load_dotenv_from_workspace() {
+    if let Ok(cwd) = std::env::current_dir() {
+        let mut dir: Option<&Path> = Some(cwd.as_path());
+        while let Some(d) = dir {
+            let candidate = d.join(".env");
+            if candidate.is_file() {
+                let _ = dotenvy::from_path(&candidate);
+                break;
+            }
+            dir = d.parent();
+        }
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    load_dotenv_from_workspace();
+
     let mut builder = tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init());
@@ -2155,6 +2552,10 @@ pub fn run() {
             list_timeline_events,
             update_timeline_event,
             delete_timeline_event,
+            get_ai_settings,
+            save_ai_settings,
+            clear_ai_api_key,
+            test_ai_connection,
             get_system_file_filter_config,
             save_system_file_filter_config,
             time_tracking::start_timer,
@@ -2193,6 +2594,20 @@ pub fn run() {
             export_case_report,
             list_report_exports,
             generate_case_report,
+            generate_ai_case_report,
+            extract_file_text,
+            extract_case_text,
+            analyze_file_with_ai,
+            analyze_case_with_ai,
+            list_ai_drafts,
+            approve_ai_finding_draft,
+            reject_ai_finding_draft,
+            approve_ai_timeline_draft,
+            reject_ai_timeline_draft,
+            approve_ai_entity_draft,
+            reject_ai_entity_draft,
+            count_approved_ai_findings,
+            get_tesseract_available,
             seed_sample_fraud_case,
             check_for_update,
         ])
@@ -2209,9 +2624,7 @@ mod parity_unit {
     #[test]
     fn relative_folder_path_strips_case_root() {
         let root = Path::new("/cases/divorce-case-2024");
-        let file = Path::new(
-            "/cases/divorce-case-2024/01-legal-documents/court-orders/notice.pdf",
-        );
+        let file = Path::new("/cases/divorce-case-2024/01-legal-documents/court-orders/notice.pdf");
         assert_eq!(
             relative_folder_path(file, root).as_deref(),
             Some("01-legal-documents/court-orders")

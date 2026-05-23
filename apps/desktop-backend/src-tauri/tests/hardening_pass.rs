@@ -50,8 +50,11 @@ fn write_seed_fixture(root: &Path) -> Result<(), String> {
     }
     for i in 0..5 {
         let payload = format!("{{\"id\":{i},\"token\":\"ALPHA_TOKEN\"}}");
-        fs::write(root.join("nested/a").join(format!("meta_{i:02}.json")), payload)
-            .map_err(|e| e.to_string())?;
+        fs::write(
+            root.join("nested/a").join(format!("meta_{i:02}.json")),
+            payload,
+        )
+        .map_err(|e| e.to_string())?;
     }
     for i in 0..5 {
         fs::write(
@@ -69,8 +72,8 @@ fn write_seed_fixture(root: &Path) -> Result<(), String> {
     }
     // Minimal PNG signature + IHDR chunk stub. Enough for binary/image handling paths.
     let png_bytes: [u8; 33] = [
-        137, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 13, 73, 72, 68, 82, 0, 0, 0, 1, 0, 0, 0, 1,
-        8, 2, 0, 0, 0, 144, 119, 83, 222,
+        137, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 13, 73, 72, 68, 82, 0, 0, 0, 1, 0, 0, 0, 1, 8, 2,
+        0, 0, 0, 144, 119, 83, 222,
     ];
     for i in 0..5 {
         fs::write(root.join(format!("image_{i:02}.png")), png_bytes).map_err(|e| e.to_string())?;
@@ -112,7 +115,10 @@ fn ingest_fixture(db: &Database, case_id: &str, source_path: &Path) {
                 .extension()
                 .map(|e| e.to_string_lossy().to_string())
                 .unwrap_or_default();
-            let hash = format!("{:x}", Sha256::digest(fs::read(entry.path()).unwrap_or_default()));
+            let hash = format!(
+                "{:x}",
+                Sha256::digest(fs::read(entry.path()).unwrap_or_default())
+            );
             conn.execute(
                 "INSERT INTO files (id, case_id, file_name, folder_path, absolute_path, file_hash, file_size, modified_at, status, deleted_at)
                  VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, 'unreviewed', NULL)",
@@ -171,12 +177,18 @@ fn hardening_seed_fixture_matches_golden_manifest() {
         for token in manifest.required_tokens {
             // Token coverage check across text-ish files.
             let mut seen = false;
-            for entry in WalkDir::new(&fixture_root).into_iter().filter_map(Result::ok) {
+            for entry in WalkDir::new(&fixture_root)
+                .into_iter()
+                .filter_map(Result::ok)
+            {
                 if !entry.file_type().is_file() {
                     continue;
                 }
                 let path = entry.path();
-                let ext = path.extension().and_then(|v| v.to_str()).unwrap_or_default();
+                let ext = path
+                    .extension()
+                    .and_then(|v| v.to_str())
+                    .unwrap_or_default();
                 if matches!(ext, "txt" | "md" | "json" | "csv" | "log") {
                     let content = fs::read_to_string(path).unwrap_or_default();
                     if content.contains(&token) {

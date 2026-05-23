@@ -39,12 +39,7 @@ pub fn seed_case_with_source(conn: &Connection, case_id: &str, source_path: &str
     .unwrap();
     conn.execute(
         "INSERT INTO case_sources (id, case_id, source_path, added_at) VALUES (?1, ?2, ?3, ?4)",
-        params![
-            uuid::Uuid::new_v4().to_string(),
-            case_id,
-            source_path,
-            now
-        ],
+        params![uuid::Uuid::new_v4().to_string(), case_id, source_path, now],
     )
     .unwrap();
 }

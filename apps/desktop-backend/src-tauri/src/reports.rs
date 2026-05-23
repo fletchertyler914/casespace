@@ -215,11 +215,7 @@ fn build_findings_section(findings: &[FindingRow], files: &[FileRow]) -> ReportS
     let mut lines = Vec::new();
     for f in findings {
         let linked = parse_linked_files(f.linked_files.clone());
-        let sev = f
-            .severity
-            .as_deref()
-            .unwrap_or("unspecified")
-            .to_string();
+        let sev = f.severity.as_deref().unwrap_or("unspecified").to_string();
         lines.push(format!(
             "### {} ({})\n{}\n",
             f.title,
@@ -261,10 +257,7 @@ fn build_timeline_section(events: &[TimelineRow], files: &[FileRow]) -> ReportSe
     let mut citations = Vec::new();
     let mut lines = Vec::new();
     for ev in events {
-        lines.push(format!(
-            "- **{}**: {}\n",
-            ev.occurred_at, ev.description
-        ));
+        lines.push(format!("- **{}**: {}\n", ev.occurred_at, ev.description));
         citations.push(Citation {
             kind: "timeline".to_string(),
             id: ev.id.clone(),
@@ -310,7 +303,14 @@ fn build_inventory_section(files: &[FileRow]) -> ReportSection {
     }
 }
 
-fn build_overview_section(case: &CaseRow, case_id: &str, files: &[FileRow], findings: &[FindingRow], notes: &[NoteRow], timeline: &[TimelineRow]) -> ReportSection {
+fn build_overview_section(
+    case: &CaseRow,
+    case_id: &str,
+    files: &[FileRow],
+    findings: &[FindingRow],
+    notes: &[NoteRow],
+    timeline: &[TimelineRow],
+) -> ReportSection {
     let text = format!(
         "Case: **{}**\n\nEvidence files: {} | Findings: {} | Notes: {} | Timeline events: {}\n",
         case.name,
@@ -333,10 +333,16 @@ fn build_overview_section(case: &CaseRow, case_id: &str, files: &[FileRow], find
     }
 }
 
-fn build_executive_section(case: &CaseRow, findings: &[FindingRow], timeline: &[TimelineRow]) -> ReportSection {
+fn build_executive_section(
+    case: &CaseRow,
+    findings: &[FindingRow],
+    timeline: &[TimelineRow],
+) -> ReportSection {
     let critical = findings
         .iter()
-        .filter(|f| f.severity.as_deref() == Some("critical") || f.severity.as_deref() == Some("high"))
+        .filter(|f| {
+            f.severity.as_deref() == Some("critical") || f.severity.as_deref() == Some("high")
+        })
         .count();
     let text = format!(
         "Examination of **{}** identified {} documented finding(s) ({} high/critical severity) across {} chronology entries. \
@@ -373,7 +379,8 @@ document findings and chronology, and prepare a defensible examination report fo
 fn build_approach_section(notes: &[NoteRow]) -> ReportSection {
     let mut citations = Vec::new();
     let methods = if notes.is_empty() {
-        "Document review, artifact analysis, and structured examination workflows within CaseSpace.".to_string()
+        "Document review, artifact analysis, and structured examination workflows within CaseSpace."
+            .to_string()
     } else {
         format!(
             "Document review and structured analysis. {} working note(s) captured during the examination.\n",
@@ -428,7 +435,10 @@ fn build_opinions_section(findings: &[FindingRow]) -> ReportSection {
 They do not constitute an ultimate legal conclusion regarding the occurrence of fraud (AICPA SSFS No. 1).\n\n{}",
         section.text
     );
-    section.standards_tags = vec!["FRCP-26(a)(2)(B)(i)".to_string(), "SSFS-NO-ULTIMATE".to_string()];
+    section.standards_tags = vec![
+        "FRCP-26(a)(2)(B)(i)".to_string(),
+        "SSFS-NO-ULTIMATE".to_string(),
+    ];
     section
 }
 
@@ -461,7 +471,8 @@ fn build_prior_testimony_section() -> ReportSection {
 }
 
 fn build_compensation_section(conn: &Connection, case_id: &str) -> ReportSection {
-    let (total_seconds, amount, _) = time_tracking::compute_case_billing_totals(conn, case_id).unwrap_or((0, 0.0, 0));
+    let (total_seconds, amount, _) =
+        time_tracking::compute_case_billing_totals(conn, case_id).unwrap_or((0, 0.0, 0));
     let minutes = total_seconds / 60;
     ReportSection {
         id: "compensation".to_string(),
@@ -497,7 +508,8 @@ Findings are based on evidence available at the time of the examination.\n".to_s
 }
 
 fn build_fees_section(conn: &Connection, case_id: &str) -> ReportSection {
-    let (_, amount, _) = time_tracking::compute_case_billing_totals(conn, case_id).unwrap_or((0, 0.0, 0));
+    let (_, amount, _) =
+        time_tracking::compute_case_billing_totals(conn, case_id).unwrap_or((0, 0.0, 0));
     ReportSection {
         id: "fees".to_string(),
         heading: "Fees".to_string(),
@@ -624,29 +636,66 @@ fn section_for_id(
 fn template_section_ids(template_id: &str) -> Result<Vec<&'static str>, String> {
     match template_id {
         "cfe-long" => Ok(vec![
-            "overview", "executive", "scope", "approach", "findings", "timeline", "inventory",
+            "overview",
+            "executive",
+            "scope",
+            "approach",
+            "findings",
+            "timeline",
+            "inventory",
             "recommendations",
         ]),
         "cfe-short" => Ok(vec![
-            "overview", "executive", "findings", "timeline", "inventory",
+            "overview",
+            "executive",
+            "findings",
+            "timeline",
+            "inventory",
         ]),
         "expert-witness-frcp26" => Ok(vec![
-            "opinions", "methodology", "findings", "exhibits", "qualifications", "prior_testimony",
-            "compensation", "timeline", "inventory",
+            "opinions",
+            "methodology",
+            "findings",
+            "exhibits",
+            "qualifications",
+            "prior_testimony",
+            "compensation",
+            "timeline",
+            "inventory",
         ]),
         "engagement-letter" => Ok(vec![
-            "parties", "scope", "overview", "limitations", "fees", "confidentiality",
+            "parties",
+            "scope",
+            "overview",
+            "limitations",
+            "fees",
+            "confidentiality",
         ]),
         "pi-surveillance" => Ok(vec![
-            "overview", "subject_profile", "observation_log", "inventory", "executive",
+            "overview",
+            "subject_profile",
+            "observation_log",
+            "inventory",
+            "executive",
             "recommendations",
         ]),
         "pi-background" => Ok(vec![
-            "overview", "scope", "osint_findings", "notes", "findings", "recommendations",
+            "overview",
+            "scope",
+            "osint_findings",
+            "notes",
+            "findings",
+            "recommendations",
         ]),
         "fraud-incident-log" => Ok(vec!["overview", "timeline", "findings"]),
         // Legacy export kinds
-        "narrative" => Ok(vec!["overview", "executive", "findings", "timeline", "inventory"]),
+        "narrative" => Ok(vec![
+            "overview",
+            "executive",
+            "findings",
+            "timeline",
+            "inventory",
+        ]),
         "executive" => Ok(vec!["executive"]),
         "evidence_index" => Ok(vec!["inventory"]),
         "financial" | "billing_invoice" => Ok(vec!["compensation"]),
@@ -659,7 +708,11 @@ fn run_compliance_checks(
     sections: &[ReportSection],
     findings: &[FindingRow],
 ) -> Vec<StandardsComplianceCheck> {
-    let full_text: String = sections.iter().map(|s| s.text.as_str()).collect::<Vec<_>>().join("\n");
+    let full_text: String = sections
+        .iter()
+        .map(|s| s.text.as_str())
+        .collect::<Vec<_>>()
+        .join("\n");
     let mut checks = Vec::new();
 
     let needs_acfe = matches!(
@@ -732,7 +785,9 @@ fn run_compliance_checks(
                 Some(format!("Missing sections: {}", missing.join(", ")))
             },
         });
-        let has_methodology = sections.iter().any(|s| s.id == "methodology" && s.text.len() > 40);
+        let has_methodology = sections
+            .iter()
+            .any(|s| s.id == "methodology" && s.text.len() > 40);
         checks.push(StandardsComplianceCheck {
             id: "FRE-702".to_string(),
             label: "FRE 702 — Methodology disclosed".to_string(),
@@ -764,15 +819,22 @@ fn run_compliance_checks(
     checks
 }
 
-fn sections_to_markdown(template_id: &str, case_name: &str, generated_at: &str, sections: &[ReportSection], compliance: &[StandardsComplianceCheck]) -> String {
-    let mut md = format!("# Report — {case_name}\n\nTemplate: `{template_id}`\nGenerated: {generated_at}\n\n");
+pub fn sections_to_markdown(
+    template_id: &str,
+    case_name: &str,
+    generated_at: &str,
+    sections: &[ReportSection],
+    compliance: &[StandardsComplianceCheck],
+) -> String {
+    let mut md = format!(
+        "# Report — {case_name}\n\nTemplate: `{template_id}`\nGenerated: {generated_at}\n\n"
+    );
     for s in sections {
         md.push_str(&format!("## {}\n\n{}\n\n", s.heading, s.text));
         if !s.citations.is_empty() {
             md.push_str("**Citations:** ");
             md.push_str(
-                &s
-                    .citations
+                &s.citations
                     .iter()
                     .map(|c| c.label.as_str())
                     .collect::<Vec<_>>()
@@ -811,11 +873,21 @@ pub fn build_report_document(
 
     let sections: Vec<ReportSection> = section_ids
         .iter()
-        .map(|id| section_for_id(id, conn, case_id, &case, &findings, &notes, &timeline, &files))
+        .map(|id| {
+            section_for_id(
+                id, conn, case_id, &case, &findings, &notes, &timeline, &files,
+            )
+        })
         .collect();
 
     let compliance = run_compliance_checks(template_id, &sections, &findings);
-    let markdown = sections_to_markdown(template_id, &case.name, generated_at, &sections, &compliance);
+    let markdown = sections_to_markdown(
+        template_id,
+        &case.name,
+        generated_at,
+        &sections,
+        &compliance,
+    );
 
     if !language_scan_passes(&markdown) {
         return Err(
@@ -834,11 +906,7 @@ pub fn build_report_document(
 }
 
 /// Backward-compatible markdown builder for legacy report kinds and tests.
-pub fn build_report_body(
-    case_id: &str,
-    conn: &Connection,
-    kind: &str,
-) -> Result<String, String> {
+pub fn build_report_body(case_id: &str, conn: &Connection, kind: &str) -> Result<String, String> {
     let generated_at = chrono::Utc::now().to_rfc3339();
     let doc = build_report_document(case_id, kind, &generated_at, conn)?;
     Ok(doc.markdown)
@@ -855,6 +923,8 @@ mod tests {
     #[test]
     fn language_scan_rejects_guilt_phrasing() {
         assert!(!language_scan_passes("The suspect is guilty of fraud."));
-        assert!(language_scan_passes("Evidence is consistent with misappropriation."));
+        assert!(language_scan_passes(
+            "Evidence is consistent with misappropriation."
+        ));
     }
 }

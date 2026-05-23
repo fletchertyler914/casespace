@@ -24,6 +24,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { commandClient } from "@/lib/command-client";
+import { useAiAvailability } from "@/hooks/use-ai-availability";
 import {
   REPORT_SECTION_DEFS,
   type ReportSectionId,
@@ -32,6 +33,7 @@ import { DEFAULT_REPORT_TEMPLATE_ID } from "@/lib/report-templates";
 import { ReportTemplatePicker } from "./report-template-picker";
 import { ComplianceFooter } from "./compliance-footer";
 import { CitationPillList } from "./citation-pill";
+import { AnalyzeCaseButton } from "@/components/agents/analyze-case-button";
 
 const TEMPLATE_STORAGE_KEY = "casespace.reportTemplate";
 
@@ -86,6 +88,7 @@ export function ReportsView({
   navigatorOpen,
   onExpandNavigator,
 }: ReportsViewProps) {
+  const { aiAvailable, loading: aiAvailabilityLoading } = useAiAvailability();
   const [loading, setLoading] = useState(true);
   const [billingAmount, setBillingAmount] = useState<number | null>(null);
   const [generating, setGenerating] = useState(false);
@@ -97,9 +100,17 @@ export function ReportsView({
   const [pickerOpen, setPickerOpen] = useState(false);
   const [history, setHistory] = useState<ReportExportHistoryEntry[]>([]);
   const [historyLoading, setHistoryLoading] = useState(true);
+  const [approvedAiFindings, setApprovedAiFindings] = useState<number>(0);
 
   useEffect(() => {
     setTemplateId(loadTemplateForCase(caseId));
+  }, [caseId]);
+
+  const loadApprovedAiFindings = useCallback(async () => {
+    const res = await commandClient.countApprovedAiFindings(caseId);
+    if (res.ok && res.data != null) {
+      setApprovedAiFindings(res.data);
+    }
   }, [caseId]);
 
   const loadHistory = useCallback(async () => {
@@ -121,12 +132,17 @@ export function ReportsView({
   useEffect(() => {
     void loadBilling();
     void loadHistory();
-  }, [loadBilling, loadHistory]);
+    void loadApprovedAiFindings();
+  }, [loadBilling, loadHistory, loadApprovedAiFindings]);
 
   async function generateReport(selectedTemplate?: ReportTemplateId) {
+    if (!aiAvailable) {
+      setGeneratedPreview("Add an OpenAI API key in Settings to enable AI features.");
+      return;
+    }
     const tid = selectedTemplate ?? templateId;
     setGenerating(true);
-    const res = await commandClient.generateCaseReport(caseId, tid);
+    const res = await commandClient.generateAiCaseReport(caseId, tid);
     setGenerating(false);
     if (res.ok && res.data) {
       try {
@@ -141,7 +157,10 @@ export function ReportsView({
       }
       void loadHistory();
     } else {
-      setGeneratedPreview("Report generation failed. Try again.");
+      setGeneratedPreview(
+        res.error?.message ??
+          "AI report generation failed. Open Settings and check your AI provider configuration.",
+      );
       setReportDocument(null);
     }
   }
@@ -198,6 +217,12 @@ export function ReportsView({
             <p className="text-xs text-muted-foreground">
               {caseSummary.name} — CFE deliverables from linked artifacts
             </p>
+            {approvedAiFindings > 0 && (
+              <Badge variant="secondary" className="mt-1 text-[10px] font-normal">
+                Includes {approvedAiFindings} approved AI finding
+                {approvedAiFindings === 1 ? "" : "s"}
+              </Badge>
+            )}
           </div>
           <div className="flex shrink-0 items-center gap-1.5">
             <Button
@@ -211,12 +236,18 @@ export function ReportsView({
             <Button
               size="sm"
               className="h-8"
-              disabled={generating}
+              disabled={generating || aiAvailabilityLoading || !aiAvailable}
+              title={
+                aiAvailable
+                  ? undefined
+                  : "Add an OpenAI API key in Settings to enable AI features."
+              }
               onClick={() => void generateReport()}
             >
               <Sparkles className="mr-1.5 h-3.5 w-3.5" />
-              {generating ? "Generating…" : "Generate report"}
+              {generating ? "Generating…" : "Generate AI report"}
             </Button>
+            <AnalyzeCaseButton caseId={caseId} fullWidth={false} className="shrink-0" />
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="sm" className="h-8 gap-1">

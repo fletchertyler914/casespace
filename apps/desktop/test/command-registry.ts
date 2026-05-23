@@ -127,6 +127,31 @@ export const INVOKE_CONTRACTS: Array<{
     command: "list_case_file_metadata",
   },
   {
+    label: "getAiSettings",
+    run: () => commandClient.getAiSettings(),
+    command: "get_ai_settings",
+  },
+  {
+    label: "saveAiSettings",
+    run: () =>
+      commandClient.saveAiSettings({
+        apiKey: "sk-test",
+        model: "gpt-4o-mini",
+        baseUrl: "https://api.openai.com/v1/chat/completions",
+      }),
+    command: "save_ai_settings",
+  },
+  {
+    label: "clearAiApiKey",
+    run: () => commandClient.clearAiApiKey(),
+    command: "clear_ai_api_key",
+  },
+  {
+    label: "testAiConnection",
+    run: () => commandClient.testAiConnection(),
+    command: "test_ai_connection",
+  },
+  {
     label: "updateNote",
     run: () => commandClient.updateNote("n1", "<p>y</p>"),
     command: "update_note",
@@ -357,5 +382,30 @@ export const INVOKE_CONTRACTS: Array<{
     label: "generateCaseReport",
     run: () => commandClient.generateCaseReport("c1", "cfe-long"),
     command: "generate_case_report",
+  },
+  {
+    label: "generateAiCaseReport",
+    run: () => commandClient.generateAiCaseReport("c1", "cfe-long"),
+    command: "generate_ai_case_report",
+  },
+  {
+    label: "extractCaseText",
+    run: () => commandClient.extractCaseText("c1"),
+    command: "extract_case_text",
+  },
+  {
+    label: "analyzeFileWithAi",
+    run: () => commandClient.analyzeFileWithAi("c1", "f1"),
+    command: "analyze_file_with_ai",
+  },
+  {
+    label: "listAiDrafts",
+    run: () => commandClient.listAiDrafts("c1"),
+    command: "list_ai_drafts",
+  },
+  {
+    label: "countApprovedAiFindings",
+    run: () => commandClient.countApprovedAiFindings("c1"),
+    command: "count_approved_ai_findings",
   },
 ];

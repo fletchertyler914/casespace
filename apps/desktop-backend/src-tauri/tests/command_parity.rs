@@ -153,7 +153,10 @@ fn flow_build_report_body_non_empty_for_all_kinds() {
 fn flow_scan_source_matches_mini_case_files() {
     let fixture = mini_case_fixture_dir();
     let scanned = ingest::scan_source(&fixture, 100).expect("scan mini-case");
-    assert!(scanned.len() >= 2, "fixture should contain at least a.txt and b.txt");
+    assert!(
+        scanned.len() >= 2,
+        "fixture should contain at least a.txt and b.txt"
+    );
     let names: Vec<_> = scanned.iter().map(|f| f.file_name.as_str()).collect();
     assert!(names.contains(&"a.txt"));
     assert!(names.contains(&"b.txt"));

@@ -11,8 +11,14 @@ export function createCaseSpaceMcpToolDefinitions() {
     },
     {
       name: "generate_case_report",
-      description: "Generate narrative case report from SQLite artifacts",
-      inputSchema: z.object({ caseId: z.string() }),
+      description: "Generate deterministic narrative case report from SQLite artifacts",
+      inputSchema: z.object({ caseId: z.string(), templateId: z.string().optional() }),
+      tier: "autonomous" as const,
+    },
+    {
+      name: "generate_ai_case_report",
+      description: "Generate provider-backed AI report draft from SQLite artifacts",
+      inputSchema: z.object({ caseId: z.string(), templateId: z.string().optional() }),
       tier: "autonomous" as const,
     },
     {

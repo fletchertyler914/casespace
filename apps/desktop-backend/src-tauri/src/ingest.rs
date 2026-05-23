@@ -52,8 +52,7 @@ fn modified_iso(metadata: &fs::Metadata) -> String {
         .ok()
         .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
         .and_then(|d| {
-            chrono::DateTime::from_timestamp(d.as_secs() as i64, 0)
-                .map(|dt| dt.to_rfc3339())
+            chrono::DateTime::from_timestamp(d.as_secs() as i64, 0).map(|dt| dt.to_rfc3339())
         })
         .unwrap_or_else(|| chrono::Utc::now().to_rfc3339())
 }
@@ -75,14 +74,20 @@ pub fn scan_source(source: &Path, limit: usize) -> Result<Vec<ScannedFile>, Stri
     }
     let meta = fs::metadata(source).map_err(|e| e.to_string())?;
     if meta.is_file() {
-        let root = source.parent().ok_or("file source has no parent directory")?;
+        let root = source
+            .parent()
+            .ok_or("file source has no parent directory")?;
         return Ok(vec![scan_one_file(source, root)?]);
     }
     if !meta.is_dir() {
         return Err("source is not a file or directory".into());
     }
     let mut out = Vec::new();
-    for entry in WalkDir::new(source).into_iter().filter_map(Result::ok).take(limit) {
+    for entry in WalkDir::new(source)
+        .into_iter()
+        .filter_map(Result::ok)
+        .take(limit)
+    {
         let Ok(entry_meta) = entry.metadata() else {
             continue;
         };
@@ -228,9 +233,13 @@ fn upsert_file(
     }
 
     if !scanned.file_hash.is_empty() {
-        if let Some(rename_id) =
-            find_rename_target(conn, case_id, source_path, &scanned.file_hash, &scanned.absolute_path)?
-        {
+        if let Some(rename_id) = find_rename_target(
+            conn,
+            case_id,
+            source_path,
+            &scanned.file_hash,
+            &scanned.absolute_path,
+        )? {
             let hash_opt = Some(scanned.file_hash.as_str());
             conn.execute(
                 "UPDATE files SET file_name = ?1, folder_path = ?2, absolute_path = ?3,
@@ -338,7 +347,8 @@ pub fn rebuild_duplicate_groups(conn: &Connection, case_id: &str) -> Result<u64,
         .filter_map(Result::ok)
         .collect();
 
-    let mut groups: std::collections::BTreeMap<String, Vec<String>> = std::collections::BTreeMap::new();
+    let mut groups: std::collections::BTreeMap<String, Vec<String>> =
+        std::collections::BTreeMap::new();
     for (hash, id) in rows {
         groups.entry(hash).or_default().push(id);
     }
@@ -361,7 +371,12 @@ pub fn rebuild_duplicate_groups(conn: &Connection, case_id: &str) -> Result<u64,
     Ok(created)
 }
 
-fn file_has_user_data(conn: &Connection, case_id: &str, file_id: &str, status: &str) -> Result<bool, String> {
+fn file_has_user_data(
+    conn: &Connection,
+    case_id: &str,
+    file_id: &str,
+    status: &str,
+) -> Result<bool, String> {
     if status != "unreviewed" {
         return Ok(true);
     }
