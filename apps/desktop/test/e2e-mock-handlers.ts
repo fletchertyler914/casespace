@@ -330,8 +330,6 @@ export const e2eMockInvoke = (async (command, args = {}) => {
       return null;
     case "count_approved_ai_findings":
       return 1;
-    case "get_tesseract_available":
-      return true;
     case "seed_sample_fraud_case":
       return {
         id: "sample-fraud-examination",

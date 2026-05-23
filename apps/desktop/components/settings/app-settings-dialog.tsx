@@ -173,7 +173,9 @@ export function AppSettingsDialog({ open, onOpenChange }: AppSettingsDialogProps
               <div>
                 <Label>AI provider</Label>
                 <p className="text-xs text-muted-foreground">
-                  Bring your own OpenAI-compatible API key for AI features.
+                  Bring your own OpenAI-compatible API key. Required for AI
+                  analysis, AI reports, and image OCR. Stored in your OS
+                  keychain — never bundled with the app.
                 </p>
               </div>
               <Badge variant={apiKeySource === "none" ? "outline" : "secondary"}>

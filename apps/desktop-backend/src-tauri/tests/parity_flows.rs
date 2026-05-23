@@ -626,7 +626,7 @@ fn flow_text_extract_round_trip() {
         .unwrap();
 
         let (text, extractor, ocr_used, err) =
-            desktop_backend_lib::text_extract::extract_text_from_path(&case_file);
+            desktop_backend_lib::text_extract::extract_text_from_path(&case_file, None);
         assert!(err.is_none());
         assert!(!ocr_used);
         assert_eq!(extractor, "plain");
@@ -655,19 +655,46 @@ fn flow_text_extract_round_trip() {
 }
 
 #[test]
-fn flow_ocr_falls_back_on_scanned_pdf() {
-    if !desktop_backend_lib::text_extract::tesseract_is_available() {
-        eprintln!("skipping OCR test — tesseract not on PATH");
-        return;
-    }
-    let fixture =
-        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/text-extract/sample.txt");
-    if !fixture.is_file() {
-        return;
-    }
-    let (text, _extractor, _ocr_used, err) =
-        desktop_backend_lib::text_extract::extract_text_from_path(&fixture);
-    assert!(text.contains("parity") || err.is_none());
+fn flow_image_ocr_runs_through_injected_provider() {
+    // BYOK OCR: a deterministic in-process closure stands in for the cloud vision
+    // call so this test covers the dispatch path without needing credentials.
+    let dir = std::env::temp_dir().join(format!("casespace-ocr-{}", uuid::Uuid::new_v4()));
+    fs::create_dir_all(&dir).unwrap();
+    let image_path = dir.join("scan.png");
+    fs::write(&image_path, b"\x89PNG\r\n\x1a\nfake-png-bytes").unwrap();
+
+    let ocr: desktop_backend_lib::text_extract::OcrFn<'_> =
+        Box::new(|b64: &str, mime: &str| {
+            assert!(!b64.is_empty());
+            assert_eq!(mime, "image/png");
+            Ok("mocked vision-llm OCR output".to_string())
+        });
+
+    let (text, extractor, ocr_used, err) =
+        desktop_backend_lib::text_extract::extract_text_from_path(&image_path, Some(&ocr));
+    assert!(err.is_none(), "unexpected OCR error: {err:?}");
+    assert!(ocr_used);
+    assert_eq!(extractor, "vision-llm");
+    assert!(text.contains("mocked vision-llm OCR output"));
+}
+
+#[test]
+fn flow_image_ocr_without_provider_returns_actionable_error() {
+    let dir = std::env::temp_dir().join(format!("casespace-ocr-{}", uuid::Uuid::new_v4()));
+    fs::create_dir_all(&dir).unwrap();
+    let image_path = dir.join("scan.jpg");
+    fs::write(&image_path, b"jpeg-bytes").unwrap();
+
+    let (text, extractor, ocr_used, err) =
+        desktop_backend_lib::text_extract::extract_text_from_path(&image_path, None);
+    assert!(text.is_empty());
+    assert_eq!(extractor, "vision-llm");
+    assert!(ocr_used);
+    let message = err.expect("expected actionable error when no provider is configured");
+    assert!(
+        message.contains("AI provider"),
+        "error should mention provider configuration: {message}"
+    );
 }
 
 #[test]

@@ -94,54 +94,54 @@ fn file_row(conn: &Connection, case_id: &str, file_id: &str) -> Result<(String, 
     .map_err(|_| "file not found".to_string())
 }
 
-pub fn extract_and_store_file(
+/// Return a previously-stored extract for `file_id` when available and not forced.
+///
+/// Splitting this out lets the caller release the DB lock before running any
+/// network-bound OCR for fresh extractions.
+pub fn cached_extract(
+    conn: &Connection,
+    file_id: &str,
+    force: bool,
+) -> Result<Option<text_extract::FileTextExtractResult>, String> {
+    if force {
+        return Ok(None);
+    }
+    let exists: i64 = conn
+        .query_row(
+            "SELECT COUNT(*) FROM file_text_extracts WHERE file_id = ?1 AND char_count > 0",
+            params![file_id],
+            |row| row.get(0),
+        )
+        .map_err(|e| e.to_string())?;
+    if exists == 0 {
+        return Ok(None);
+    }
+    conn.query_row(
+        "SELECT file_id, char_count, extractor, ocr_used, extracted_at, extract_error FROM file_text_extracts WHERE file_id = ?1",
+        params![file_id],
+        |row| {
+            Ok(text_extract::FileTextExtractResult {
+                file_id: row.get(0)?,
+                char_count: row.get::<_, i64>(1)? as usize,
+                extractor: row.get(2)?,
+                ocr_used: row.get::<_, i64>(3)? != 0,
+                extracted_at: row.get(4)?,
+                extract_error: row.get(5)?,
+            })
+        },
+    )
+    .map(Some)
+    .map_err(|e| e.to_string())
+}
+
+/// Resolve the on-disk path for a case file.
+pub fn file_path_for(
     conn: &Connection,
     case_id: &str,
     file_id: &str,
-    force: bool,
-    extracted_at: &str,
-) -> Result<text_extract::FileTextExtractResult, String> {
-    if !force {
-        let exists: i64 = conn
-            .query_row(
-                "SELECT COUNT(*) FROM file_text_extracts WHERE file_id = ?1 AND char_count > 0",
-                params![file_id],
-                |row| row.get(0),
-            )
-            .map_err(|e| e.to_string())?;
-        if exists > 0 {
-            return conn
-                .query_row(
-                    "SELECT file_id, char_count, extractor, ocr_used, extracted_at, extract_error FROM file_text_extracts WHERE file_id = ?1",
-                    params![file_id],
-                    |row| {
-                        Ok(text_extract::FileTextExtractResult {
-                            file_id: row.get(0)?,
-                            char_count: row.get::<_, i64>(1)? as usize,
-                            extractor: row.get(2)?,
-                            ocr_used: row.get::<_, i64>(3)? != 0,
-                            extracted_at: row.get(4)?,
-                            extract_error: row.get(5)?,
-                        })
-                    },
-                )
-                .map_err(|e| e.to_string());
-        }
-    }
-
+) -> Result<std::path::PathBuf, String> {
     let (_, path_str) = file_row(conn, case_id, file_id)?;
-    let path = std::path::Path::new(&path_str);
-    let (text, extractor, ocr_used, err) = text_extract::extract_text_from_path(path);
-    text_extract::persist_extract(
-        conn,
-        file_id,
-        &text,
-        None,
-        &extractor,
-        ocr_used,
-        err.as_deref(),
-        extracted_at,
-    )
+    Ok(std::path::PathBuf::from(path_str))
 }
 
 pub fn prepare_file_analysis(

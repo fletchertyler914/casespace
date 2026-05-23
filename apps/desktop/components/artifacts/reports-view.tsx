@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
-import { History, PanelLeft, Sparkles } from "lucide-react";
+import { History, KeyRound, PanelLeft, Sparkles } from "lucide-react";
 import type {
   CaseFile,
   CaseSummary,
@@ -217,12 +217,33 @@ export function ReportsView({
             <p className="text-xs text-muted-foreground">
               {caseSummary.name} — CFE deliverables from linked artifacts
             </p>
-            {approvedAiFindings > 0 && (
-              <Badge variant="secondary" className="mt-1 text-[10px] font-normal">
-                Includes {approvedAiFindings} approved AI finding
-                {approvedAiFindings === 1 ? "" : "s"}
-              </Badge>
-            )}
+            <div className="mt-1 flex flex-wrap items-center gap-1.5">
+              <span
+                className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-medium ${
+                  aiAvailable
+                    ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
+                    : "border-border/60 bg-muted text-muted-foreground"
+                }`}
+                title={
+                  aiAvailable
+                    ? "AI provider configured"
+                    : "Connect an AI provider in Settings → AI provider"
+                }
+              >
+                {aiAvailable ? (
+                  <Sparkles className="h-3 w-3" />
+                ) : (
+                  <KeyRound className="h-3 w-3" />
+                )}
+                {aiAvailable ? "AI connected" : "AI not connected"}
+              </span>
+              {approvedAiFindings > 0 && (
+                <Badge variant="secondary" className="text-[10px] font-normal">
+                  Includes {approvedAiFindings} approved AI finding
+                  {approvedAiFindings === 1 ? "" : "s"}
+                </Badge>
+              )}
+            </div>
           </div>
           <div className="flex shrink-0 items-center gap-1.5">
             <Button

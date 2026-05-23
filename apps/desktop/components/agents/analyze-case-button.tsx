@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { Loader2, ScanSearch } from "lucide-react";
 import type { TextExtractProgress } from "@repo/types";
 import { Button } from "@/components/ui/button";
@@ -30,14 +30,7 @@ export function AnalyzeCaseButton({
     done: number;
     total: number;
   }>({ done: 0, total: 0 });
-  const [tesseractOk, setTesseractOk] = useState<boolean | null>(null);
   const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    void commandClient.getTesseractAvailable().then((res) => {
-      if (res.ok) setTesseractOk(res.data ?? false);
-    });
-  }, []);
 
   const runPipeline = useCallback(async () => {
     if (!aiAvailable) {
@@ -123,11 +116,11 @@ export function AnalyzeCaseButton({
         )}
         {label}
       </Button>
-      {tesseractOk === false && (
-        <p className="mt-1.5 text-[10px] text-amber-600">
-          Tesseract not found — install with{" "}
-          <code className="rounded bg-muted px-1">brew install tesseract</code>{" "}
-          for OCR on scans.
+      {!aiAvailable && !aiAvailabilityLoading && (
+        <p className="mt-1.5 text-[10px] text-muted-foreground">
+          AI analysis &amp; image OCR require an API key. Open{" "}
+          <span className="font-medium">Settings → AI provider</span> to connect
+          one.
         </p>
       )}
       {error && (

@@ -492,9 +492,6 @@ export const commandClient = {
   countApprovedAiFindings(caseId: string) {
     return safeInvoke<number>("count_approved_ai_findings", { caseId });
   },
-  getTesseractAvailable() {
-    return safeInvoke<boolean>("get_tesseract_available", {});
-  },
   seedSampleFraudCase() {
     return safeInvoke<CaseSummary>("seed_sample_fraud_case", {});
   },

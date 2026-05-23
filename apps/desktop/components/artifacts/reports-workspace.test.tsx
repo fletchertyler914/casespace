@@ -14,7 +14,6 @@ vi.mock("@/lib/command-client", () => ({
     calculateBillingAmount: vi.fn(),
     countApprovedAiFindings: vi.fn(),
     getAiSettings: vi.fn(),
-    getTesseractAvailable: vi.fn(),
     loadCaseFiles: vi.fn(),
     extractCaseText: vi.fn(),
     analyzeFileWithAi: vi.fn(),
@@ -73,10 +72,6 @@ describe("ReportsWorkspace (FLOW-005)", () => {
         model: "gpt-4o-mini",
         baseUrl: "https://api.openai.com/v1/chat/completions",
       },
-    });
-    vi.mocked(commandClient.getTesseractAvailable).mockResolvedValue({
-      ok: true,
-      data: true,
     });
     vi.mocked(commandClient.loadCaseFiles).mockResolvedValue({
       ok: true,

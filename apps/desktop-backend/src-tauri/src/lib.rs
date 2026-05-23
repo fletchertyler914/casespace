@@ -2074,6 +2074,26 @@ fn open_file(case_id: String, path: String, state: State<AppState>) -> Result<St
     Ok(safe.to_string_lossy().to_string())
 }
 
+/// Build an OCR closure backed by the user's BYOK AI provider. Returns `None`
+/// when no API key is configured, so callers can short-circuit and surface a
+/// "connect AI provider" message instead of opening a doomed network call.
+fn build_ocr_fn(state: &State<AppState>) -> Option<text_extract::OcrFn<'static>> {
+    let (key_present, model, base_url) = with_conn(state, |conn| {
+        Ok((
+            ai_settings::lookup_api_key().is_some(),
+            ai_settings::model_name(Some(conn)),
+            ai_settings::base_url(Some(conn)),
+        ))
+    })
+    .ok()?;
+    if !key_present {
+        return None;
+    }
+    Some(Box::new(move |b64, mime| {
+        tauri::async_runtime::block_on(ai_provider::vision_ocr(b64, mime, &model, &base_url))
+    }))
+}
+
 #[tauri::command]
 fn run_ocr_preview(
     case_id: String,
@@ -2082,16 +2102,12 @@ fn run_ocr_preview(
 ) -> Result<String, String> {
     let roots = state.db.list_case_roots(Some(&case_id))?;
     let safe = path::validate_safe_path(&file_path, &roots)?;
-    let (text, _, _, err) = text_extract::extract_text_from_path(&safe);
+    let ocr = build_ocr_fn(&state);
+    let (text, _, _, err) = text_extract::extract_text_from_path(&safe, ocr.as_ref());
     if let Some(e) = err {
         return Err(e);
     }
     Ok(text.chars().take(4000).collect())
-}
-
-#[tauri::command]
-fn get_tesseract_available() -> bool {
-    text_extract::tesseract_is_available()
 }
 
 #[tauri::command]
@@ -2101,16 +2117,34 @@ fn extract_file_text(
     force: Option<bool>,
     state: State<AppState>,
 ) -> Result<text_extract::FileTextExtractResult, String> {
+    let force = force.unwrap_or(false);
     let extracted_at = now_iso();
-    with_conn(&state, |conn| {
+
+    let cached = with_conn(&state, |conn| {
         if !case_exists(conn, &case_id)? {
             return Err("case not found".into());
         }
-        ai_analysis::extract_and_store_file(
+        ai_analysis::cached_extract(conn, &file_id, force)
+    })?;
+    if let Some(cached) = cached {
+        return Ok(cached);
+    }
+
+    let path = with_conn(&state, |conn| {
+        ai_analysis::file_path_for(conn, &case_id, &file_id)
+    })?;
+    let ocr = build_ocr_fn(&state);
+    let (text, extractor, ocr_used, err) = text_extract::extract_text_from_path(&path, ocr.as_ref());
+
+    with_conn(&state, |conn| {
+        text_extract::persist_extract(
             conn,
-            &case_id,
             &file_id,
-            force.unwrap_or(false),
+            &text,
+            None,
+            &extractor,
+            ocr_used,
+            err.as_deref(),
             &extracted_at,
         )
     })
@@ -2152,9 +2186,40 @@ async fn extract_case_text(
     let mut failed = 0u32;
 
     for file_id in &file_ids {
-        let result = with_conn(&state, |conn| {
-            ai_analysis::extract_and_store_file(conn, &case_id, file_id, force, &extracted_at)
-        });
+        let result: Result<text_extract::FileTextExtractResult, String> = async {
+            let cached = with_conn(&state, |conn| {
+                ai_analysis::cached_extract(conn, file_id, force)
+            })?;
+            if let Some(cached) = cached {
+                return Ok(cached);
+            }
+            let path = with_conn(&state, |conn| {
+                ai_analysis::file_path_for(conn, &case_id, file_id)
+            })?;
+            // Run extraction (and any blocking vision-OCR bridge) off the runtime worker
+            // so the inner `block_on` cannot deadlock the async executor.
+            let ocr = build_ocr_fn(&state);
+            let extract_path = path.clone();
+            let (text, extractor, ocr_used, err) = tauri::async_runtime::spawn_blocking(move || {
+                text_extract::extract_text_from_path(&extract_path, ocr.as_ref())
+            })
+            .await
+            .map_err(|e| format!("extract task join error: {e}"))?;
+
+            with_conn(&state, |conn| {
+                text_extract::persist_extract(
+                    conn,
+                    file_id,
+                    &text,
+                    None,
+                    &extractor,
+                    ocr_used,
+                    err.as_deref(),
+                    &extracted_at,
+                )
+            })
+        }
+        .await;
         match result {
             Ok(r) => {
                 if r.extract_error.is_some() && r.char_count == 0 {
@@ -2607,7 +2672,6 @@ pub fn run() {
             approve_ai_entity_draft,
             reject_ai_entity_draft,
             count_approved_ai_findings,
-            get_tesseract_available,
             seed_sample_fraud_case,
             check_for_update,
         ])

@@ -50,6 +50,8 @@ Tracks implemented scope, validated scope, and gates before production sign-off 
 
 CaseSpace uses bring-your-own-key AI access for distribution. Users configure an OpenAI-compatible API key in Settings -> AI provider; the key is stored in the OS keychain, and model/base URL are stored as non-secret local app settings. Developer env vars (`OPENAI_API_KEY`, `CASESPACE_OPENAI_API_KEY`, `CASESPACE_OPENAI_MODEL`, `CASESPACE_OPENAI_API_URL`) remain local-dev/CI fallbacks and must not be treated as bundled production credentials.
 
+The same BYOK provider powers image OCR via the chat-completions `image_url` content type (`ai_provider::vision_ocr`). All local-evidence flows — ingest, dedup, FTS5 search, deterministic report assembly, time tracking, digital-PDF/DOCX/XLSX/CSV/TXT extraction — run without a key. Scanned PDFs without a text layer return an actionable "convert pages to images" status pending Phase 2 PDF rasterization (see [product-roadmap.md](product-roadmap.md) §Deferred). The legacy Tesseract dependency has been removed; no system-binary install is required on any platform.
+
 ## Deferred (post–release gate)
 
 - Team collaboration

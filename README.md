@@ -47,11 +47,7 @@ pnpm ops:validate:local   # lint, types, tests, build, parity
 
 AI features use a bring-your-own-key provider model. In the desktop app, open Settings -> AI provider and add an OpenAI-compatible API key; CaseSpace stores the secret in the OS keychain and keeps model/base URL in local app settings. Developers can still set `OPENAI_API_KEY` or `CASESPACE_OPENAI_API_KEY` in `.env` for local `pnpm dev`; optional env overrides include `CASESPACE_OPENAI_MODEL` / `OPENAI_MODEL` and `CASESPACE_OPENAI_API_URL`.
 
-**OCR (scanned PDFs / images):** install [Tesseract](https://github.com/tesseract-ocr/tesseract) on your PATH:
-
-- macOS: `brew install tesseract`
-- Linux: `apt install tesseract-ocr`
-- Windows: [UB Mannheim installer](https://github.com/UB-Mannheim/tesseract/wiki)
+**Local-by-default, AI-on-demand.** Everything CaseSpace does with on-disk evidence — ingest, indexing, dedup, FTS5 search, timeline, notes, time tracking, deterministic report assembly — runs locally with no key. AI analysis, AI report drafting, and image OCR (jpg / png / tiff / webp / heic) go through your BYOK provider via OpenAI-compatible chat completions; no key, no network. Digital PDFs and DOCX/XLSX/CSV/TXT extract locally; scanned PDFs without a text layer surface a clear "convert pages to images and re-ingest" message (full scanned-PDF rasterization is a Phase 2 roadmap item).
 
 Optional env overrides for the analysis pipeline: `CASESPACE_ANALYSIS_MODEL`, `CASESPACE_ANALYSIS_MAX_CHARS` (default 60k), `CASESPACE_ANALYSIS_TOKEN_CEILING` (default 1M).
 

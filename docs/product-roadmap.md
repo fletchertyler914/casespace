@@ -25,7 +25,9 @@ Desktop UX and release milestones for `apps/desktop`. Backend command matrix: [c
 ## Release: 0.1.11 (local, 2026-05-22) — Evidence-to-Report Pipeline
 
 - Schema v8: `file_text_extracts` + FTS5, `ai_*_drafts`, `ai_run_log`
-- Text extraction: PDF text layer, DOCX, XLSX/CSV, plain text; Tesseract OCR fallback for scans
+- Text extraction: PDF text layer, DOCX, XLSX/CSV, plain text (all local, no key required)
+- Image OCR (jpg / png / tiff / webp / heic): BYOK vision-LLM via chat completions `image_url` content — no system binaries, no `brew install`
+- Scanned PDFs without text layer: surfaced as actionable "convert pages to images and re-ingest" status (Phase 2 will rasterize PDF pages locally and route them through the same vision pipeline)
 - Commands: `extract_file_text`, `extract_case_text`, `analyze_file_with_ai`, `analyze_case_with_ai`, draft approve/reject, `count_approved_ai_findings`
 - `@repo/agents` report graph upgraded: extract → per-file analyze → corpus aggregate → review interrupt → AI report draft
 - UI: `AnalyzeCaseButton` in reports workspace, `ApprovalsQueue` renders finding/timeline/entity drafts with page anchors
@@ -76,6 +78,11 @@ pnpm build              # CaseSpace_0.1.8_aarch64.dmg bundled with ad-hoc signin
 2. Report PDF/DOCX export (optional)
 3. Production signing + updater ([release-runbook.md](release-runbook.md))
 4. Agent C1 (MCP bridge + Sqlite checkpointer) — see [architecture-agents.md](architecture-agents.md) §Implementation phases
+
+## Deferred / Phase 2
+
+- **Scanned PDF OCR**: locally rasterize PDF pages (e.g. via `pdfium-render` bundled through Tauri resources, or platform-native PDF renderers) and pipe them through `ai_provider::vision_ocr`. The `OcrFn` extension point in `text_extract.rs` is already shaped for this — only the page→image bridge is missing.
+- **CaseSpace Cloud (managed tier)**: optional account-based subscription that fronts a hosted AI provider so non-technical users don't have to source their own key. Same MCP/agents contracts, same BYOK escape hatch for power users. Gated behind the UX release; not part of the desktop parity build.
 
 ## Validation
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Bot, Play } from "lucide-react";
+import { Bot, KeyRound, Play, Sparkles } from "lucide-react";
 import type {
   AiDraftsBundle,
   CaseFile,
@@ -262,10 +262,31 @@ export function AgentPanel({ caseId, onClose, onReportDraft }: AgentPanelProps) 
     <WorkspaceSidePanel title="Agent" onClose={onClose}>
       <div className="flex h-full flex-col">
         <div className="space-y-2 border-b border-border/40 p-3">
-          <p className="text-xs text-muted-foreground">
-            Extract evidence text, analyze with AI, review drafts, then generate
-            a citation-backed report.
-          </p>
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-xs text-muted-foreground">
+              Extract evidence text, analyze with AI, review drafts, then
+              generate a citation-backed report.
+            </p>
+            <span
+              className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-medium ${
+                aiAvailable
+                  ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
+                  : "border-border/60 bg-muted text-muted-foreground"
+              }`}
+              title={
+                aiAvailable
+                  ? "AI provider configured"
+                  : "Connect an AI provider in Settings"
+              }
+            >
+              {aiAvailable ? (
+                <Sparkles className="h-3 w-3" />
+              ) : (
+                <KeyRound className="h-3 w-3" />
+              )}
+              {aiAvailable ? "AI connected" : "AI not connected"}
+            </span>
+          </div>
           <AnalyzeCaseButton
             caseId={caseId}
             onComplete={({ draftsCreated, merged }) => {

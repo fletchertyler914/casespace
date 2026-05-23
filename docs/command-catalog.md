@@ -86,9 +86,9 @@ Native Tauri commands exposed to `apps/desktop` via `lib/command-client.ts`.
 | `approve_ai_entity_draft` | ai | implemented locally | Marks entity draft approved (audit trail) |
 | `reject_ai_entity_draft` | ai | implemented locally | Marks draft rejected |
 | `count_approved_ai_findings` | ai | implemented locally | Badge count for reports workspace |
-| `get_tesseract_available` | ai | implemented locally | OCR capability probe |
 | `seed_sample_fraud_case` | cases | implemented | PMF demo — seeds sample fraud examination case |
 | `export_case_report` | reports | implemented | REQ-REPORT-001 |
-| `run_ocr_preview` | ai | implemented locally | REQ-AI-001 — delegates to text extractor (preview capped at 4k chars) |
+| `run_ocr_preview` | ai | implemented locally | REQ-AI-001 — delegates to text extractor; image OCR routes through BYOK vision-LLM (preview capped at 4k chars) |
+| `get_ai_settings` / `save_ai_settings` / `clear_ai_api_key` / `test_ai_connection` | ai | implemented locally | BYOK AI provider settings (OS keychain + app_settings); see `ai_settings.rs` |
 
 See [spec/commands-and-contracts.md](spec/commands-and-contracts.md).

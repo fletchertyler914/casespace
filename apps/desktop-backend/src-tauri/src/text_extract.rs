@@ -1,13 +1,20 @@
-//! Per-file text extraction with optional Tesseract OCR fallback.
+//! Per-file text extraction.
+//!
+//! Local extractors handle digital documents (PDF text layer, DOCX, XLSX, CSV, plain text).
+//! Image files are OCR'd via a pluggable `OcrFn` so the AI provider transport (and tests)
+//! can be swapped without entangling this module with `reqwest` or the keychain.
 
+use base64::{engine::general_purpose::STANDARD as BASE64, Engine as _};
 use calamine::{open_workbook_auto, Reader};
 use rusqlite::{params, Connection, OptionalExtension};
 use serde::{Deserialize, Serialize};
-use std::path::{Path, PathBuf};
-use std::process::Command;
+use std::path::Path;
 
 const MIN_PDF_TEXT_CHARS: usize = 50;
 const MAX_EXTRACT_CHARS: usize = 500_000;
+
+pub const SCANNED_PDF_NOT_SUPPORTED: &str =
+    "This PDF has no extractable text layer (likely a scan). CaseSpace OCR currently supports image files (jpg/png/tiff/heic/webp). Convert PDF pages to images and re-ingest to OCR them.";
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -29,6 +36,12 @@ pub struct TextExtractProgress {
     pub char_count: usize,
     pub error: Option<String>,
 }
+
+/// Pluggable OCR transport. Returns extracted text given `(image_b64, mime)`.
+///
+/// In production this wraps `ai_provider::vision_ocr` with the user's BYOK settings.
+/// Tests inject a deterministic closure to avoid network and credentials.
+pub type OcrFn<'a> = Box<dyn Fn(&str, &str) -> Result<String, String> + Send + Sync + 'a>;
 
 fn extension_lower(path: &Path) -> String {
     path.extension()
@@ -58,35 +71,6 @@ fn truncate_text(s: String) -> String {
 fn extract_pdf_text_layer(path: &Path) -> Result<String, String> {
     let bytes = std::fs::read(path).map_err(|e| format!("pdf read: {e}"))?;
     pdf_extract::extract_text_from_mem(&bytes).map_err(|e| format!("pdf extract: {e}"))
-}
-
-fn tesseract_available() -> bool {
-    Command::new("tesseract")
-        .arg("--version")
-        .output()
-        .map(|o| o.status.success())
-        .unwrap_or(false)
-}
-
-fn ocr_with_tesseract(path: &Path) -> Result<String, String> {
-    if !tesseract_available() {
-        return Err("OCR unavailable: install tesseract (brew install tesseract)".into());
-    }
-    let out_base = std::env::temp_dir().join(format!("casespace-ocr-{}", uuid::Uuid::new_v4()));
-    let status = Command::new("tesseract")
-        .arg(path)
-        .arg(out_base.to_string_lossy().as_ref())
-        .arg("-l")
-        .arg("eng")
-        .status()
-        .map_err(|e| format!("tesseract spawn failed: {e}"))?;
-    if !status.success() {
-        return Err("tesseract OCR failed".into());
-    }
-    let txt_path = PathBuf::from(format!("{}.txt", out_base.display()));
-    let text = std::fs::read_to_string(&txt_path).map_err(|e| format!("ocr output read: {e}"))?;
-    let _ = std::fs::remove_file(&txt_path);
-    Ok(truncate_text(text))
 }
 
 fn extract_docx(path: &Path) -> Result<String, String> {
@@ -144,70 +128,99 @@ fn extract_csv(path: &Path) -> Result<String, String> {
     Ok(truncate_text(out))
 }
 
-pub fn extract_text_from_path(path: &Path) -> (String, String, bool, Option<String>) {
-    let ext = extension_lower(path);
-    let image_exts = ["png", "jpg", "jpeg", "tif", "tiff", "bmp", "gif", "webp"];
+fn image_mime_for_ext(ext: &str) -> Option<&'static str> {
+    match ext {
+        "png" => Some("image/png"),
+        "jpg" | "jpeg" => Some("image/jpeg"),
+        "tif" | "tiff" => Some("image/tiff"),
+        "bmp" => Some("image/bmp"),
+        "gif" => Some("image/gif"),
+        "webp" => Some("image/webp"),
+        "heic" | "heif" => Some("image/heic"),
+        _ => None,
+    }
+}
 
-    if image_exts.contains(&ext.as_str()) {
-        match ocr_with_tesseract(path) {
-            Ok(t) => return (t, "ocr-tesseract".into(), true, None),
-            Err(e) => return (String::new(), "ocr-tesseract".into(), true, Some(e)),
-        }
+fn ocr_image_file(path: &Path, mime: &str, ocr: &OcrFn<'_>) -> Result<String, String> {
+    let bytes = std::fs::read(path).map_err(|e| format!("image read: {e}"))?;
+    let encoded = BASE64.encode(&bytes);
+    let text = ocr(&encoded, mime)?;
+    Ok(truncate_text(text))
+}
+
+/// Run text extraction for a file. AI-dependent paths (image OCR) require `ocr` to
+/// be `Some(...)`. When `ocr` is `None`, image files return a structured error
+/// indicating the user must configure an AI provider.
+pub fn extract_text_from_path(
+    path: &Path,
+    ocr: Option<&OcrFn<'_>>,
+) -> (String, String, bool, Option<String>) {
+    let ext = extension_lower(path);
+
+    if let Some(mime) = image_mime_for_ext(&ext) {
+        let Some(ocr) = ocr else {
+            return (
+                String::new(),
+                "vision-llm".into(),
+                true,
+                Some(
+                    "OCR requires an AI provider key. Open Settings -> AI provider to add one."
+                        .to_string(),
+                ),
+            );
+        };
+        return match ocr_image_file(path, mime, ocr) {
+            Ok(t) => (t, "vision-llm".into(), true, None),
+            Err(e) => (String::new(), "vision-llm".into(), true, Some(e)),
+        };
     }
 
     if ext == "pdf" {
-        match extract_pdf_text_layer(path) {
+        return match extract_pdf_text_layer(path) {
             Ok(t) if t.trim().len() >= MIN_PDF_TEXT_CHARS => {
-                return (truncate_text(t), "pdf-text-layer".into(), false, None);
+                (truncate_text(t), "pdf-text-layer".into(), false, None)
             }
-            Ok(t) if !t.trim().is_empty() => {
-                return (
-                    truncate_text(t),
-                    "pdf-text-layer-partial".into(),
-                    false,
-                    None,
-                );
-            }
-            Ok(_) | Err(_) => match ocr_with_tesseract(path) {
-                Ok(t) => return (t, "pdf-ocr".into(), true, None),
-                Err(e) => {
-                    return (
-                        String::new(),
-                        "pdf-ocr".into(),
-                        true,
-                        Some(format!("{e}; text layer empty or unavailable")),
-                    );
-                }
-            },
-        }
+            Ok(t) if !t.trim().is_empty() => (
+                truncate_text(t),
+                "pdf-text-layer-partial".into(),
+                false,
+                None,
+            ),
+            Ok(_) | Err(_) => (
+                String::new(),
+                "pdf-scan-skipped".into(),
+                false,
+                Some(SCANNED_PDF_NOT_SUPPORTED.to_string()),
+            ),
+        };
     }
 
     if ext == "docx" {
-        match extract_docx(path) {
-            Ok(t) => return (t, "docx".into(), false, None),
-            Err(e) => return (String::new(), "docx".into(), false, Some(e)),
-        }
+        return match extract_docx(path) {
+            Ok(t) => (t, "docx".into(), false, None),
+            Err(e) => (String::new(), "docx".into(), false, Some(e)),
+        };
     }
 
     if matches!(ext.as_str(), "xlsx" | "xls" | "ods") {
-        match extract_xlsx(path) {
-            Ok(t) => return (t, "calamine".into(), false, None),
-            Err(e) => return (String::new(), "calamine".into(), false, Some(e)),
-        }
+        return match extract_xlsx(path) {
+            Ok(t) => (t, "calamine".into(), false, None),
+            Err(e) => (String::new(), "calamine".into(), false, Some(e)),
+        };
     }
 
     if matches!(ext.as_str(), "txt" | "md" | "json" | "xml" | "html" | "htm") {
-        match read_plain_text(path) {
-            Ok(t) => return (t, "plain".into(), false, None),
-            Err(e) => return (String::new(), "plain".into(), false, Some(e)),
-        }
+        return match read_plain_text(path) {
+            Ok(t) => (t, "plain".into(), false, None),
+            Err(e) => (String::new(), "plain".into(), false, Some(e)),
+        };
     }
 
     if matches!(ext.as_str(), "csv" | "tsv") {
-        match extract_csv(path) {
-            Ok(t) => return (t, "csv".into(), false, None),
-            Err(e) => return (String::new(), "csv".into(), false, Some(e)),
-        }
+        return match extract_csv(path) {
+            Ok(t) => (t, "csv".into(), false, None),
+            Err(e) => (String::new(), "csv".into(), false, Some(e)),
+        };
     }
 
     (
@@ -272,17 +285,65 @@ pub fn load_extract_text(conn: &Connection, file_id: &str) -> Result<Option<Stri
     .map_err(|e| e.to_string())
 }
 
-pub fn tesseract_is_available() -> bool {
-    tesseract_available()
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::io::Write;
 
     #[test]
     fn truncate_respects_max() {
         let s = "a".repeat(MAX_EXTRACT_CHARS + 100);
         assert_eq!(truncate_text(s).len(), MAX_EXTRACT_CHARS);
+    }
+
+    #[test]
+    fn image_extract_uses_injected_ocr() {
+        let dir = std::env::temp_dir().join(format!("text-extract-{}", uuid::Uuid::new_v4()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let img = dir.join("scan.png");
+        let mut f = std::fs::File::create(&img).unwrap();
+        f.write_all(b"\x89PNG\r\n\x1a\nfake-bytes").unwrap();
+
+        let ocr: OcrFn<'_> = Box::new(|b64: &str, mime: &str| {
+            assert!(!b64.is_empty());
+            assert_eq!(mime, "image/png");
+            Ok("mocked vision text".to_string())
+        });
+
+        let (text, extractor, ocr_used, err) = extract_text_from_path(&img, Some(&ocr));
+        assert!(err.is_none());
+        assert!(ocr_used);
+        assert_eq!(extractor, "vision-llm");
+        assert_eq!(text, "mocked vision text");
+    }
+
+    #[test]
+    fn image_extract_without_ocr_returns_actionable_error() {
+        let dir = std::env::temp_dir().join(format!("text-extract-{}", uuid::Uuid::new_v4()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let img = dir.join("scan.jpg");
+        std::fs::write(&img, b"jpeg-bytes").unwrap();
+
+        let (text, extractor, ocr_used, err) = extract_text_from_path(&img, None);
+        assert!(text.is_empty());
+        assert_eq!(extractor, "vision-llm");
+        assert!(ocr_used);
+        let msg = err.expect("error");
+        assert!(msg.contains("AI provider"), "error should mention provider: {msg}");
+    }
+
+    #[test]
+    fn scanned_pdf_returns_actionable_message() {
+        // Construct a minimal "PDF" that has no extractable text. pdf_extract may
+        // return an error or empty string; either way we should land in the scan branch.
+        let dir = std::env::temp_dir().join(format!("text-extract-{}", uuid::Uuid::new_v4()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let pdf = dir.join("scan.pdf");
+        std::fs::write(&pdf, b"%PDF-1.4\n%%EOF\n").unwrap();
+
+        let (text, extractor, _ocr_used, err) = extract_text_from_path(&pdf, None);
+        assert!(text.is_empty());
+        assert_eq!(extractor, "pdf-scan-skipped");
+        assert!(err.unwrap_or_default().contains("scan"));
     }
 }

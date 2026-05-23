@@ -20,6 +20,19 @@ struct OpenAiRequest {
     response_format: serde_json::Value,
 }
 
+#[derive(Debug, Serialize)]
+struct VisionMessage {
+    role: String,
+    content: Vec<serde_json::Value>,
+}
+
+#[derive(Debug, Serialize)]
+struct VisionRequest {
+    model: String,
+    messages: Vec<VisionMessage>,
+    temperature: f32,
+}
+
 #[derive(Debug, Deserialize)]
 struct OpenAiResponse {
     choices: Vec<OpenAiChoice>,
@@ -160,4 +173,77 @@ pub async fn call_openai_json_with_timeout_and_settings(
         .next()
         .map(|choice| choice.message.content)
         .ok_or_else(|| "AI provider returned no choices".to_string())
+}
+
+const VISION_OCR_SYSTEM_PROMPT: &str = "You are a forensic OCR assistant. Extract all visible text from the provided image verbatim. Preserve line breaks and reading order. Do not summarize, translate, or interpret. If the image contains no readable text, return an empty string. Return plain text only — no markdown, no commentary.";
+
+/// OCR an image via the BYOK provider's chat completions endpoint with vision content.
+///
+/// `image_b64` must be unpadded raw base64 (no `data:` prefix). `mime` is the original
+/// image content type, e.g. `image/png`.
+pub async fn vision_ocr(
+    image_b64: &str,
+    mime: &str,
+    model: &str,
+    api_url: &str,
+) -> Result<String, String> {
+    let key = api_key()?;
+    let data_url = format!("data:{mime};base64,{image_b64}");
+
+    let req = VisionRequest {
+        model: model.to_string(),
+        temperature: 0.0,
+        messages: vec![
+            VisionMessage {
+                role: "system".to_string(),
+                content: vec![serde_json::json!({
+                    "type": "text",
+                    "text": VISION_OCR_SYSTEM_PROMPT,
+                })],
+            },
+            VisionMessage {
+                role: "user".to_string(),
+                content: vec![
+                    serde_json::json!({
+                        "type": "text",
+                        "text": "Extract all visible text from this image.",
+                    }),
+                    serde_json::json!({
+                        "type": "image_url",
+                        "image_url": { "url": data_url },
+                    }),
+                ],
+            },
+        ],
+    };
+
+    let client = reqwest::Client::builder()
+        .timeout(Duration::from_secs(120))
+        .build()
+        .map_err(|e| e.to_string())?;
+
+    let response = client
+        .post(api_url)
+        .header(AUTHORIZATION, format!("Bearer {key}"))
+        .header(CONTENT_TYPE, "application/json")
+        .json(&req)
+        .send()
+        .await
+        .map_err(|e| format!("AI vision request failed: {e}"))?;
+
+    if !response.status().is_success() {
+        let status = response.status();
+        let body = response.text().await.unwrap_or_default();
+        return Err(format!("AI vision returned {status}: {body}"));
+    }
+
+    let body: OpenAiResponse = response
+        .json()
+        .await
+        .map_err(|e| format!("AI vision response parse failed: {e}"))?;
+    body.choices
+        .into_iter()
+        .next()
+        .map(|choice| choice.message.content)
+        .ok_or_else(|| "AI vision returned no choices".to_string())
 }
