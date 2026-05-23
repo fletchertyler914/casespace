@@ -86,6 +86,19 @@ Native Tauri commands exposed to `apps/desktop` via `lib/command-client.ts`.
 | `approve_ai_entity_draft` | ai | implemented locally | Marks entity draft approved (audit trail) |
 | `reject_ai_entity_draft` | ai | implemented locally | Marks draft rejected |
 | `count_approved_ai_findings` | ai | implemented locally | Badge count for reports workspace |
+| `get_report_draft` | reports | implemented locally | Returns persisted `ReportDraft` for case+template or null |
+| `save_report_draft` | reports | implemented locally | Full draft upsert (autosave) |
+| `update_report_section` | reports | implemented locally | Patch single section text + status |
+| `regenerate_report` | reports | implemented locally | AI regen with scope `all` / `unreviewed` / `section`; never overwrites `edited`/`locked` |
+| `generate_and_save_report_draft` | reports | implemented locally | First-draft generation + persist |
+| `create_report_snapshot` | reports | implemented locally | Named snapshot of draft |
+| `list_report_snapshots` | reports | implemented locally | Snapshot history |
+| `restore_report_snapshot` | reports | implemented locally | Restore draft from snapshot |
+| `export_report_markdown` | reports | implemented locally | Markdown string export |
+| `export_report_docx` | reports | implemented locally | DOCX write via `docx-rs` + save path |
+| `get_examiner_profile` | reports | implemented locally | Singleton examiner boilerplate |
+| `save_examiner_profile` | reports | implemented locally | Upsert examiner profile |
+| `run_report_compliance_scan` | reports | implemented locally | Language scan + required sections + persona completeness |
 | `seed_sample_fraud_case` | cases | implemented | PMF demo — seeds sample fraud examination case |
 | `export_case_report` | reports | implemented | REQ-REPORT-001 |
 | `run_ocr_preview` | ai | implemented locally | REQ-AI-001 — delegates to text extractor; image OCR routes through BYOK vision-LLM (preview capped at 4k chars) |

@@ -42,6 +42,7 @@ encoding_rs = "0.8.35"
 zip = "8.6.0"
 quick-xml = "0.40.1"
 keyring = { version = "3", features = ["apple-native", "windows-native", "linux-native"] }
+docx-rs = "0.4.20"
 
 [dev-dependencies]
 uuid = { version = "1", features = ["v4"] }

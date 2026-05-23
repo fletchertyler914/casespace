@@ -10,9 +10,9 @@ Tracks implemented scope, validated scope, and gates before production sign-off 
 |------|--------|
 | Planning / spec pack | **Complete** — [product-spec-bible.md](product-spec-bible.md) |
 | Core backend | **Complete (local)** — SQLite, FTS, P0 commands, parity + hardening |
-| Desktop UX | **Implemented (local)** — case hub, workspace, viewers, board, artifacts, reports, billing, evidence-to-report pipeline. **Not release-validated** until native E2E checklist passes |
+| Desktop UX | **Implemented (local)** — case hub, workspace, viewers, board, artifacts, customer-centric report workspace, billing, evidence-to-report pipeline. **Not release-validated** until native E2E checklist passes |
 | Toolchain | Next **16.2.6** catalog-pinned |
-| AI-native phase | **Partially implemented locally** — extract -> analyze -> approve -> AI report draft pipeline with BYOK provider settings; broader AI-native GA remains blocked until UX release gate |
+| AI-native phase | **Partially implemented locally** — extract → analyze → approve → AI report draft + persisted report workspace (schema v9) with BYOK provider settings; broader AI-native GA remains blocked until UX release gate |
 | Production distribution | **Blocked** — updater placeholders; code signing / notarization pending |
 
 ## Gates
@@ -51,6 +51,8 @@ Tracks implemented scope, validated scope, and gates before production sign-off 
 CaseSpace uses bring-your-own-key AI access for distribution. Users configure an OpenAI-compatible API key in Settings -> AI provider; the key is stored in the OS keychain, and model/base URL are stored as non-secret local app settings. Developer env vars (`OPENAI_API_KEY`, `CASESPACE_OPENAI_API_KEY`, `CASESPACE_OPENAI_MODEL`, `CASESPACE_OPENAI_API_URL`) remain local-dev/CI fallbacks and must not be treated as bundled production credentials.
 
 The same BYOK provider powers image OCR via the chat-completions `image_url` content type (`ai_provider::vision_ocr`). All local-evidence flows — ingest, dedup, FTS5 search, deterministic report assembly, time tracking, digital-PDF/DOCX/XLSX/CSV/TXT extraction — run without a key. Scanned PDFs without a text layer return an actionable "convert pages to images" status pending Phase 2 PDF rasterization (see [product-roadmap.md](product-roadmap.md) §Deferred). The legacy Tesseract dependency has been removed; no system-binary install is required on any platform.
+
+**Report workspace (schema v9):** Drafts persist per case+template in `report_drafts`; examiner boilerplate lives in singleton `examiner_profile`. Regeneration never overwrites sections marked `edited` or `locked`. Export paths: Markdown string + DOCX via `docx-rs`. Compliance scan runs before finalize/export.
 
 ## Deferred (post–release gate)
 

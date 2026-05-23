@@ -1,10 +1,16 @@
 import type {
   CaseFile,
   CaseSummary,
+  ExaminerProfile,
   Finding,
   Note,
+  ReportComplianceScan,
   ReportDocument,
+  ReportDraft,
   ReportExportHistoryEntry,
+  ReportSectionStatus,
+  ReportSnapshot,
+  SaveReportDraftInput,
   SearchHit,
   TimeEntry,
   TimelineEvent,
@@ -43,6 +49,96 @@ function mockReportDocument(templateId = "cfe-long"): string {
     markdown: "# E2E Report\n\nPreview body.",
   };
   return JSON.stringify(doc);
+}
+
+const mockExaminerProfile: ExaminerProfile = {
+  fullName: "Jane Examiner, CFE",
+  credentials: "CFE, CPA",
+  firmName: "Forensic Partners LLC",
+  qualificationsMd: "20 years fraud examination experience.",
+  priorTestimonyMd: "Testified in 12 matters (2022–2025).",
+  compensationDisclosure: "Hourly at $350/hr; no contingency.",
+  signatureBlock: "Jane Examiner, CFE\nForensic Partners LLC",
+  confidentialityClause: "This report is confidential.",
+  limitationsClause: "Scope limited to documents provided.",
+  updatedAt: "2026-01-01T00:00:00Z",
+};
+
+const mockReportDraftStore = new Map<string, ReportDraft>();
+const mockReportSnapshots: ReportSnapshot[] = [];
+
+function reportDraftKey(caseId: string, templateId: string) {
+  return `${caseId}:${templateId}`;
+}
+
+function buildMockReportDraft(caseId: string, templateId: string): ReportDraft {
+  const doc = JSON.parse(mockReportDocument(templateId)) as ReportDocument;
+  doc.caseId = caseId;
+  if (doc.sections.length === 0) {
+    doc.sections = [
+      {
+        id: "executive",
+        heading: "Executive Summary",
+        text: "E2E executive summary with evidence context.",
+        citations: [],
+        standardsTags: [],
+      },
+      {
+        id: "findings",
+        heading: "Findings",
+        text: "E2E mock finding content.",
+        citations: [
+          { kind: "finding", id: "finding-1", label: "Finding: Mock" },
+        ],
+        standardsTags: ["ACFE-EVIDENCE"],
+      },
+    ];
+  }
+  const sectionStatus: Record<string, ReportSectionStatus> = {};
+  for (const section of doc.sections) {
+    sectionStatus[section.id] = "aiDrafted";
+  }
+  const now = new Date().toISOString();
+  return {
+    id: `draft-${caseId}-${templateId}`,
+    caseId,
+    templateId: templateId as ReportDraft["templateId"],
+    document: doc,
+    sectionStatus,
+    generatedAt: now,
+    updatedAt: now,
+  };
+}
+
+function mockComplianceScan(draft: ReportDraft | null): ReportComplianceScan {
+  const hasCitations = (draft?.document.sections ?? []).some(
+    (s) => s.citations.length > 0,
+  );
+  const reviewed = draft
+    ? Object.values(draft.sectionStatus).every(
+        (s) => s === "reviewed" || s === "locked",
+      )
+    : false;
+  const items = [
+    {
+      id: "citations",
+      label: "Findings cite evidence",
+      passed: hasCitations,
+      detail: hasCitations ? undefined : "Add citations to findings sections.",
+    },
+    {
+      id: "reviewed",
+      label: "All sections reviewed or locked",
+      passed: reviewed,
+      detail: reviewed ? undefined : "Mark each section reviewed before export.",
+    },
+    {
+      id: "persona",
+      label: "Examiner profile complete",
+      passed: Boolean(mockExaminerProfile.fullName.trim()),
+    },
+  ];
+  return { ok: items.every((i) => i.passed), items };
 }
 
 
@@ -288,6 +384,153 @@ export const e2eMockInvoke = (async (command, args = {}) => {
       return mockReportDocument(String(args.templateId ?? "cfe-long"));
     case "generate_ai_case_report":
       return mockReportDocument(String(args.templateId ?? "cfe-long"));
+    case "get_report_draft": {
+      const caseId = String(args.caseId ?? E2E_CASE_ID);
+      const templateId = String(args.templateId ?? "cfe-long");
+      return mockReportDraftStore.get(reportDraftKey(caseId, templateId)) ?? null;
+    }
+    case "save_report_draft": {
+      const caseId = String(args.caseId ?? E2E_CASE_ID);
+      const templateId = String(args.templateId ?? "cfe-long");
+      const draftInput = args.draft as SaveReportDraftInput;
+      const existing =
+        mockReportDraftStore.get(reportDraftKey(caseId, templateId)) ??
+        buildMockReportDraft(caseId, templateId);
+      const updated: ReportDraft = {
+        ...existing,
+        document: {
+          ...existing.document,
+          sections: draftInput.sections ?? existing.document.sections,
+          compliance: draftInput.compliance ?? existing.document.compliance,
+          generatedAt: draftInput.generatedAt ?? existing.generatedAt,
+        },
+        sectionStatus: draftInput.sectionStatus ?? existing.sectionStatus,
+        updatedAt: new Date().toISOString(),
+      };
+      mockReportDraftStore.set(reportDraftKey(caseId, templateId), updated);
+      return updated;
+    }
+    case "update_report_section": {
+      const caseId = String(args.caseId ?? E2E_CASE_ID);
+      const templateId = String(args.templateId ?? "cfe-long");
+      const key = reportDraftKey(caseId, templateId);
+      const draft =
+        mockReportDraftStore.get(key) ?? buildMockReportDraft(caseId, templateId);
+      const sectionId = String(args.sectionId);
+      const text = String(args.text);
+      const status = args.status as ReportSectionStatus;
+      draft.document.sections = draft.document.sections.map((s) =>
+        s.id === sectionId ? { ...s, text } : s,
+      );
+      draft.sectionStatus[sectionId] = status;
+      draft.updatedAt = new Date().toISOString();
+      mockReportDraftStore.set(key, draft);
+      return draft;
+    }
+    case "generate_and_save_report_draft":
+    case "regenerate_report": {
+      const caseId = String(args.caseId ?? E2E_CASE_ID);
+      const templateId = String(args.templateId ?? "cfe-long");
+      const key = reportDraftKey(caseId, templateId);
+      const existing = mockReportDraftStore.get(key);
+      const fresh = buildMockReportDraft(caseId, templateId);
+      if (!existing || command === "generate_and_save_report_draft") {
+        mockReportDraftStore.set(key, fresh);
+        return fresh;
+      }
+      const options = args.options as { scope?: string; sectionId?: string } | undefined;
+      if (options?.scope === "section" && options.sectionId) {
+        const lockedOrEdited =
+          existing.sectionStatus[options.sectionId] === "edited" ||
+          existing.sectionStatus[options.sectionId] === "locked";
+        if (lockedOrEdited) return existing;
+      }
+      const merged: ReportDraft = {
+        ...existing,
+        document: fresh.document,
+        sectionStatus: { ...fresh.sectionStatus, ...existing.sectionStatus },
+        updatedAt: new Date().toISOString(),
+      };
+      for (const [id, status] of Object.entries(existing.sectionStatus)) {
+        if (status === "edited" || status === "locked") {
+          const prev = existing.document.sections.find((s) => s.id === id);
+          if (prev) {
+            merged.document.sections = merged.document.sections.map((s) =>
+              s.id === id ? { ...s, text: prev.text } : s,
+            );
+            merged.sectionStatus[id] = status;
+          }
+        }
+      }
+      mockReportDraftStore.set(key, merged);
+      return merged;
+    }
+    case "create_report_snapshot": {
+      const caseId = String(args.caseId ?? E2E_CASE_ID);
+      const templateId = String(args.templateId ?? "cfe-long");
+      const draft =
+        mockReportDraftStore.get(reportDraftKey(caseId, templateId)) ??
+        buildMockReportDraft(caseId, templateId);
+      const snap: ReportSnapshot = {
+        id: `snap-${mockReportSnapshots.length + 1}`,
+        caseId,
+        templateId: templateId as ReportSnapshot["templateId"],
+        label: String(args.label ?? "Snapshot"),
+        document: draft.document,
+        sectionStatus: { ...draft.sectionStatus },
+        createdAt: new Date().toISOString(),
+      };
+      mockReportSnapshots.push(snap);
+      return snap;
+    }
+    case "list_report_snapshots": {
+      const caseId = String(args.caseId ?? E2E_CASE_ID);
+      const templateId = String(args.templateId ?? "cfe-long");
+      return mockReportSnapshots.filter(
+        (s) => s.caseId === caseId && s.templateId === templateId,
+      );
+    }
+    case "restore_report_snapshot": {
+      const snap = mockReportSnapshots.find((s) => s.id === args.snapshotId);
+      if (!snap) throw new Error("snapshot not found");
+      const draft: ReportDraft = {
+        id: `draft-${snap.caseId}-${snap.templateId}`,
+        caseId: snap.caseId,
+        templateId: snap.templateId,
+        document: snap.document,
+        sectionStatus: { ...snap.sectionStatus },
+        generatedAt: snap.createdAt,
+        updatedAt: new Date().toISOString(),
+      };
+      mockReportDraftStore.set(
+        reportDraftKey(snap.caseId, snap.templateId),
+        draft,
+      );
+      return draft;
+    }
+    case "export_report_markdown": {
+      const caseId = String(args.caseId ?? E2E_CASE_ID);
+      const templateId = String(args.templateId ?? "cfe-long");
+      const draft =
+        mockReportDraftStore.get(reportDraftKey(caseId, templateId)) ??
+        buildMockReportDraft(caseId, templateId);
+      return draft.document.markdown || "# E2E Report\n\nPreview body.";
+    }
+    case "export_report_docx":
+      return null;
+    case "get_examiner_profile":
+      return mockExaminerProfile;
+    case "save_examiner_profile":
+      Object.assign(mockExaminerProfile, args.profile as ExaminerProfile);
+      mockExaminerProfile.updatedAt = new Date().toISOString();
+      return mockExaminerProfile;
+    case "run_report_compliance_scan": {
+      const caseId = String(args.caseId ?? E2E_CASE_ID);
+      const templateId = String(args.templateId ?? "cfe-long");
+      const draft =
+        mockReportDraftStore.get(reportDraftKey(caseId, templateId)) ?? null;
+      return mockComplianceScan(draft);
+    }
     case "extract_case_text":
       return { processed: 2, succeeded: 2, failed: 0 };
     case "extract_file_text":

@@ -2,8 +2,8 @@
 
 Desktop UX and release milestones for `apps/desktop`. Backend command matrix: [command-catalog.md](command-catalog.md). Component map: [desktop-workflow-mapping.md](desktop-workflow-mapping.md). Agent track: [architecture-agents.md](architecture-agents.md).
 
-**Last updated:** 2026-05-22
-**Current version:** 0.1.11 local (evidence-to-report pipeline — local-validated pending release)
+**Last updated:** 2026-05-23
+**Current version:** 0.1.12 local (customer-centric report workspace — local-validated pending release)
 
 ## Status summary
 
@@ -18,9 +18,18 @@ Desktop UX and release milestones for `apps/desktop`. Backend command matrix: [c
 | **Report library Wave A** (CFE long/short, expert witness, engagement letter) | **Shipped in 0.1.9** — citation pills + standards footer |
 | Sample case demo flow | **Shipped in 0.1.9** |
 | **Evidence-to-report pipeline** (extract → analyze → approve → draft) | **Shipped in 0.1.11 local** |
+| **Customer-centric report workspace** (draft persist, edit, persona, snapshots, DOCX) | **Shipped in 0.1.12 local** |
 | Agent report graph + MCP bridge (Phase B) | **Implemented locally** — multi-node graph: extract → per-file analyze → aggregate → review → draft |
 | UX release gate (native E2E) | **Pending** |
 | Wave B templates (PI) | **Blocked** — [pmf-gate-eval.md](spec/pmf-gate-eval.md) |
+
+## Release: 0.1.12 (local, 2026-05-23) — Customer-Centric Report Workspace
+
+- Schema v9: `report_drafts`, `report_snapshots`, `examiner_profile`
+- Report workspace UI: outline + scrollable Tiptap canvas, per-section status (`empty` → `aiDrafted` → `edited` → `reviewed` → `locked`)
+- Five flows: first draft, edit/iterate, persona boilerplate (Settings), citation verify inspector, snapshot/finalize/export
+- Commands: draft CRUD, scoped regen, compliance scan, Markdown + DOCX export, examiner profile
+- Settings: Examiner profile section + tightened AI provider card (inline Test)
 
 ## Release: 0.1.11 (local, 2026-05-22) — Evidence-to-Report Pipeline
 
@@ -75,7 +84,7 @@ pnpm build              # CaseSpace_0.1.8_aarch64.dmg bundled with ad-hoc signin
 ## Remaining before release gate
 
 1. Manual E2E on [spec/user-flow-map.md](spec/user-flow-map.md)
-2. Report PDF/DOCX export (optional)
+2. **Report PDF export** — DOCX shipped in 0.1.12; PDF deferred (browser print bridge in v1)
 3. Production signing + updater ([release-runbook.md](release-runbook.md))
 4. Agent C1 (MCP bridge + Sqlite checkpointer) — see [architecture-agents.md](architecture-agents.md) §Implementation phases
 

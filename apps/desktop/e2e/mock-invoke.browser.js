@@ -101,6 +101,66 @@
       generatedAt: "2026-01-01T12:00:00Z",
     },
   ];
+  const mockExaminerProfile = {
+    fullName: "Jane Examiner, CFE",
+    credentials: "CFE, CPA",
+    firmName: "Forensic Partners LLC",
+    qualificationsMd: "20 years fraud examination experience.",
+    priorTestimonyMd: "Testified in 12 matters (2022–2025).",
+    compensationDisclosure: "Hourly at $350/hr; no contingency.",
+    signatureBlock: "Jane Examiner, CFE\nForensic Partners LLC",
+    confidentialityClause: "This report is confidential.",
+    limitationsClause: "Scope limited to documents provided.",
+    updatedAt: "2026-01-01T00:00:00Z",
+  };
+  const mockReportDraftStore = {};
+  const mockReportSnapshots = [];
+
+  function reportDraftKey(caseId, templateId) {
+    return caseId + ":" + templateId;
+  }
+
+  function buildMockReportDraft(caseId, templateId) {
+    var now = new Date().toISOString();
+    return {
+      id: "draft-" + caseId + "-" + templateId,
+      caseId: caseId,
+      templateId: templateId,
+      document: {
+        templateId: templateId,
+        caseId: caseId,
+        generatedAt: now,
+        sections: [
+          {
+            id: "executive",
+            heading: "Executive Summary",
+            text: "E2E executive summary.",
+            citations: [],
+            standardsTags: [],
+          },
+          {
+            id: "findings",
+            heading: "Findings",
+            text: "E2E mock finding content.",
+            citations: [{ kind: "finding", id: "finding-1", label: "Finding: Mock" }],
+            standardsTags: ["ACFE-EVIDENCE"],
+          },
+        ],
+        compliance: [
+          {
+            id: "ACFE-III.C.2",
+            label: "No guilt/innocence opinion",
+            status: "verified",
+          },
+        ],
+        markdown: "# E2E Report\n\nPreview body.",
+      },
+      sectionStatus: { executive: "aiDrafted", findings: "aiDrafted" },
+      generatedAt: now,
+      updatedAt: now,
+    };
+  }
+
   const mockSearchHits = [
     {
       id: "file-1",
@@ -209,7 +269,6 @@
           filePath: "/tmp/e2e-export.md",
           generatedAt: new Date().toISOString(),
         };
-      case "generate_case_report":
       case "generate_ai_case_report":
         return JSON.stringify({
           templateId: args.templateId || "cfe-long",
@@ -231,6 +290,106 @@
               status: "verified",
             },
           ],
+          markdown: "# E2E Report\n\nPreview body.",
+        });
+      case "get_report_draft":
+        return (
+          mockReportDraftStore[reportDraftKey(String(args.caseId || E2E_CASE_ID), String(args.templateId || "cfe-long"))] ||
+          null
+        );
+      case "generate_and_save_report_draft":
+      case "regenerate_report": {
+        var cid = String(args.caseId || E2E_CASE_ID);
+        var tid = String(args.templateId || "cfe-long");
+        var key = reportDraftKey(cid, tid);
+        var fresh = buildMockReportDraft(cid, tid);
+        mockReportDraftStore[key] = fresh;
+        return fresh;
+      }
+      case "update_report_section": {
+        var uCase = String(args.caseId || E2E_CASE_ID);
+        var uTpl = String(args.templateId || "cfe-long");
+        var uKey = reportDraftKey(uCase, uTpl);
+        var draft = mockReportDraftStore[uKey] || buildMockReportDraft(uCase, uTpl);
+        draft.document.sections = draft.document.sections.map(function (s) {
+          return s.id === args.sectionId ? Object.assign({}, s, { text: String(args.text) }) : s;
+        });
+        draft.sectionStatus[args.sectionId] = args.status;
+        draft.updatedAt = new Date().toISOString();
+        mockReportDraftStore[uKey] = draft;
+        return draft;
+      }
+      case "create_report_snapshot": {
+        var snap = {
+          id: "snap-" + (mockReportSnapshots.length + 1),
+          caseId: String(args.caseId || E2E_CASE_ID),
+          templateId: String(args.templateId || "cfe-long"),
+          label: String(args.label || "Snapshot"),
+          document: buildMockReportDraft(String(args.caseId || E2E_CASE_ID), String(args.templateId || "cfe-long")).document,
+          sectionStatus: { executive: "aiDrafted", findings: "aiDrafted" },
+          createdAt: new Date().toISOString(),
+        };
+        mockReportSnapshots.push(snap);
+        return snap;
+      }
+      case "list_report_snapshots":
+        return mockReportSnapshots.filter(function (s) {
+          return (
+            s.caseId === String(args.caseId || E2E_CASE_ID) &&
+            s.templateId === String(args.templateId || "cfe-long")
+          );
+        });
+      case "restore_report_snapshot": {
+        var found = mockReportSnapshots.find(function (s) {
+          return s.id === args.snapshotId;
+        });
+        if (!found) throw new Error("snapshot not found");
+        var restored = {
+          id: "draft-" + found.caseId + "-" + found.templateId,
+          caseId: found.caseId,
+          templateId: found.templateId,
+          document: found.document,
+          sectionStatus: found.sectionStatus,
+          generatedAt: found.createdAt,
+          updatedAt: new Date().toISOString(),
+        };
+        mockReportDraftStore[reportDraftKey(found.caseId, found.templateId)] = restored;
+        return restored;
+      }
+      case "export_report_markdown":
+        return "# E2E Report\n\nPreview body.";
+      case "export_report_docx":
+        return null;
+      case "get_examiner_profile":
+        return mockExaminerProfile;
+      case "save_examiner_profile":
+        Object.assign(mockExaminerProfile, args.profile || {});
+        mockExaminerProfile.updatedAt = new Date().toISOString();
+        return mockExaminerProfile;
+      case "run_report_compliance_scan":
+        return {
+          ok: true,
+          items: [
+            { id: "citations", label: "Findings cite evidence", passed: true },
+            { id: "reviewed", label: "All sections reviewed", passed: true },
+            { id: "persona", label: "Examiner profile complete", passed: true },
+          ],
+        };
+      case "generate_case_report":
+        return JSON.stringify({
+          templateId: args.templateId || "cfe-long",
+          caseId: E2E_CASE_ID,
+          generatedAt: new Date().toISOString(),
+          sections: [
+            {
+              id: "findings",
+              heading: "Findings",
+              text: "E2E mock finding.",
+              citations: [{ kind: "finding", id: "f1", label: "Finding: Mock" }],
+              standardsTags: [],
+            },
+          ],
+          compliance: [],
           markdown: "# E2E Report\n\nPreview body.",
         });
       case "seed_sample_fraud_case":

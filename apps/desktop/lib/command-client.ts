@@ -27,6 +27,13 @@ import type {
   AiDraftsBundle,
   AiConnectionTestResult,
   AiSettings,
+  ExaminerProfile,
+  RegenerateReportOptions,
+  ReportComplianceScan,
+  ReportDraft,
+  ReportSectionStatus,
+  ReportSnapshot,
+  SaveReportDraftInput,
 } from "@repo/types";
 
 function toResponse<T>(data: T): CommandResponse<T> {
@@ -446,6 +453,78 @@ export const commandClient = {
   },
   generateAiCaseReport(caseId: string, templateId?: string) {
     return safeInvoke<string>("generate_ai_case_report", { caseId, templateId });
+  },
+  getReportDraft(caseId: string, templateId: string) {
+    return safeInvoke<ReportDraft | null>("get_report_draft", { caseId, templateId });
+  },
+  saveReportDraft(caseId: string, templateId: string, draft: SaveReportDraftInput) {
+    return safeInvoke<ReportDraft>("save_report_draft", { caseId, templateId, draft });
+  },
+  updateReportSection(
+    caseId: string,
+    templateId: string,
+    sectionId: string,
+    text: string,
+    status: ReportSectionStatus,
+  ) {
+    return safeInvoke<ReportDraft>("update_report_section", {
+      caseId,
+      templateId,
+      sectionId,
+      text,
+      status,
+    });
+  },
+  regenerateReport(
+    caseId: string,
+    templateId: string,
+    options: RegenerateReportOptions,
+  ) {
+    return safeInvoke<ReportDraft>("regenerate_report", {
+      caseId,
+      templateId,
+      options,
+    });
+  },
+  generateAndSaveReportDraft(caseId: string, templateId?: string) {
+    return safeInvoke<ReportDraft>("generate_and_save_report_draft", {
+      caseId,
+      templateId,
+    });
+  },
+  createReportSnapshot(caseId: string, templateId: string, label: string) {
+    return safeInvoke<ReportSnapshot>("create_report_snapshot", {
+      caseId,
+      templateId,
+      label,
+    });
+  },
+  listReportSnapshots(caseId: string, templateId: string) {
+    return safeInvoke<ReportSnapshot[]>("list_report_snapshots", {
+      caseId,
+      templateId,
+    });
+  },
+  restoreReportSnapshot(snapshotId: string) {
+    return safeInvoke<ReportDraft>("restore_report_snapshot", { snapshotId });
+  },
+  exportReportMarkdown(caseId: string, templateId: string) {
+    return safeInvoke<string>("export_report_markdown", { caseId, templateId });
+  },
+  exportReportDocx(caseId: string, templateId: string, savePath: string) {
+    return safeInvoke<void>("export_report_docx", { caseId, templateId, savePath });
+  },
+  getExaminerProfile() {
+    return safeInvoke<ExaminerProfile>("get_examiner_profile", {});
+  },
+  saveExaminerProfile(profile: ExaminerProfile) {
+    return safeInvoke<ExaminerProfile>("save_examiner_profile", { profile });
+  },
+  runReportComplianceScan(caseId: string, templateId: string) {
+    return safeInvoke<ReportComplianceScan>("run_report_compliance_scan", {
+      caseId,
+      templateId,
+    });
   },
   extractFileText(caseId: string, fileId: string, force?: boolean) {
     return safeInvoke<FileTextExtractResult>("extract_file_text", {

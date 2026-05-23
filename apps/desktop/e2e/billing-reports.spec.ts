@@ -23,7 +23,7 @@ test.describe("Time and reports (FLOW-005/006)", () => {
   test("report mode shows generate action", async ({ page }) => {
     await page.getByTitle("Examination report").click();
     await expect(
-      page.getByRole("button", { name: /Generate AI report/i }),
+      page.getByRole("button", { name: /Generate first draft/i }).first(),
     ).toBeVisible();
     await expect(
       page.getByRole("button", { name: /Findings/i }).first(),
@@ -32,9 +32,9 @@ test.describe("Time and reports (FLOW-005/006)", () => {
 
   test("generates case report from report workspace", async ({ page }) => {
     await page.getByTitle("Examination report").click();
-    await page.getByRole("button", { name: /Generate AI report/i }).click();
+    await page.getByRole("button", { name: /Generate first draft/i }).first().click();
     await expect(
-      page.getByRole("button", { name: /Findings/i }).first(),
+      page.getByRole("heading", { name: "Findings" }),
     ).toBeVisible({
       timeout: 10_000,
     });

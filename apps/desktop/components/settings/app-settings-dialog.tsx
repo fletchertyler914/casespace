@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { ApiKeySource } from "@repo/types";
+import type { ApiKeySource, ExaminerProfile } from "@repo/types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -13,6 +13,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -43,6 +44,18 @@ export function AppSettingsDialog({ open, onOpenChange }: AppSettingsDialogProps
   );
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
+  const [examinerProfile, setExaminerProfile] = useState<ExaminerProfile>({
+    fullName: "",
+    credentials: "",
+    firmName: "",
+    qualificationsMd: "",
+    priorTestimonyMd: "",
+    compensationDisclosure: "",
+    signatureBlock: "",
+    confidentialityClause: "",
+    limitationsClause: "",
+    updatedAt: "",
+  });
 
   useEffect(() => {
     if (!open) return;
@@ -60,6 +73,9 @@ export function AppSettingsDialog({ open, onOpenChange }: AppSettingsDialogProps
         setAiBaseUrl(res.data.baseUrl);
       }
     });
+    void commandClient.getExaminerProfile().then((res) => {
+      if (res.ok && res.data) setExaminerProfile(res.data);
+    });
   }, [open]);
 
   async function handleSave() {
@@ -74,6 +90,17 @@ export function AppSettingsDialog({ open, onOpenChange }: AppSettingsDialogProps
       toast({
         title: "Failed to save AI settings",
         description: aiRes.error?.message ?? "Unknown error",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const profileRes = await commandClient.saveExaminerProfile(examinerProfile);
+    if (!profileRes.ok) {
+      setSaving(false);
+      toast({
+        title: "Failed to save examiner profile",
+        description: profileRes.error?.message ?? "Unknown error",
         variant: "destructive",
       });
       return;
@@ -173,9 +200,7 @@ export function AppSettingsDialog({ open, onOpenChange }: AppSettingsDialogProps
               <div>
                 <Label>AI provider</Label>
                 <p className="text-xs text-muted-foreground">
-                  Bring your own OpenAI-compatible API key. Required for AI
-                  analysis, AI reports, and image OCR. Stored in your OS
-                  keychain — never bundled with the app.
+                  BYOK for AI reports, analysis, and image OCR. Key stored in OS keychain.
                 </p>
               </div>
               <Badge variant={apiKeySource === "none" ? "outline" : "secondary"}>
@@ -184,63 +209,158 @@ export function AppSettingsDialog({ open, onOpenChange }: AppSettingsDialogProps
             </div>
             <div className="space-y-2">
               <Label htmlFor="ai-api-key">OpenAI API key</Label>
-              <Input
-                id="ai-api-key"
-                type="password"
-                value={apiKeyInput}
-                onChange={(e) => setApiKeyInput(e.target.value)}
-                placeholder="sk-..."
-                autoComplete="off"
-              />
+              <div className="flex gap-2">
+                <Input
+                  id="ai-api-key"
+                  type="password"
+                  className="flex-1"
+                  value={apiKeyInput}
+                  onChange={(e) => setApiKeyInput(e.target.value)}
+                  placeholder="sk-..."
+                  autoComplete="off"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="shrink-0"
+                  onClick={() => void handleTestConnection()}
+                  disabled={testing || (!apiKeySet && !apiKeyInput.trim())}
+                >
+                  {testing ? "Testing…" : "Test"}
+                </Button>
+              </div>
               <p className="text-xs text-muted-foreground">
-                Leave blank to keep the saved key. The key is stored in your OS
-                keychain, never in the case database.
+                Leave blank to keep the saved key.
               </p>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="ai-model">Model</Label>
-              <Input
-                id="ai-model"
-                value={aiModel}
-                onChange={(e) => setAiModel(e.target.value)}
-                placeholder="gpt-4o-mini"
-              />
-              <p className="text-xs text-muted-foreground">
-                Examples: gpt-4o-mini, gpt-4o, o4-mini, or another
-                OpenAI-compatible model id.
-              </p>
+            <div className="grid gap-2 sm:grid-cols-2">
+              <div className="space-y-1">
+                <Label htmlFor="ai-model">Model</Label>
+                <Input
+                  id="ai-model"
+                  value={aiModel}
+                  onChange={(e) => setAiModel(e.target.value)}
+                  placeholder="gpt-4o-mini"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="ai-base-url">Base URL</Label>
+                <Input
+                  id="ai-base-url"
+                  value={aiBaseUrl}
+                  onChange={(e) => setAiBaseUrl(e.target.value)}
+                  placeholder="https://api.openai.com/v1/chat/completions"
+                />
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="ai-base-url">Base URL</Label>
-              <Input
-                id="ai-base-url"
-                value={aiBaseUrl}
-                onChange={(e) => setAiBaseUrl(e.target.value)}
-                placeholder="https://api.openai.com/v1/chat/completions"
-              />
-              <p className="text-xs text-muted-foreground">
-                Use OpenAI, Azure OpenAI, LM Studio, Ollama, or another
-                OpenAI-compatible chat completions endpoint.
-              </p>
-            </div>
-            <div className="flex gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => void handleTestConnection()}
-                disabled={testing || (!apiKeySet && !apiKeyInput.trim())}
-              >
-                {testing ? "Testing..." : "Test connection"}
-              </Button>
+            {apiKeySet ? (
               <Button
                 type="button"
                 variant="ghost"
+                size="sm"
+                className="h-7 px-2 text-xs"
                 onClick={() => void handleClearApiKey()}
-                disabled={!apiKeySet}
               >
-                Remove key
+                Remove saved key
               </Button>
+            ) : null}
+          </div>
+          <div className="space-y-3 rounded-lg border border-border/60 p-3">
+            <div>
+              <Label>Examiner profile</Label>
+              <p className="text-xs text-muted-foreground">
+                Fill once — qualifications and boilerplate auto-fill every report.
+              </p>
             </div>
+            <div className="grid gap-2 sm:grid-cols-2">
+              <Input
+                placeholder="Full name"
+                value={examinerProfile.fullName}
+                onChange={(e) =>
+                  setExaminerProfile((p) => ({ ...p, fullName: e.target.value }))
+                }
+              />
+              <Input
+                placeholder="Credentials (CFE, CPA, …)"
+                value={examinerProfile.credentials}
+                onChange={(e) =>
+                  setExaminerProfile((p) => ({ ...p, credentials: e.target.value }))
+                }
+              />
+              <Input
+                placeholder="Firm name"
+                value={examinerProfile.firmName}
+                onChange={(e) =>
+                  setExaminerProfile((p) => ({ ...p, firmName: e.target.value }))
+                }
+              />
+            </div>
+            <Textarea
+              placeholder="Qualifications"
+              value={examinerProfile.qualificationsMd}
+              onChange={(e) =>
+                setExaminerProfile((p) => ({
+                  ...p,
+                  qualificationsMd: e.target.value,
+                }))
+              }
+              rows={3}
+            />
+            <Textarea
+              placeholder="Prior testimony (4 years)"
+              value={examinerProfile.priorTestimonyMd}
+              onChange={(e) =>
+                setExaminerProfile((p) => ({
+                  ...p,
+                  priorTestimonyMd: e.target.value,
+                }))
+              }
+              rows={2}
+            />
+            <Textarea
+              placeholder="Compensation disclosure"
+              value={examinerProfile.compensationDisclosure}
+              onChange={(e) =>
+                setExaminerProfile((p) => ({
+                  ...p,
+                  compensationDisclosure: e.target.value,
+                }))
+              }
+              rows={2}
+            />
+            <Textarea
+              placeholder="Confidentiality clause"
+              value={examinerProfile.confidentialityClause}
+              onChange={(e) =>
+                setExaminerProfile((p) => ({
+                  ...p,
+                  confidentialityClause: e.target.value,
+                }))
+              }
+              rows={2}
+            />
+            <Textarea
+              placeholder="Limitations clause"
+              value={examinerProfile.limitationsClause}
+              onChange={(e) =>
+                setExaminerProfile((p) => ({
+                  ...p,
+                  limitationsClause: e.target.value,
+                }))
+              }
+              rows={2}
+            />
+            <Textarea
+              placeholder="Signature block"
+              value={examinerProfile.signatureBlock}
+              onChange={(e) =>
+                setExaminerProfile((p) => ({
+                  ...p,
+                  signatureBlock: e.target.value,
+                }))
+              }
+              rows={2}
+            />
           </div>
           <div className="space-y-2">
             <Label htmlFor="app-theme">Theme</Label>

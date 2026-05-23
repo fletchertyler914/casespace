@@ -25,7 +25,7 @@ fn segment_duration_seconds(started_at: &str, ended_at: Option<&str>) -> Result<
     Ok((end_ts - start.timestamp()).max(0))
 }
 
-const SCHEMA_VERSION: i32 = 8;
+const SCHEMA_VERSION: i32 = 9;
 
 fn table_has_column(conn: &Connection, table: &str, column: &str) -> Result<bool, String> {
     let mut stmt = conn
@@ -180,6 +180,49 @@ CREATE INDEX IF NOT EXISTS idx_ai_finding_drafts_case ON ai_finding_drafts(case_
 CREATE INDEX IF NOT EXISTS idx_ai_timeline_drafts_case ON ai_timeline_drafts(case_id, status);
 CREATE INDEX IF NOT EXISTS idx_ai_entity_drafts_case ON ai_entity_drafts(case_id, status);
 CREATE INDEX IF NOT EXISTS idx_ai_run_log_case ON ai_run_log(case_id, started_at);
+"#;
+
+const MIGRATION_V9: &str = r#"
+CREATE TABLE IF NOT EXISTS report_drafts (
+    id TEXT PRIMARY KEY,
+    case_id TEXT NOT NULL,
+    template_id TEXT NOT NULL,
+    sections_json TEXT NOT NULL,
+    compliance_json TEXT NOT NULL DEFAULT '[]',
+    status_json TEXT NOT NULL DEFAULT '{}',
+    generated_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    FOREIGN KEY (case_id) REFERENCES cases(id) ON DELETE CASCADE,
+    UNIQUE(case_id, template_id)
+);
+
+CREATE TABLE IF NOT EXISTS report_snapshots (
+    id TEXT PRIMARY KEY,
+    case_id TEXT NOT NULL,
+    template_id TEXT NOT NULL,
+    label TEXT NOT NULL,
+    document_json TEXT NOT NULL,
+    status_json TEXT NOT NULL DEFAULT '{}',
+    created_at TEXT NOT NULL,
+    FOREIGN KEY (case_id) REFERENCES cases(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS examiner_profile (
+    id INTEGER PRIMARY KEY CHECK(id = 1),
+    full_name TEXT NOT NULL DEFAULT '',
+    credentials TEXT NOT NULL DEFAULT '',
+    firm_name TEXT NOT NULL DEFAULT '',
+    qualifications_md TEXT NOT NULL DEFAULT '',
+    prior_testimony_md TEXT NOT NULL DEFAULT '',
+    compensation_disclosure TEXT NOT NULL DEFAULT '',
+    signature_block TEXT NOT NULL DEFAULT '',
+    confidentiality_clause TEXT NOT NULL DEFAULT '',
+    limitations_clause TEXT NOT NULL DEFAULT '',
+    updated_at TEXT NOT NULL DEFAULT ''
+);
+
+CREATE INDEX IF NOT EXISTS idx_report_drafts_case ON report_drafts(case_id);
+CREATE INDEX IF NOT EXISTS idx_report_snapshots_case ON report_snapshots(case_id, template_id, created_at DESC);
 "#;
 
 const MIGRATION_V1: &str = r#"
@@ -500,6 +543,10 @@ impl Database {
         if version == 8 {
             conn.execute_batch(MIGRATION_V8)
                 .map_err(|e| format!("migration v8 failed: {e}"))?;
+        }
+        if version == 9 {
+            conn.execute_batch(MIGRATION_V9)
+                .map_err(|e| format!("migration v9 failed: {e}"))?;
         }
         let now = chrono::Utc::now().to_rfc3339();
         conn.execute(

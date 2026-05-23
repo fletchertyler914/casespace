@@ -35,6 +35,7 @@ All features tagged: `P0-CoreParity` | `P1-CoreParity` | `AI-Phase` | `deferred`
 | F-REPORT-02 | reports | Executive summary export | P0-CoreParity | REQ-REPORT-001 | implemented (MVP UI) |
 | F-REPORT-03 | reports | Narrative report export | P0-CoreParity | REQ-REPORT-001 | implemented (MVP UI) |
 | F-REPORT-04 | reports | Financial analysis package | P1-CoreParity | REQ-REPORT-001 | implemented (legacy export; not CFE-primary) |
+| F-REPORT-05 | reports | Customer-centric report workspace (draft persist, Tiptap edit, persona, snapshots, DOCX) | P0-CoreParity | REQ-REPORT-001 | implemented (local) |
 | F-BILL-01 | time-billing | Start/stop timer | P0-CoreParity | REQ-TIME-001 | implemented (MVP) |
 | F-BILL-02 | time-billing | Pause/resume/segments | P1-CoreParity | REQ-TIME-001 | planned |
 | F-BILL-03 | time-billing | Billing config + calculations | P0-CoreParity | REQ-TIME-001 | partial (summary + totals visible) |

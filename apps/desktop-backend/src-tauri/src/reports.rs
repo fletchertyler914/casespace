@@ -1,5 +1,6 @@
 //! Template-aware report composition with citations and standards compliance.
 
+use crate::examiner_profile::ExaminerProfile;
 use crate::time_tracking;
 use rusqlite::{params, Connection};
 use serde::{Deserialize, Serialize};
@@ -450,27 +451,50 @@ fn build_exhibits_section(files: &[FileRow]) -> ReportSection {
     section
 }
 
-fn build_qualifications_section() -> ReportSection {
+fn build_qualifications_section(profile: Option<&ExaminerProfile>) -> ReportSection {
+    let text = profile
+        .and_then(|p| p.persona_section_text("qualifications"))
+        .unwrap_or_else(|| {
+            "[Examiner qualifications, credentials (e.g., CFE, CPA, CFF), publications (10 years), and relevant experience to be completed by the examiner before disclosure.]\n".to_string()
+        });
     ReportSection {
         id: "qualifications".to_string(),
         heading: "Qualifications".to_string(),
-        text: "[Examiner qualifications, credentials (e.g., CFE, CPA, CFF), publications (10 years), and relevant experience to be completed by the examiner before disclosure.]\n".to_string(),
+        text,
         citations: vec![],
         standards_tags: vec!["FRCP-26(a)(2)(B)(iv)".to_string()],
     }
 }
 
-fn build_prior_testimony_section() -> ReportSection {
+fn build_prior_testimony_section(profile: Option<&ExaminerProfile>) -> ReportSection {
+    let text = profile
+        .and_then(|p| p.persona_section_text("prior_testimony"))
+        .unwrap_or_else(|| {
+            "[List cases in which the witness testified as an expert at trial or by deposition during the previous four years — FRCP 26(a)(2)(B)(v).]\n".to_string()
+        });
     ReportSection {
         id: "prior_testimony".to_string(),
         heading: "Prior Testimony (4 years)".to_string(),
-        text: "[List cases in which the witness testified as an expert at trial or by deposition during the previous four years — FRCP 26(a)(2)(B)(v).]\n".to_string(),
+        text,
         citations: vec![],
         standards_tags: vec!["FRCP-26(a)(2)(B)(v)".to_string()],
     }
 }
 
-fn build_compensation_section(conn: &Connection, case_id: &str) -> ReportSection {
+fn build_compensation_section(
+    conn: &Connection,
+    case_id: &str,
+    profile: Option<&ExaminerProfile>,
+) -> ReportSection {
+    if let Some(text) = profile.and_then(|p| p.persona_section_text("compensation")) {
+        return ReportSection {
+            id: "compensation".to_string(),
+            heading: "Compensation".to_string(),
+            text,
+            citations: vec![],
+            standards_tags: vec!["FRCP-26(a)(2)(B)(vi)".to_string()],
+        };
+    }
     let (total_seconds, amount, _) =
         time_tracking::compute_case_billing_totals(conn, case_id).unwrap_or((0, 0.0, 0));
     let minutes = total_seconds / 60;
@@ -496,12 +520,17 @@ fn build_engagement_parties(case: &CaseRow) -> ReportSection {
     }
 }
 
-fn build_limitations_section() -> ReportSection {
+fn build_limitations_section(profile: Option<&ExaminerProfile>) -> ReportSection {
+    let text = profile
+        .and_then(|p| p.persona_section_text("limitations"))
+        .unwrap_or_else(|| {
+            "This engagement is limited to the scope described herein. The examiner does not guarantee detection of all fraud or irregularities. \
+Findings are based on evidence available at the time of the examination.\n".to_string()
+        });
     ReportSection {
         id: "limitations".to_string(),
         heading: "Limitations".to_string(),
-        text: "This engagement is limited to the scope described herein. The examiner does not guarantee detection of all fraud or irregularities. \
-Findings are based on evidence available at the time of the examination.\n".to_string(),
+        text,
         citations: vec![],
         standards_tags: vec![],
     }
@@ -519,12 +548,17 @@ fn build_fees_section(conn: &Connection, case_id: &str) -> ReportSection {
     }
 }
 
-fn build_confidentiality_section() -> ReportSection {
+fn build_confidentiality_section(profile: Option<&ExaminerProfile>) -> ReportSection {
+    let text = profile
+        .and_then(|p| p.persona_section_text("confidentiality"))
+        .unwrap_or_else(|| {
+            "All information obtained during this engagement shall be treated as confidential and used solely for the purposes described in this letter, \
+subject to applicable law and professional standards.\n".to_string()
+        });
     ReportSection {
         id: "confidentiality".to_string(),
         heading: "Confidentiality".to_string(),
-        text: "All information obtained during this engagement shall be treated as confidential and used solely for the purposes described in this letter, \
-subject to applicable law and professional standards.\n".to_string(),
+        text,
         citations: vec![],
         standards_tags: vec![],
     }
@@ -599,6 +633,7 @@ fn section_for_id(
     notes: &[NoteRow],
     timeline: &[TimelineRow],
     files: &[FileRow],
+    profile: Option<&ExaminerProfile>,
 ) -> ReportSection {
     match id {
         "overview" => build_overview_section(case, case_id, files, findings, notes, timeline),
@@ -612,13 +647,13 @@ fn section_for_id(
         "methodology" => build_methodology_section(),
         "opinions" => build_opinions_section(findings),
         "exhibits" => build_exhibits_section(files),
-        "qualifications" => build_qualifications_section(),
-        "prior_testimony" => build_prior_testimony_section(),
-        "compensation" => build_compensation_section(conn, case_id),
+        "qualifications" => build_qualifications_section(profile),
+        "prior_testimony" => build_prior_testimony_section(profile),
+        "compensation" => build_compensation_section(conn, case_id, profile),
         "parties" => build_engagement_parties(case),
-        "limitations" => build_limitations_section(),
+        "limitations" => build_limitations_section(profile),
         "fees" => build_fees_section(conn, case_id),
-        "confidentiality" => build_confidentiality_section(),
+        "confidentiality" => build_confidentiality_section(profile),
         "notes" => build_notes_section(notes),
         "observation_log" => build_observation_log(timeline, files),
         "subject_profile" => build_subject_profile(),
@@ -871,11 +906,12 @@ pub fn build_report_document(
     let timeline = load_timeline(conn, case_id)?;
     let files = load_files(conn, case_id)?;
 
+    let profile = crate::examiner_profile::get_profile(conn).ok();
     let sections: Vec<ReportSection> = section_ids
         .iter()
         .map(|id| {
             section_for_id(
-                id, conn, case_id, &case, &findings, &notes, &timeline, &files,
+                id, conn, case_id, &case, &findings, &notes, &timeline, &files, profile.as_ref(),
             )
         })
         .collect();
@@ -888,6 +924,15 @@ pub fn build_report_document(
         &sections,
         &compliance,
     );
+
+    let mut markdown = markdown;
+    if let Some(ref p) = profile {
+        if !p.signature_block.trim().is_empty() {
+            markdown.push_str("\n---\n\n");
+            markdown.push_str(&p.signature_block);
+            markdown.push('\n');
+        }
+    }
 
     if !language_scan_passes(&markdown) {
         return Err(

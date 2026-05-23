@@ -826,3 +826,68 @@ fn flow_corpus_aggregation_dedups() {
         Ok(())
     });
 }
+
+#[test]
+fn flow_report_draft_round_trip() {
+    use desktop_backend_lib::report_drafts::{self, ReportDraft, ReportSectionStatus};
+    use desktop_backend_lib::reports::{ReportDocument, ReportSection};
+
+    let (_dir, db) = temp_db();
+    let _ = with_db(&db, |conn| {
+        let case_id = uuid::Uuid::new_v4().to_string();
+        let now = chrono::Utc::now().to_rfc3339();
+        conn.execute(
+            "INSERT INTO cases (id, name, status, created_at, updated_at) VALUES (?1, 'Report Draft', 'active', ?2, ?2)",
+            params![case_id, now],
+        )
+        .unwrap();
+
+        let doc = ReportDocument {
+            template_id: "cfe-long".into(),
+            case_id: case_id.clone(),
+            generated_at: now.clone(),
+            sections: vec![
+                ReportSection {
+                    id: "executive".into(),
+                    heading: "Executive Summary".into(),
+                    text: "Summary body.".into(),
+                    citations: vec![],
+                    standards_tags: vec![],
+                },
+                ReportSection {
+                    id: "findings".into(),
+                    heading: "Findings".into(),
+                    text: "Edited findings.".into(),
+                    citations: vec![],
+                    standards_tags: vec![],
+                },
+            ],
+            compliance: vec![],
+            markdown: String::new(),
+        };
+        let mut section_status = report_drafts::initial_status_map(&doc);
+        section_status.insert("findings".into(), ReportSectionStatus::Edited);
+
+        let draft = ReportDraft {
+            id: String::new(),
+            case_id: case_id.clone(),
+            template_id: "cfe-long".into(),
+            document: doc,
+            section_status,
+            generated_at: now.clone(),
+            updated_at: now,
+        };
+
+        let saved = report_drafts::save_draft(conn, &draft).expect("save draft");
+        let loaded = report_drafts::get_draft(conn, &case_id, "cfe-long")
+            .expect("get draft")
+            .expect("draft row");
+        assert_eq!(loaded.document.sections.len(), 2);
+        assert_eq!(
+            loaded.section_status.get("findings"),
+            Some(&ReportSectionStatus::Edited)
+        );
+        assert!(!saved.id.is_empty());
+        Ok(())
+    });
+}

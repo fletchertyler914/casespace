@@ -6,14 +6,12 @@ import type { CaseFile, CaseSummary, Finding, Note, TimelineEvent } from "@repo/
 import { FileNavigator } from "./file-navigator";
 import { SplitView } from "./split-view";
 import { BoardView } from "./board-view";
-import { ReportSectionNavigator } from "@/components/artifacts/report-section-navigator";
-import { ReportsView } from "@/components/artifacts/reports-view";
+import { ReportOutline } from "@/components/reports/report-outline";
+import { ReportWorkspaceView } from "@/components/reports/report-workspace";
+import { ReportWorkspaceProvider } from "@/components/reports/report-workspace-context";
 import { filterFilesByFolder } from "@/lib/file-tree-utils";
 import type { DuplicateGroup } from "@/lib/duplicate-utils";
-import {
-  REPORT_SECTION_DEFS,
-  type ReportSectionId,
-} from "@/lib/report-sections";
+import type { ReportSectionId } from "@/lib/report-sections";
 import type { WorkspaceViewMode } from "@/lib/workspace-view";
 
 function ResizeHandle() {
@@ -115,20 +113,55 @@ export const WorkspaceLayout = memo(function WorkspaceLayout({
 }: WorkspaceLayoutProps) {
   const scopedFiles = filterFilesByFolder(files, selectedFolderPath);
 
-  const reportSections = REPORT_SECTION_DEFS.map((s) => ({
-    id: s.id,
-    label: s.label,
-    count:
-      s.id === "findings"
-        ? findings.length
-        : s.id === "timeline"
-          ? timeline.length
-          : s.id === "inventory"
-            ? files.length
-            : s.id === "notes"
-              ? notes.length
-              : undefined,
-  }));
+  const reportsShell =
+    viewMode === "reports" ? (
+      <ReportWorkspaceProvider
+        caseId={caseId}
+        caseSummary={caseSummary}
+        files={files}
+        notes={notes}
+        findings={findings}
+        timeline={timeline}
+      >
+        <PanelGroup
+          direction="horizontal"
+          className="min-h-0 flex-1 overflow-hidden"
+          id="workspace-shell"
+        >
+          {navigatorOpen && (
+            <>
+              <Panel
+                id="navigator"
+                order={0}
+                defaultSize={28}
+                minSize={18}
+                maxSize={45}
+                className="flex min-h-0 flex-col"
+              >
+                <ReportOutline
+                  onToggleNavigator={onToggleNavigator}
+                  onSectionChange={onReportSectionChange}
+                />
+              </Panel>
+              <ResizeHandle />
+            </>
+          )}
+          <Panel
+            id="workspace-main"
+            order={1}
+            className="relative flex min-h-0 flex-col overflow-hidden"
+          >
+            <ReportWorkspaceView
+              navigatorOpen={navigatorOpen}
+              onExpandNavigator={onExpandNavigator}
+              anchorSection={reportSection}
+            />
+          </Panel>
+        </PanelGroup>
+      </ReportWorkspaceProvider>
+    ) : null;
+
+  if (reportsShell) return reportsShell;
 
   return (
     <PanelGroup
@@ -146,17 +179,7 @@ export const WorkspaceLayout = memo(function WorkspaceLayout({
             maxSize={45}
             className="flex min-h-0 flex-col"
           >
-            {viewMode === "reports" ? (
-              <ReportSectionNavigator
-                sections={reportSections}
-                activeSectionId={reportSection}
-                onSectionSelect={(id) =>
-                  onReportSectionChange(id as ReportSectionId)
-                }
-                onToggleNavigator={onToggleNavigator}
-              />
-            ) : (
-              <FileNavigator
+            <FileNavigator
                 caseId={caseId}
                 files={files}
                 currentFile={viewingFile}
@@ -169,7 +192,6 @@ export const WorkspaceLayout = memo(function WorkspaceLayout({
                 onFolderSelect={onFolderSelect}
                 onToggleNavigator={onToggleNavigator}
               />
-            )}
           </Panel>
           <ResizeHandle />
         </>
@@ -216,7 +238,7 @@ export const WorkspaceLayout = memo(function WorkspaceLayout({
             onArtifactsChanged={onArtifactsChanged}
             onFileSelect={onFileSelect}
           />
-        ) : viewMode === "board" ? (
+        ) : (
           <BoardView
             caseId={caseId}
             files={scopedFiles}
@@ -228,18 +250,6 @@ export const WorkspaceLayout = memo(function WorkspaceLayout({
             onExpandNavigator={onExpandNavigator}
             onFileOpen={onFileOpen}
             onStatusChange={onStatusChange}
-          />
-        ) : (
-          <ReportsView
-            caseId={caseId}
-            caseSummary={caseSummary}
-            activeSection={reportSection}
-            files={files}
-            notes={notes}
-            findings={findings}
-            timeline={timeline}
-            navigatorOpen={navigatorOpen}
-            onExpandNavigator={onExpandNavigator}
           />
         )}
       </Panel>

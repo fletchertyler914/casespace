@@ -389,6 +389,91 @@ export const INVOKE_CONTRACTS: Array<{
     command: "generate_ai_case_report",
   },
   {
+    label: "getReportDraft",
+    run: () => commandClient.getReportDraft("c1", "cfe-long"),
+    command: "get_report_draft",
+  },
+  {
+    label: "saveReportDraft",
+    run: () =>
+      commandClient.saveReportDraft("c1", "cfe-long", {
+        sections: [],
+        compliance: [],
+        sectionStatus: {},
+        generatedAt: "2026-01-01T00:00:00Z",
+      }),
+    command: "save_report_draft",
+  },
+  {
+    label: "updateReportSection",
+    run: () =>
+      commandClient.updateReportSection("c1", "cfe-long", "executive", "text", "edited"),
+    command: "update_report_section",
+  },
+  {
+    label: "regenerateReport",
+    run: () =>
+      commandClient.regenerateReport("c1", "cfe-long", { scope: "unreviewed" }),
+    command: "regenerate_report",
+  },
+  {
+    label: "generateAndSaveReportDraft",
+    run: () => commandClient.generateAndSaveReportDraft("c1", "cfe-long"),
+    command: "generate_and_save_report_draft",
+  },
+  {
+    label: "createReportSnapshot",
+    run: () => commandClient.createReportSnapshot("c1", "cfe-long", "Draft v1"),
+    command: "create_report_snapshot",
+  },
+  {
+    label: "listReportSnapshots",
+    run: () => commandClient.listReportSnapshots("c1", "cfe-long"),
+    command: "list_report_snapshots",
+  },
+  {
+    label: "restoreReportSnapshot",
+    run: () => commandClient.restoreReportSnapshot("snap-1"),
+    command: "restore_report_snapshot",
+  },
+  {
+    label: "exportReportMarkdown",
+    run: () => commandClient.exportReportMarkdown("c1", "cfe-long"),
+    command: "export_report_markdown",
+  },
+  {
+    label: "exportReportDocx",
+    run: () => commandClient.exportReportDocx("c1", "cfe-long", "/tmp/report.docx"),
+    command: "export_report_docx",
+  },
+  {
+    label: "getExaminerProfile",
+    run: () => commandClient.getExaminerProfile(),
+    command: "get_examiner_profile",
+  },
+  {
+    label: "saveExaminerProfile",
+    run: () =>
+      commandClient.saveExaminerProfile({
+        fullName: "Jane",
+        credentials: "CFE",
+        firmName: "Firm",
+        qualificationsMd: "",
+        priorTestimonyMd: "",
+        compensationDisclosure: "",
+        signatureBlock: "",
+        confidentialityClause: "",
+        limitationsClause: "",
+        updatedAt: "",
+      }),
+    command: "save_examiner_profile",
+  },
+  {
+    label: "runReportComplianceScan",
+    run: () => commandClient.runReportComplianceScan("c1", "cfe-long"),
+    command: "run_report_compliance_scan",
+  },
+  {
     label: "extractCaseText",
     run: () => commandClient.extractCaseText("c1"),
     command: "extract_case_text",

@@ -288,6 +288,70 @@ export interface ReportDocument {
   markdown: string;
 }
 
+export type ReportSectionStatus =
+  | "empty"
+  | "aiDrafted"
+  | "edited"
+  | "reviewed"
+  | "locked";
+
+export interface ReportDraft {
+  id: string;
+  caseId: string;
+  templateId: ReportTemplateId;
+  document: ReportDocument;
+  sectionStatus: Record<string, ReportSectionStatus>;
+  generatedAt: string;
+  updatedAt: string;
+}
+
+export interface ReportSnapshot {
+  id: string;
+  caseId: string;
+  templateId: ReportTemplateId;
+  label: string;
+  document: ReportDocument;
+  sectionStatus: Record<string, ReportSectionStatus>;
+  createdAt: string;
+}
+
+export interface ExaminerProfile {
+  fullName: string;
+  credentials: string;
+  firmName: string;
+  qualificationsMd: string;
+  priorTestimonyMd: string;
+  compensationDisclosure: string;
+  signatureBlock: string;
+  confidentialityClause: string;
+  limitationsClause: string;
+  updatedAt: string;
+}
+
+export interface ComplianceScanItem {
+  id: string;
+  label: string;
+  passed: boolean;
+  detail?: string;
+}
+
+export interface ReportComplianceScan {
+  ok: boolean;
+  items: ComplianceScanItem[];
+}
+
+export interface RegenerateReportOptions {
+  scope: "all" | "unreviewed" | "section";
+  sectionId?: string;
+}
+
+export interface SaveReportDraftInput {
+  sections: ReportSection[];
+  compliance: StandardsComplianceCheck[];
+  sectionStatus: Record<string, ReportSectionStatus>;
+  generatedAt: string;
+}
+
 export interface ReportTemplate {
   id: ReportTemplateId;
   persona: ReportPersona;

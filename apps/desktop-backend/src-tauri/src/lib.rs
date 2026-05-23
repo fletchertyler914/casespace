@@ -4,12 +4,15 @@ mod ai_provider;
 mod ai_reports;
 mod ai_settings;
 pub mod database;
+pub mod examiner_profile;
 pub mod field_extraction;
 pub mod ingest;
 pub mod path;
 #[path = "report_templates.generated.rs"]
 mod report_templates_generated;
-mod reports;
+pub mod report_drafts;
+mod report_export;
+pub mod reports;
 mod sample_case;
 mod search;
 pub mod text_extract;
@@ -2530,6 +2533,226 @@ async fn generate_ai_case_report(
 }
 
 #[tauri::command]
+fn get_report_draft(
+    case_id: String,
+    template_id: String,
+    state: State<AppState>,
+) -> Result<Option<report_drafts::ReportDraft>, String> {
+    with_conn(&state, |conn| report_drafts::get_draft(conn, &case_id, &template_id))
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct SaveReportDraftInput {
+    sections: Vec<reports::ReportSection>,
+    compliance: Vec<reports::StandardsComplianceCheck>,
+    section_status: std::collections::HashMap<String, report_drafts::ReportSectionStatus>,
+    generated_at: String,
+}
+
+#[tauri::command]
+fn save_report_draft(
+    case_id: String,
+    template_id: String,
+    draft: SaveReportDraftInput,
+    state: State<AppState>,
+) -> Result<report_drafts::ReportDraft, String> {
+    with_conn(&state, |conn| {
+        let document = reports::ReportDocument {
+            template_id: template_id.clone(),
+            case_id: case_id.clone(),
+            generated_at: draft.generated_at.clone(),
+            sections: draft.sections,
+            compliance: draft.compliance,
+            markdown: String::new(),
+        };
+        let record = report_drafts::ReportDraft {
+            id: String::new(),
+            case_id,
+            template_id,
+            document,
+            section_status: draft.section_status,
+            generated_at: draft.generated_at,
+            updated_at: chrono::Utc::now().to_rfc3339(),
+        };
+        report_drafts::save_draft(conn, &record)
+    })
+}
+
+#[tauri::command]
+fn update_report_section(
+    case_id: String,
+    template_id: String,
+    section_id: String,
+    text: String,
+    status: report_drafts::ReportSectionStatus,
+    state: State<AppState>,
+) -> Result<report_drafts::ReportDraft, String> {
+    with_conn(&state, |conn| {
+        report_drafts::update_section(conn, &case_id, &template_id, &section_id, &text, status)
+    })
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct RegenerateReportOptions {
+    scope: String,
+    section_id: Option<String>,
+}
+
+#[tauri::command]
+async fn regenerate_report(
+    case_id: String,
+    template_id: String,
+    options: RegenerateReportOptions,
+    state: State<'_, AppState>,
+) -> Result<report_drafts::ReportDraft, String> {
+    if !report_templates_generated::is_known_template(&template_id) {
+        return Err(format!("unknown report template: {template_id}"));
+    }
+    let generated_at = now_iso();
+    let scope = report_drafts::RegenerateScope {
+        scope: options.scope,
+        section_id: options.section_id,
+    };
+
+    let prepared = {
+        let conn = state.db.conn.lock().map_err(|_| "db lock poisoned")?;
+        ai_reports::prepare_ai_report_document(&case_id, &template_id, &generated_at, &conn)?
+    };
+    let regenerated = ai_reports::generate_ai_report_document(prepared).await?;
+
+    with_conn(&state, |conn| {
+        let existing = report_drafts::get_draft(conn, &case_id, &template_id)?;
+        let merged = if let Some(existing) = existing {
+            let mut merged =
+                report_drafts::merge_regenerated_sections(&existing, regenerated, &scope);
+            report_drafts::refresh_draft_markdown(conn, &mut merged)?;
+            merged
+        } else {
+            report_drafts::draft_from_document(&case_id, &template_id, regenerated, None)
+        };
+        report_drafts::save_draft(conn, &merged)
+    })
+}
+
+#[tauri::command]
+fn create_report_snapshot(
+    case_id: String,
+    template_id: String,
+    label: String,
+    state: State<AppState>,
+) -> Result<report_drafts::ReportSnapshot, String> {
+    with_conn(&state, |conn| {
+        report_drafts::create_snapshot(conn, &case_id, &template_id, &label)
+    })
+}
+
+#[tauri::command]
+fn list_report_snapshots(
+    case_id: String,
+    template_id: String,
+    state: State<AppState>,
+) -> Result<Vec<report_drafts::ReportSnapshot>, String> {
+    with_conn(&state, |conn| report_drafts::list_snapshots(conn, &case_id, &template_id))
+}
+
+#[tauri::command]
+fn restore_report_snapshot(
+    snapshot_id: String,
+    state: State<AppState>,
+) -> Result<report_drafts::ReportDraft, String> {
+    with_conn(&state, |conn| report_drafts::restore_snapshot(conn, &snapshot_id))
+}
+
+#[tauri::command]
+fn export_report_markdown(
+    case_id: String,
+    template_id: String,
+    state: State<AppState>,
+) -> Result<String, String> {
+    with_conn(&state, |conn| {
+        let draft = report_drafts::get_draft(conn, &case_id, &template_id)?
+            .ok_or_else(|| "no report draft to export".to_string())?;
+        let case_name: String = conn
+            .query_row(
+                "SELECT name FROM cases WHERE id = ?1",
+                params![case_id],
+                |row| row.get(0),
+            )
+            .map_err(|_| "case not found".to_string())?;
+        Ok(report_export::export_markdown(&draft.document, &case_name))
+    })
+}
+
+#[tauri::command]
+fn export_report_docx(
+    case_id: String,
+    template_id: String,
+    save_path: String,
+    state: State<AppState>,
+) -> Result<(), String> {
+    with_conn(&state, |conn| {
+        let draft = report_drafts::get_draft(conn, &case_id, &template_id)?
+            .ok_or_else(|| "no report draft to export".to_string())?;
+        let case_name: String = conn
+            .query_row(
+                "SELECT name FROM cases WHERE id = ?1",
+                params![case_id],
+                |row| row.get(0),
+            )
+            .map_err(|_| "case not found".to_string())?;
+        report_export::export_docx(&draft.document, &case_name, std::path::Path::new(&save_path))
+    })
+}
+
+#[tauri::command]
+fn get_examiner_profile(state: State<AppState>) -> Result<examiner_profile::ExaminerProfile, String> {
+    with_conn(&state, |conn| examiner_profile::get_profile(conn))
+}
+
+#[tauri::command]
+fn save_examiner_profile(
+    profile: examiner_profile::ExaminerProfile,
+    state: State<AppState>,
+) -> Result<examiner_profile::ExaminerProfile, String> {
+    with_conn(&state, |conn| examiner_profile::save_profile(conn, &profile))
+}
+
+#[tauri::command]
+fn run_report_compliance_scan(
+    case_id: String,
+    template_id: String,
+    state: State<AppState>,
+) -> Result<report_drafts::ReportComplianceScan, String> {
+    with_conn(&state, |conn| {
+        report_drafts::run_compliance_scan(conn, &case_id, &template_id)
+    })
+}
+
+#[tauri::command]
+async fn generate_and_save_report_draft(
+    case_id: String,
+    template_id: Option<String>,
+    state: State<'_, AppState>,
+) -> Result<report_drafts::ReportDraft, String> {
+    let tid = template_id.unwrap_or_else(|| "cfe-long".to_string());
+    if !report_templates_generated::is_known_template(&tid) {
+        return Err(format!("unknown report template: {tid}"));
+    }
+    let generated_at = now_iso();
+    let prepared = {
+        let conn = state.db.conn.lock().map_err(|_| "db lock poisoned")?;
+        ai_reports::prepare_ai_report_document(&case_id, &tid, &generated_at, &conn)?
+    };
+    let document = ai_reports::generate_ai_report_document(prepared).await?;
+    with_conn(&state, |conn| {
+        let draft = report_drafts::draft_from_document(&case_id, &tid, document, None);
+        report_drafts::save_draft(conn, &draft)
+    })
+}
+
+#[tauri::command]
 fn seed_sample_fraud_case(state: State<AppState>) -> Result<CaseSummary, String> {
     with_conn(&state, |conn| sample_case::seed_sample_fraud_case(conn))
 }
@@ -2660,6 +2883,19 @@ pub fn run() {
             list_report_exports,
             generate_case_report,
             generate_ai_case_report,
+            get_report_draft,
+            save_report_draft,
+            update_report_section,
+            regenerate_report,
+            generate_and_save_report_draft,
+            create_report_snapshot,
+            list_report_snapshots,
+            restore_report_snapshot,
+            export_report_markdown,
+            export_report_docx,
+            get_examiner_profile,
+            save_examiner_profile,
+            run_report_compliance_scan,
             extract_file_text,
             extract_case_text,
             analyze_file_with_ai,
